@@ -1,0 +1,376 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+
+  morningBriefTime String  @default("06:00") // HH:mm local time
+  timezone         String  @default("America/New_York")
+  voiceStyle       String  @default("neutral-professional")
+  ttsProvider      String? // e.g. "openai", "elevenlabs" - null = disabled
+}
+
+// ─────────────────────────────────────────────────────────────
+// CATEGORIES
+// ─────────────────────────────────────────────────────────────
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6b7280") // hex color, used in UI + calendar
+  isSeed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  tasks  Task[]
+  events CalendarEvent[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// PEOPLE
+// ─────────────────────────────────────────────────────────────
+
+model Person {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  notes     String?
+  isSeed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  tasks         TaskPerson[]
+  events        CalendarEvent[]
+  contextItems  ContextItem[]
+  suggestions   Suggestion[]
+  followUpTasks Task[]          @relation("FollowUpPerson")
+}
+
+// ─────────────────────────────────────────────────────────────
+// TASKS
+// ─────────────────────────────────────────────────────────────
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  WAITING
+  COMPLETED
+}
+
+enum Effort {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Task {
+  id     String @id @default(cuid())
+  title  String
+  description String?
+
+  status TaskStatus @default(NOT_STARTED)
+  effort Effort     @default(LOW)
+
+  // Manual ordering - fractional index, user-controlled, survives refresh/device
+  position Float @default(0)
+
+  // AI recommendation layer - never overrides manual `position` / `pinnedToday`
+  aiPriorityScore  Float?
+  aiPriorityReason String?
+
+  // Curated "Today" focus list (explicit pin, not simply due-today)
+  pinnedToday Boolean @default(false)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  dueDate DateTime?
+  dueTime String? // HH:mm, optional companion to dueDate
+  location String?
+  notes    String?
+
+  followUpRequired Boolean   @default(false)
+  followUpDate     DateTime?
+  followUpPersonId String?
+  followUpPerson   Person?   @relation("FollowUpPerson", fields: [followUpPersonId], references: [id])
+
+  parentTaskId String?
+  parentTask   Task?   @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subTasks     Task[]  @relation("SubTasks")
+
+  calendarEvents CalendarEvent[]
+  contextItems   ContextItem[]
+
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  waitingAt   DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  isSeed Boolean @default(false)
+
+  steps       TaskStep[]
+  people      TaskPerson[]
+  events      TaskEvent[]
+
+  blockedBy TaskDependency[] @relation("BlockedTask")
+  blocks    TaskDependency[] @relation("BlockerTask")
+
+  suggestions Suggestion[]
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([pinnedToday])
+}
+
+model TaskStep {
+  id       String  @id @default(cuid())
+  taskId   String
+  task     Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title    String
+  done     Boolean @default(false)
+  position Float   @default(0)
+
+  createdAt DateTime @default(now())
+  doneAt    DateTime?
+}
+
+// many-to-many join, explicit so we can add role/context later
+model TaskPerson {
+  taskId   String
+  personId String
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, personId])
+}
+
+model TaskDependency {
+  id        String @id @default(cuid())
+  blockerId String // this task must complete first
+  blockedId String // this task is blocked
+  blocker   Task   @relation("BlockerTask", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   Task   @relation("BlockedTask", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+// audit log of state transitions, feeds pattern detection later
+model TaskEvent {
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  type    String // "created" | "status_changed" | "priority_recommended" | "priority_overridden" | "reordered" | "completed" | ...
+  fromValue String?
+  toValue   String?
+  actor     String @default("user") // "user" | "ai"
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// CALENDAR
+// ─────────────────────────────────────────────────────────────
+
+model CalendarEvent {
+  id    String @id @default(cuid())
+  title String
+
+  date      DateTime // day of the event (date component used)
+  startTime String? // HH:mm
+  endTime   String? // HH:mm
+  allDay    Boolean  @default(false)
+
+  location String?
+  notes    String?
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  personId String?
+  person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  isSeed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTEXT ENGINE
+// ─────────────────────────────────────────────────────────────
+
+enum ContextSourceType {
+  OBSIDIAN
+  CHATGPT
+  MANUAL
+  TASK
+  CALENDAR
+  MORNING_BRIEF
+}
+
+enum ContextType {
+  NOTE
+  CONVERSATION
+  DECISION
+  COMMITMENT
+  IDEA
+  DEADLINE
+  MEETING
+  PROMISE
+  FOLLOW_UP
+  OBSERVATION
+  PROJECT_UPDATE
+  TASK_CANDIDATE
+}
+
+model ContextItem {
+  id String @id @default(cuid())
+
+  source   ContextSourceType
+  sourceId String? // e.g. obsidian file path, chatgpt conversation id
+  sourceUrl String?
+
+  timestamp DateTime @default(now()) // when the underlying content was authored
+  content     String
+  contentType ContextType @default(NOTE)
+
+  project String?
+
+  personId String?
+  person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  relatedTaskId String?
+  relatedTask   Task?   @relation(fields: [relatedTaskId], references: [id], onDelete: SetNull)
+
+  relevance  Float @default(0.5) // 0-1, how relevant to active priorities
+  confidence Float @default(0.5) // 0-1, AI extraction confidence
+
+  processed Boolean @default(false) // has extraction pipeline run on this item
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  suggestions Suggestion[]
+
+  @@index([source])
+  @@index([processed])
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUGGESTIONS (AI recommendation layer, never auto-applied)
+// ─────────────────────────────────────────────────────────────
+
+enum SuggestionType {
+  UNFINISHED_STEP
+  UNFINISHED_FOLLOW_UP
+  ABANDONED_TASK
+  BLOCKER
+  OVERDUE
+  PERSON_FOLLOW_UP
+  MISSING_TASK
+  OPPORTUNITY
+  PRIORITY_CHANGE
+  CROSS_SOURCE_LINK
+}
+
+enum SuggestionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EDITED
+  SNOOZED
+  DISMISSED
+}
+
+model Suggestion {
+  id   String         @id @default(cuid())
+  type SuggestionType
+
+  title   String
+  body    String
+  reason  String // human-readable "why" - cites source
+  confidence Float @default(0.5)
+
+  status     SuggestionStatus @default(PENDING)
+  snoozedUntil DateTime?
+
+  relatedTaskId String?
+  relatedTask   Task?   @relation(fields: [relatedTaskId], references: [id], onDelete: Cascade)
+
+  relatedPersonId String?
+  relatedPerson   Person? @relation(fields: [relatedPersonId], references: [id], onDelete: Cascade)
+
+  relatedContextId String?
+  relatedContext   ContextItem? @relation(fields: [relatedContextId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([status])
+  @@index([type])
+}
+
+// ─────────────────────────────────────────────────────────────
+// MORNING BRIEF
+// ─────────────────────────────────────────────────────────────
+
+model MorningBrief {
+  id   String   @id @default(cuid())
+  date DateTime @default(now())
+
+  textContent String
+
+  // JSON array of { start: number, end: number, text: string } segments (seconds)
+  transcriptSegments Json?
+
+  audioUrl      String?
+  audioDuration Float?
+  voiceStyle    String?
+  ttsProvider   String?
+  ttsStatus     String @default("not_generated") // "not_generated" | "pending" | "ready" | "failed"
+
+  lastPlaybackPosition Float @default(0)
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTEXT SOURCE CONFIG (obsidian sync, chatgpt connector, etc)
+// ─────────────────────────────────────────────────────────────
+
+model SyncSource {
+  id   String            @id @default(cuid())
+  type ContextSourceType
+  name String
+
+  enabled Boolean @default(true)
+  config  Json? // e.g. { vaultPath, includeFolders, excludeFolders, syncFrequencyMinutes }
+
+  authTokenHash String? // hashed token the local agent authenticates with
+
+  lastSyncAt     DateTime?
+  lastSyncStatus String? // "success" | "error" | "never"
+  lastSyncError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, name])
+}

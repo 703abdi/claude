@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --background: #09090a;
+  --surface: #131315;
+  --surface-2: #1a1a1d;
+  --border: #26262a;
+  --foreground: #f3f3f4;
+  --muted: #8b8b90;
+  --muted-2: #5c5c62;
+
+  --status-red: #ef4444;
+  --status-orange: #f59e0b;
+  --status-yellow: #eab308;
+  --status-green: #22c55e;
+
+  --effort-1: #22c55e;
+  --effort-2: #f59e0b;
+  --effort-3: #ef4444;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
+
+  --color-status-red: var(--status-red);
+  --color-status-orange: var(--status-orange);
+  --color-status-yellow: var(--status-yellow);
+  --color-status-green: var(--status-green);
+
+  --color-effort-1: var(--effort-1);
+  --color-effort-2: var(--effort-2);
+  --color-effort-3: var(--effort-3);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-2);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}

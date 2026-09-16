@@ -1,0 +1,1 @@
+export const REALISTIC_TODAY_LIMIT_CLIENT = 5;
