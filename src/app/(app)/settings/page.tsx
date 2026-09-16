@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import MorningBriefSettings from "@/components/settings/MorningBriefSettings";
 import ChatGPTUploader from "@/components/settings/ChatGPTUploader";
 import ProcessContextButton from "@/components/settings/ProcessContextButton";
+import DailyRefreshButton from "@/components/settings/DailyRefreshButton";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function SettingsPage() {
   const obsidianTokenConfigured = !!process.env.OBSIDIAN_SYNC_TOKEN;
   const chatgptTokenConfigured = !!process.env.CHATGPT_CONNECTOR_TOKEN;
   const ttsConfigured = !!process.env.TTS_PROVIDER;
+  const cronConfigured = !!process.env.CRON_SECRET;
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 space-y-8">
@@ -40,6 +42,18 @@ export default async function SettingsPage() {
           }}
           ttsConfigured={ttsConfigured}
         />
+      </section>
+
+      <section className="border border-border bg-surface rounded-lg p-4">
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-2">Daily refresh</h2>
+        <p className="text-xs text-muted mb-3">
+          Re-runs context extraction, overdue/blocker/follow-up detection, priority recommendations, and generates a
+          fresh morning brief — all from your current data, nothing invented.{" "}
+          {cronConfigured
+            ? "Also runs automatically once a day via Vercel Cron."
+            : "Set CRON_SECRET and deploy vercel.json to also run this automatically every morning."}
+        </p>
+        <DailyRefreshButton />
       </section>
 
       <section className="border border-border bg-surface rounded-lg p-4">

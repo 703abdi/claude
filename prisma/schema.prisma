@@ -340,11 +340,16 @@ model MorningBrief {
   // JSON array of { start: number, end: number, text: string } segments (seconds)
   transcriptSegments Json?
 
-  audioUrl      String?
+  // MP3 bytes stored directly in Postgres so playback works on serverless
+  // hosts with no persistent/writable filesystem (e.g. Vercel) without
+  // requiring a separate blob storage provider.
+  audioData     Bytes?
+  audioMimeType String?
   audioDuration Float?
   voiceStyle    String?
   ttsProvider   String?
   ttsStatus     String @default("not_generated") // "not_generated" | "pending" | "ready" | "failed"
+  ttsError      String?
 
   lastPlaybackPosition Float @default(0)
 

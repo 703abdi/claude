@@ -68,6 +68,23 @@ export type TaskWithDate = {
   category: Category | null;
 };
 
+export type TranscriptSegment = { start: number; end: number; text: string };
+
+export type MorningBrief = {
+  id: string;
+  date: string;
+  textContent: string;
+  transcriptSegments: TranscriptSegment[];
+  audioDuration: number | null;
+  hasAudio: boolean;
+  voiceStyle: string | null;
+  ttsProvider: string | null;
+  ttsStatus: string;
+  ttsError: string | null;
+  lastPlaybackPosition: number;
+  createdAt: string;
+};
+
 export type SuggestionType =
   | "UNFINISHED_STEP"
   | "UNFINISHED_FOLLOW_UP"

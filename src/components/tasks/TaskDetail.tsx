@@ -102,6 +102,21 @@ export default function TaskDetail({
         />
       </div>
 
+      {task.aiPriorityReason && task.aiPriorityScore !== null && task.aiPriorityScore > 0 && (
+        <div className="flex items-start gap-2 text-xs border border-border rounded-md px-2.5 py-2 text-muted">
+          <span className="text-muted-2 shrink-0">AI:</span>
+          <span>{task.aiPriorityReason}</span>
+          {!task.pinnedToday && (
+            <button
+              onClick={() => patch({ pinnedToday: true })}
+              className="ml-auto shrink-0 text-foreground hover:underline"
+            >
+              Pin to Today
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Steps */}
       <div>
         <p className="text-[11px] uppercase tracking-wide text-muted-2 font-semibold mb-1.5">Steps</p>
