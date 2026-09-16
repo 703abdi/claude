@@ -1,4 +1,4 @@
-import type { Task, Category, Person, Effort, CalendarEvent } from "./types";
+import type { Task, Category, Person, Effort, CalendarEvent, Suggestion } from "./types";
 
 export type TaskCreateInput = {
   title: string;
@@ -83,5 +83,13 @@ export const api = {
     update: (id: string, data: Record<string, unknown>) =>
       request<CalendarEvent>(`/api/calendar-events/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) => request<{ ok: boolean }>(`/api/calendar-events/${id}`, { method: "DELETE" }),
+  },
+  suggestions: {
+    list: () => request<Suggestion[]>("/api/suggestions"),
+    resolve: (id: string, action: "accept" | "reject" | "dismiss" | "snooze" | "edit", extra?: Record<string, unknown>) =>
+      request<{ ok: boolean; taskId?: string }>(`/api/suggestions/${id}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ action, ...extra }),
+      }),
   },
 };

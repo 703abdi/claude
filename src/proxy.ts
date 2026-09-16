@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const SESSION_COOKIE = "pos_session";
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/sync/obsidian", "/api/connectors/chatgpt"];
+// Prefix-matched — only login and the browser login API.
+const PUBLIC_PREFIXES = ["/login", "/api/auth/login"];
+// Exact-matched — machine-to-machine endpoints that authenticate themselves
+// with a bearer token (see src/lib/sync-auth.ts), not the session cookie.
+// Sibling paths like /api/connectors/chatgpt/upload are NOT exempted here —
+// those are browser-only and must go through the normal session check.
+const PUBLIC_EXACT = ["/api/sync/obsidian", "/api/connectors/chatgpt"];
 
 async function isValidSession(token: string | undefined) {
   if (!token) return false;
@@ -19,7 +25,7 @@ async function isValidSession(token: string | undefined) {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) || PUBLIC_EXACT.includes(pathname)) {
     return NextResponse.next();
   }
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {

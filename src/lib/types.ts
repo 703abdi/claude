@@ -68,6 +68,32 @@ export type TaskWithDate = {
   category: Category | null;
 };
 
+export type SuggestionType =
+  | "UNFINISHED_STEP"
+  | "UNFINISHED_FOLLOW_UP"
+  | "ABANDONED_TASK"
+  | "BLOCKER"
+  | "OVERDUE"
+  | "PERSON_FOLLOW_UP"
+  | "MISSING_TASK"
+  | "OPPORTUNITY"
+  | "PRIORITY_CHANGE"
+  | "CROSS_SOURCE_LINK";
+
+export type Suggestion = {
+  id: string;
+  type: SuggestionType;
+  title: string;
+  body: string;
+  reason: string;
+  confidence: number;
+  status: string;
+  createdAt: string;
+  relatedTask: { id: string; title: string; status: TaskStatus } | null;
+  relatedPerson: { id: string; name: string } | null;
+  relatedContext: { id: string; content: string; source: string; sourceUrl: string | null; timestamp: string } | null;
+};
+
 export type CalendarEvent = {
   id: string;
   title: string;

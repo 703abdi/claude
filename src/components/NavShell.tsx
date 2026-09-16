@@ -54,6 +54,9 @@ export default function NavShell({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-2">{email}</span>
+          <Link href="/settings" className="text-muted hover:text-foreground transition-colors" aria-label="Settings">
+            <GearIcon className="w-4 h-4" />
+          </Link>
           <button
             onClick={logout}
             className="text-xs text-muted hover:text-foreground transition-colors"
@@ -66,9 +69,14 @@ export default function NavShell({
       {/* Mobile top bar */}
       <header className="md:hidden flex items-center justify-between border-b border-border px-4 py-3 sticky top-0 bg-background/95 backdrop-blur z-40">
         <span className="font-bold text-sm tracking-tight">abdi&apos;s os</span>
-        <button onClick={logout} className="text-xs text-muted">
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <Link href="/settings" className="text-muted hover:text-foreground transition-colors" aria-label="Settings">
+            <GearIcon className="w-4 h-4" />
+          </Link>
+          <button onClick={logout} className="text-xs text-muted">
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
@@ -121,6 +129,21 @@ function PeopleIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+function GearIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function CalendarIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>

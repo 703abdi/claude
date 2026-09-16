@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { Task, Category } from "@/lib/types";
+import type { Task, Category, Suggestion } from "@/lib/types";
 import { api } from "@/lib/api-client";
 import ProgressHeader from "./ProgressHeader";
 import FilterBar, { DEFAULT_FILTERS, type Filters } from "./FilterBar";
 import TaskSection from "./TaskSection";
 import NewTaskForm from "./NewTaskForm";
 import CategoryManager from "./CategoryManager";
+import SuggestionsPanel from "./SuggestionsPanel";
 import { REALISTIC_TODAY_LIMIT_CLIENT } from "@/lib/client-constants";
 
 type PersonLite = { id: string; name: string };
@@ -18,11 +19,13 @@ export default function TasksDashboard({
   initialCompletedCount,
   categories: initialCategories,
   people,
+  initialSuggestions,
 }: {
   initialTasks: Task[];
   initialCompletedCount: number;
   categories: Category[];
   people: PersonLite[];
+  initialSuggestions: Suggestion[];
 }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [completedCount, setCompletedCount] = useState(initialCompletedCount);
@@ -31,6 +34,13 @@ export default function TasksDashboard({
   const [completedTasks, setCompletedTasks] = useState<Task[] | null>(null);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [managingCategories, setManagingCategories] = useState(false);
+
+  async function refreshTasks() {
+    const [freshActive, freshCompletedCount] = await Promise.all([api.tasks.list(), api.tasks.list({ status: "COMPLETED" })]);
+    setTasks(freshActive);
+    setCompletedCount(freshCompletedCount.length);
+    if (completedTasks) setCompletedTasks(freshCompletedCount);
+  }
 
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
@@ -183,6 +193,8 @@ export default function TasksDashboard({
           }}
         />
       )}
+
+      <SuggestionsPanel initialSuggestions={initialSuggestions} onTaskUpdated={refreshTasks} />
 
       <NewTaskForm categories={categories} people={people} onCreated={handleCreated} />
 
