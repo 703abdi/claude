@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Task, Category } from "@/lib/types";
 import { api } from "@/lib/api-client";
 import ProgressHeader from "./ProgressHeader";
@@ -30,6 +31,31 @@ export default function TasksDashboard({
   const [completedTasks, setCompletedTasks] = useState<Task[] | null>(null);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [managingCategories, setManagingCategories] = useState(false);
+
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+
+  useEffect(() => {
+    if (!highlightId) return;
+    if (tasks.some((t) => t.id === highlightId)) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/tasks/${highlightId}`);
+        if (!res.ok) return;
+        const t: Task = await res.json();
+        if (t.status === "COMPLETED") {
+          setShowCompleted(true);
+          setCompletedTasks((prev) => {
+            const list = prev ?? [];
+            return list.some((x) => x.id === t.id) ? list : [...list, t];
+          });
+        }
+      } catch {
+        // task no longer exists — ignore
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightId]);
 
   function handleChange(updated: Task) {
     setTasks((prev) => {
@@ -178,6 +204,7 @@ export default function TasksDashboard({
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.today, ids)}
           emptyState="You're clear for today."
+          highlightId={highlightId}
         />
       )}
       {todayOverloaded && (filters.bucket === "ALL" || filters.bucket === "TODAY") && (
@@ -190,6 +217,7 @@ export default function TasksDashboard({
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.today, ids)}
           emptyState=""
+          highlightId={highlightId}
         />
       )}
 
@@ -203,6 +231,7 @@ export default function TasksDashboard({
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.now, ids)}
           emptyState="Nothing outstanding in the next 48 hours."
+          highlightId={highlightId}
         />
       )}
 
@@ -216,6 +245,7 @@ export default function TasksDashboard({
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.next, ids)}
           emptyState="Nothing outstanding this week."
+          highlightId={highlightId}
         />
       )}
 
@@ -229,6 +259,7 @@ export default function TasksDashboard({
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.later, ids)}
           emptyState="Nothing outstanding."
+          highlightId={highlightId}
         />
       )}
 
@@ -251,6 +282,7 @@ export default function TasksDashboard({
               onDelete={handleDelete}
               onReorder={() => {}}
               emptyState="Nothing completed yet."
+              highlightId={highlightId}
             />
           </div>
         )}

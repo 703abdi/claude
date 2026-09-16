@@ -58,3 +58,29 @@ export type Task = {
   overdue: boolean;
   isBlocked: boolean;
 };
+
+export type TaskWithDate = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  dueDate: string;
+  dueTime: string | null;
+  category: Category | null;
+};
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  allDay: boolean;
+  location: string | null;
+  notes: string | null;
+  category: Category | null;
+  task: { id: string; title: string; status: TaskStatus } | null;
+  person: Person | null;
+  isSeed?: boolean;
+  createdAt: string;
+  updatedAt: string;
+};

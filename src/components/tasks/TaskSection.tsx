@@ -16,6 +16,7 @@ export default function TaskSection({
   onDelete,
   onReorder,
   emptyState,
+  highlightId,
 }: {
   title: string;
   subtitle?: string;
@@ -26,6 +27,7 @@ export default function TaskSection({
   onDelete: (id: string) => void;
   onReorder: (orderedIds: string[]) => void;
   emptyState: string;
+  highlightId?: string | null;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -67,6 +69,7 @@ export default function TaskSection({
                   people={people}
                   onChange={onChange}
                   onDelete={onDelete}
+                  highlighted={highlightId === task.id}
                 />
               ))}
             </div>

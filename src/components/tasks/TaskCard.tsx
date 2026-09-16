@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task, Category, Effort, TaskStatus } from "@/lib/types";
@@ -38,6 +38,7 @@ export default function TaskCard({
   onChange,
   onDelete,
   dragDisabled,
+  highlighted,
 }: {
   task: Task;
   categories: Category[];
@@ -45,9 +46,20 @@ export default function TaskCard({
   onChange: (task: Task) => void;
   onDelete: (id: string) => void;
   dragDisabled?: boolean;
+  highlighted?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!highlighted);
   const [busy, setBusy] = useState(false);
+  const [flash, setFlash] = useState(!!highlighted);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!highlighted) return;
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setFlash(false), 2200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -104,11 +116,14 @@ export default function TaskCard({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        cardRef.current = node;
+      }}
       style={style}
-      className={`group border border-border bg-surface rounded-lg transition-colors ${
-        task.isBlocked ? "opacity-70" : ""
-      } ${expanded ? "" : "hover:border-muted-2"}`}
+      className={`group border rounded-lg transition-colors ${
+        flash ? "border-foreground bg-surface-2" : "border-border bg-surface"
+      } ${task.isBlocked ? "opacity-70" : ""} ${expanded ? "" : "hover:border-muted-2"}`}
     >
       <div
         className="flex items-center gap-3 px-3 py-3 cursor-pointer select-none"

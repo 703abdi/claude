@@ -1,4 +1,4 @@
-import type { Task, Category, Person, Effort } from "./types";
+import type { Task, Category, Person, Effort, CalendarEvent } from "./types";
 
 export type TaskCreateInput = {
   title: string;
@@ -74,5 +74,14 @@ export const api = {
     update: (id: string, data: Partial<{ name: string; notes: string | null }>) =>
       request<Person>(`/api/people/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) => request<{ ok: boolean }>(`/api/people/${id}`, { method: "DELETE" }),
+  },
+  calendarEvents: {
+    list: (params?: { from?: string; to?: string }) =>
+      request<CalendarEvent[]>(`/api/calendar-events${params ? "?" + new URLSearchParams(params) : ""}`),
+    create: (data: Partial<CalendarEvent> & { title: string; date: string; categoryId?: string | null; taskId?: string | null; personId?: string | null }) =>
+      request<CalendarEvent>("/api/calendar-events", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Record<string, unknown>) =>
+      request<CalendarEvent>(`/api/calendar-events/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) => request<{ ok: boolean }>(`/api/calendar-events/${id}`, { method: "DELETE" }),
   },
 };

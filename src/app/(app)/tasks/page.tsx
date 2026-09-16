@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { taskInclude, serializeTask } from "@/lib/serialize";
 import { TaskStatus } from "@prisma/client";
@@ -20,11 +21,13 @@ export default async function TasksPage() {
   const initialTasks: import("@/lib/types").Task[] = JSON.parse(JSON.stringify(tasks.map(serializeTask)));
 
   return (
-    <TasksDashboard
-      initialTasks={initialTasks}
-      initialCompletedCount={completedCount}
-      categories={categories}
-      people={people}
-    />
+    <Suspense fallback={null}>
+      <TasksDashboard
+        initialTasks={initialTasks}
+        initialCompletedCount={completedCount}
+        categories={categories}
+        people={people}
+      />
+    </Suspense>
   );
 }
