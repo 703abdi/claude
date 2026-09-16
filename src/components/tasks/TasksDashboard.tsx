@@ -148,6 +148,8 @@ export default function TasksDashboard({
     return { today, now, next, later };
   }, [filtered]);
 
+  const taskTitles = useMemo(() => tasks.map((t) => ({ id: t.id, title: t.title })), [tasks]);
+
   const totalActive = tasks.length;
   const totalAll = totalActive + completedCount;
 
@@ -212,6 +214,7 @@ export default function TasksDashboard({
           tasks={todayOverloaded ? focusToday : buckets.today}
           categories={categories}
           people={people}
+          allTasks={taskTitles}
           onChange={handleChange}
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.today, ids)}
@@ -225,6 +228,7 @@ export default function TasksDashboard({
           tasks={buckets.today.filter((t) => !focusToday.some((f) => f.id === t.id))}
           categories={categories}
           people={people}
+          allTasks={taskTitles}
           onChange={handleChange}
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.today, ids)}
@@ -239,6 +243,7 @@ export default function TasksDashboard({
           tasks={buckets.now}
           categories={categories}
           people={people}
+          allTasks={taskTitles}
           onChange={handleChange}
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.now, ids)}
@@ -253,6 +258,7 @@ export default function TasksDashboard({
           tasks={buckets.next}
           categories={categories}
           people={people}
+          allTasks={taskTitles}
           onChange={handleChange}
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.next, ids)}
@@ -267,6 +273,7 @@ export default function TasksDashboard({
           tasks={buckets.later}
           categories={categories}
           people={people}
+          allTasks={taskTitles}
           onChange={handleChange}
           onDelete={handleDelete}
           onReorder={(ids) => handleReorder(buckets.later, ids)}
@@ -290,6 +297,7 @@ export default function TasksDashboard({
               tasks={completedTasks}
               categories={categories}
               people={people}
+              allTasks={taskTitles}
               onChange={handleChange}
               onDelete={handleDelete}
               onReorder={() => {}}

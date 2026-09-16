@@ -21,11 +21,13 @@ export default function NewTaskForm({
   const [personId, setPersonId] = useState("");
   const [pinnedToday, setPinnedToday] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || submitting) return;
     setSubmitting(true);
+    setError(null);
     try {
       const task = await api.tasks.create({
         title: title.trim(),
@@ -43,6 +45,8 @@ export default function NewTaskForm({
       setPersonId("");
       setPinnedToday(false);
       setOpen(false);
+    } catch {
+      setError("Couldn't save that task — your entry is still here. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -117,6 +121,7 @@ export default function NewTaskForm({
           Pin to Today
         </label>
       </div>
+      {error && <p className="text-xs text-status-red">{error}</p>}
       <div className="flex justify-end gap-2 pt-1">
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted px-3 py-1.5">
           Cancel

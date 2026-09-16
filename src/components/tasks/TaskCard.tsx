@@ -35,6 +35,7 @@ export default function TaskCard({
   task,
   categories,
   people,
+  allTasks,
   onChange,
   onDelete,
   dragDisabled,
@@ -43,6 +44,7 @@ export default function TaskCard({
   task: Task;
   categories: Category[];
   people: { id: string; name: string }[];
+  allTasks: { id: string; title: string }[];
   onChange: (task: Task) => void;
   onDelete: (id: string) => void;
   dragDisabled?: boolean;
@@ -204,6 +206,7 @@ export default function TaskCard({
           task={task}
           categories={categories}
           people={people}
+          allTasks={allTasks}
           onChange={onChange}
           onDelete={onDelete}
           onCycleEffort={cycleEffort}

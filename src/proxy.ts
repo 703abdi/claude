@@ -25,6 +25,14 @@ async function isValidSession(token: string | undefined) {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  if (pathname === "/login") {
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+    if (await isValidSession(token)) {
+      return NextResponse.redirect(new URL("/tasks", req.url));
+    }
+    return NextResponse.next();
+  }
+
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) || PUBLIC_EXACT.includes(pathname)) {
     return NextResponse.next();
   }

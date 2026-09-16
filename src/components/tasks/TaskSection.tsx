@@ -12,6 +12,7 @@ export default function TaskSection({
   tasks,
   categories,
   people,
+  allTasks,
   onChange,
   onDelete,
   onReorder,
@@ -23,6 +24,7 @@ export default function TaskSection({
   tasks: Task[];
   categories: Category[];
   people: { id: string; name: string }[];
+  allTasks: { id: string; title: string }[];
   onChange: (task: Task) => void;
   onDelete: (id: string) => void;
   onReorder: (orderedIds: string[]) => void;
@@ -67,6 +69,7 @@ export default function TaskSection({
                   task={task}
                   categories={categories}
                   people={people}
+                  allTasks={allTasks}
                   onChange={onChange}
                   onDelete={onDelete}
                   highlighted={highlightId === task.id}
