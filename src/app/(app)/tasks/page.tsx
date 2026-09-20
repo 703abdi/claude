@@ -38,7 +38,7 @@ export default async function TasksPage() {
 
   return (
     <Suspense fallback={null}>
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-6">
+      <div className="px-4 lg:px-6 pt-3">
         <MorningBriefTeaser hasBriefToday={hasBriefToday} briefTime={user?.morningBriefTime ?? "6:00 AM"} />
       </div>
       <TasksDashboard

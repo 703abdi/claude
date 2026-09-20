@@ -6,6 +6,8 @@ import type { Task, Category, Suggestion } from "@/lib/types";
 import { api } from "@/lib/api-client";
 import ProgressHeader from "./ProgressHeader";
 import FilterBar, { DEFAULT_FILTERS, type Filters } from "./FilterBar";
+import SecondaryFiltersPopover from "./SecondaryFiltersPopover";
+import LeftRail from "./LeftRail";
 import TaskSection from "./TaskSection";
 import NewTaskForm from "./NewTaskForm";
 import CategoryManager from "./CategoryManager";
@@ -167,145 +169,161 @@ export default function TasksDashboard({
   }, [todayOverloaded, buckets.today]);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-6">
-      <ProgressHeader completed={completedCount} total={totalAll} />
+    <div className="flex items-start">
+      <LeftRail
+        tasks={tasks}
+        categories={categories}
+        filters={filters}
+        onChange={setFilters}
+        onManageCategories={() => setManagingCategories(true)}
+      />
 
-      <div className="flex flex-wrap items-start gap-x-2 gap-y-2">
-        <FilterBar filters={filters} onChange={setFilters} categories={categories} people={people} />
-        <button
-          onClick={() => setManagingCategories(true)}
-          className="text-xs text-muted hover:text-foreground shrink-0 mt-2 ml-auto"
-        >
-          Manage categories
-        </button>
-      </div>
+      <div className="flex-1 min-w-0 px-4 lg:px-6 py-4">
+        <ProgressHeader completed={completedCount} total={totalAll} />
 
-      {managingCategories && (
-        <CategoryManager
-          categories={categories}
-          onChange={setCategories}
-          onClose={async () => {
-            setManagingCategories(false);
-            const [freshActive, freshCompleted] = await Promise.all([
-              api.tasks.list(),
-              completedTasks ? api.tasks.list({ status: "COMPLETED" }) : Promise.resolve(null),
-            ]);
-            setTasks(freshActive);
-            if (freshCompleted) setCompletedTasks(freshCompleted);
-          }}
-        />
-      )}
-
-      <SuggestionsPanel initialSuggestions={initialSuggestions} onTaskUpdated={refreshTasks} />
-
-      <NewTaskForm categories={categories} people={people} onCreated={handleCreated} />
-
-      {todayOverloaded && filters.bucket !== "LATER" && (
-        <div className="mb-6 text-sm border border-status-orange/40 bg-status-orange/10 text-status-orange rounded-lg px-3 py-2.5">
-          You currently have {buckets.today.length} tasks marked Today — probably more than you can realistically
-          finish. Here are the {REALISTIC_TODAY_LIMIT_CLIENT} highest-priority ones; the rest stay pinned below.
+        <div className="flex items-start gap-2 mb-4">
+          <div className="lg:hidden flex-1">
+            <FilterBar filters={filters} onChange={setFilters} categories={categories} people={people} />
+          </div>
+          <button
+            onClick={() => setManagingCategories(true)}
+            className="lg:hidden text-xs text-muted hover:text-foreground shrink-0 mt-2"
+          >
+            Manage categories
+          </button>
+          <div className="hidden lg:flex ml-auto">
+            <SecondaryFiltersPopover filters={filters} onChange={setFilters} people={people} />
+          </div>
         </div>
-      )}
 
-      {(filters.bucket === "ALL" || filters.bucket === "TODAY") && (
-        <TaskSection
-          title="Today"
-          subtitle={todayOverloaded ? "focus set" : undefined}
-          tasks={todayOverloaded ? focusToday : buckets.today}
-          categories={categories}
-          people={people}
-          allTasks={taskTitles}
-          onChange={handleChange}
-          onDelete={handleDelete}
-          onReorder={(ids) => handleReorder(buckets.today, ids)}
-          emptyState="You're clear for today."
-          highlightId={highlightId}
-        />
-      )}
-      {todayOverloaded && (filters.bucket === "ALL" || filters.bucket === "TODAY") && (
-        <TaskSection
-          title="Also pinned to Today"
-          tasks={buckets.today.filter((t) => !focusToday.some((f) => f.id === t.id))}
-          categories={categories}
-          people={people}
-          allTasks={taskTitles}
-          onChange={handleChange}
-          onDelete={handleDelete}
-          onReorder={(ids) => handleReorder(buckets.today, ids)}
-          emptyState=""
-          highlightId={highlightId}
-        />
-      )}
+        {managingCategories && (
+          <CategoryManager
+            categories={categories}
+            onChange={setCategories}
+            onClose={async () => {
+              setManagingCategories(false);
+              const [freshActive, freshCompleted] = await Promise.all([
+                api.tasks.list(),
+                completedTasks ? api.tasks.list({ status: "COMPLETED" }) : Promise.resolve(null),
+              ]);
+              setTasks(freshActive);
+              if (freshCompleted) setCompletedTasks(freshCompleted);
+            }}
+          />
+        )}
 
-      {(filters.bucket === "ALL" || filters.bucket === "NOW") && (
-        <TaskSection
-          title="Now"
-          tasks={buckets.now}
-          categories={categories}
-          people={people}
-          allTasks={taskTitles}
-          onChange={handleChange}
-          onDelete={handleDelete}
-          onReorder={(ids) => handleReorder(buckets.now, ids)}
-          emptyState="Nothing outstanding in the next 48 hours."
-          highlightId={highlightId}
-        />
-      )}
+        <SuggestionsPanel initialSuggestions={initialSuggestions} onTaskUpdated={refreshTasks} />
 
-      {(filters.bucket === "ALL" || filters.bucket === "NEXT") && (
-        <TaskSection
-          title="Next"
-          tasks={buckets.next}
-          categories={categories}
-          people={people}
-          allTasks={taskTitles}
-          onChange={handleChange}
-          onDelete={handleDelete}
-          onReorder={(ids) => handleReorder(buckets.next, ids)}
-          emptyState="Nothing outstanding this week."
-          highlightId={highlightId}
-        />
-      )}
+        <NewTaskForm categories={categories} people={people} onCreated={handleCreated} />
 
-      {(filters.bucket === "ALL" || filters.bucket === "LATER") && (
-        <TaskSection
-          title="Later"
-          tasks={buckets.later}
-          categories={categories}
-          people={people}
-          allTasks={taskTitles}
-          onChange={handleChange}
-          onDelete={handleDelete}
-          onReorder={(ids) => handleReorder(buckets.later, ids)}
-          emptyState="Nothing outstanding."
-          highlightId={highlightId}
-        />
-      )}
-
-      {totalActive === 0 && (
-        <p className="text-sm text-muted-2 py-6 text-center">Nothing outstanding.</p>
-      )}
-
-      <div className="mt-10 border-t border-border pt-4">
-        <button onClick={loadCompleted} className="text-xs font-semibold text-muted hover:text-foreground uppercase tracking-wide">
-          Completed ({completedCount}) {showCompleted ? "▲" : "▼"}
-        </button>
-        {showCompleted && completedTasks && (
-          <div className="mt-3 opacity-80">
-            <TaskSection
-              title=""
-              tasks={completedTasks}
-              categories={categories}
-              people={people}
-              allTasks={taskTitles}
-              onChange={handleChange}
-              onDelete={handleDelete}
-              onReorder={() => {}}
-              emptyState="Nothing completed yet."
-              highlightId={highlightId}
-            />
+        {todayOverloaded && filters.bucket !== "LATER" && (
+          <div className="mb-6 text-sm border border-due-today/40 bg-due-today/10 text-due-today rounded px-3 py-2.5">
+            You currently have {buckets.today.length} tasks marked Today — probably more than you can realistically
+            finish. Here are the {REALISTIC_TODAY_LIMIT_CLIENT} highest-priority ones; the rest stay pinned below.
           </div>
         )}
+
+        {(filters.bucket === "ALL" || filters.bucket === "TODAY") && (
+          <TaskSection
+            title="Today"
+            subtitle={todayOverloaded ? "focus set" : undefined}
+            tasks={todayOverloaded ? focusToday : buckets.today}
+            categories={categories}
+            people={people}
+            allTasks={taskTitles}
+            onChange={handleChange}
+            onDelete={handleDelete}
+            onReorder={(ids) => handleReorder(buckets.today, ids)}
+            emptyState="You're clear for today."
+            highlightId={highlightId}
+          />
+        )}
+        {todayOverloaded && (filters.bucket === "ALL" || filters.bucket === "TODAY") && (
+          <TaskSection
+            title="Also pinned to Today"
+            tasks={buckets.today.filter((t) => !focusToday.some((f) => f.id === t.id))}
+            categories={categories}
+            people={people}
+            allTasks={taskTitles}
+            onChange={handleChange}
+            onDelete={handleDelete}
+            onReorder={(ids) => handleReorder(buckets.today, ids)}
+            emptyState=""
+            highlightId={highlightId}
+          />
+        )}
+
+        {(filters.bucket === "ALL" || filters.bucket === "NOW") && (
+          <TaskSection
+            title="Now"
+            tasks={buckets.now}
+            categories={categories}
+            people={people}
+            allTasks={taskTitles}
+            onChange={handleChange}
+            onDelete={handleDelete}
+            onReorder={(ids) => handleReorder(buckets.now, ids)}
+            emptyState="Nothing outstanding in the next 48 hours."
+            highlightId={highlightId}
+          />
+        )}
+
+        {(filters.bucket === "ALL" || filters.bucket === "NEXT") && (
+          <TaskSection
+            title="Next"
+            tasks={buckets.next}
+            categories={categories}
+            people={people}
+            allTasks={taskTitles}
+            onChange={handleChange}
+            onDelete={handleDelete}
+            onReorder={(ids) => handleReorder(buckets.next, ids)}
+            emptyState="Nothing outstanding this week."
+            highlightId={highlightId}
+          />
+        )}
+
+        {(filters.bucket === "ALL" || filters.bucket === "LATER") && (
+          <TaskSection
+            title="Later"
+            tasks={buckets.later}
+            categories={categories}
+            people={people}
+            allTasks={taskTitles}
+            onChange={handleChange}
+            onDelete={handleDelete}
+            onReorder={(ids) => handleReorder(buckets.later, ids)}
+            emptyState="Nothing outstanding."
+            highlightId={highlightId}
+          />
+        )}
+
+        {totalActive === 0 && <p className="text-sm text-muted-2 py-6 text-center">Nothing outstanding.</p>}
+
+        <div className="mt-8 border-t border-border pt-4 pb-16 lg:pb-8">
+          <button
+            onClick={loadCompleted}
+            className="font-mono text-[11px] font-medium text-muted hover:text-foreground uppercase tracking-wide"
+          >
+            Completed ({completedCount}) {showCompleted ? "▲" : "▼"}
+          </button>
+          {showCompleted && completedTasks && (
+            <div className="mt-3 opacity-80">
+              <TaskSection
+                title=""
+                tasks={completedTasks}
+                categories={categories}
+                people={people}
+                allTasks={taskTitles}
+                onChange={handleChange}
+                onDelete={handleDelete}
+                onReorder={() => {}}
+                emptyState="Nothing completed yet."
+                highlightId={highlightId}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
