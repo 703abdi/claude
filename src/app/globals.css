@@ -1,14 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090a;
+  /* Base surfaces — near-black, one step up for cards, one more for hover */
+  --background: #0a0a0b;
   --surface: #131315;
-  --surface-2: #1a1a1d;
-  --border: #26262a;
-  --foreground: #f3f3f4;
-  --muted: #8b8b90;
-  --muted-2: #5c5c62;
+  --surface-2: #1c1c1f;
+  --surface-hover: #1c1c1f;
 
+  /* Text — three levels only */
+  --foreground: #ededef;
+  --muted: #8a8a93;
+  --muted-2: #5a5a62;
+
+  --border: #242428;
+
+  /* The one accent — focus, active state, and signature elements only */
+  --accent: #00e5ff;
+
+  /* Semantic — red for overdue, amber for due-today. Nothing else. */
+  --overdue: #ef4444;
+  --due-today: #f59e0b;
+
+  /* Legacy status/effort colors — still used by People/Calendar and other
+     screens outside the Tasks workspace rebuild; not used by TaskRow. */
   --status-red: #ef4444;
   --status-orange: #f59e0b;
   --status-yellow: #eab308;
@@ -23,10 +37,15 @@
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
   --color-border: var(--border);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-2: var(--muted-2);
+
+  --color-accent: var(--accent);
+  --color-overdue: var(--overdue);
+  --color-due-today: var(--due-today);
 
   --color-status-red: var(--status-red);
   --color-status-orange: var(--status-orange);
@@ -37,8 +56,8 @@
   --color-effort-2: var(--effort-2);
   --color-effort-3: var(--effort-3);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
 }
 
 * {
@@ -54,6 +73,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+.font-mono,
+.mono {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-variant-numeric: tabular-nums;
 }
 
 ::-webkit-scrollbar {
@@ -83,4 +109,15 @@ body {
 }
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
