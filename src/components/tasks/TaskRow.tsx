@@ -41,6 +41,7 @@ export default function TaskRow({
   onChange,
   onSelect,
   selected,
+  cursor,
   dragDisabled,
   highlighted,
 }: {
@@ -48,6 +49,7 @@ export default function TaskRow({
   onChange: (task: Task) => void;
   onSelect: (task: Task) => void;
   selected?: boolean;
+  cursor?: boolean;
   dragDisabled?: boolean;
   highlighted?: boolean;
 }) {
@@ -63,6 +65,10 @@ export default function TaskRow({
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (cursor) rowRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [cursor]);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -142,7 +148,7 @@ export default function TaskRow({
           : task.overdue
             ? "bg-overdue/[0.06] hover:bg-overdue/[0.1]"
             : "hover:bg-surface-hover"
-      } ${task.isBlocked ? "opacity-60" : ""}`}
+      } ${task.isBlocked ? "opacity-60" : ""} ${cursor ? "ring-1 ring-inset ring-muted-2" : ""}`}
     >
       <div className="flex items-stretch h-10 cursor-pointer select-none" onClick={() => onSelect(task)}>
         <span

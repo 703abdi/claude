@@ -8,12 +8,14 @@ export default function StatusBar({
   totalAll,
   overdue,
   waiting,
+  onShowShortcuts,
 }: {
   total: number;
   completed: number;
   totalAll: number;
   overdue: number;
   waiting: number;
+  onShowShortcuts: () => void;
 }) {
   const [now, setNow] = useState(() => new Date());
 
@@ -35,7 +37,10 @@ export default function StatusBar({
           {completed}/{totalAll} DONE ({pct}%)
         </span>
       </div>
-      <div className="ml-auto flex items-center gap-2.5">
+      <div className="ml-auto flex items-center gap-3">
+        <button onClick={onShowShortcuts} className="hover:text-foreground" title="Keyboard shortcuts">
+          ?
+        </button>
         <span className="w-1.5 h-1.5 rounded-full bg-accent" title="Synced" />
         <span className="text-foreground" suppressHydrationWarning>
           {time}

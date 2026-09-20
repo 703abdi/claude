@@ -12,6 +12,8 @@ import TaskSection from "./TaskSection";
 import TaskDetailPanel from "./TaskDetailPanel";
 import TodayTimeline from "./TodayTimeline";
 import StatusBar from "./StatusBar";
+import CommandPalette from "./CommandPalette";
+import ShortcutsCheatsheet from "./ShortcutsCheatsheet";
 import NewTaskForm from "./NewTaskForm";
 import CategoryManager from "./CategoryManager";
 import SuggestionsPanel from "./SuggestionsPanel";
@@ -42,6 +44,9 @@ export default function TasksDashboard({
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [managingCategories, setManagingCategories] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [cursorId, setCursorId] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
 
   async function refreshTasks() {
     const [freshActive, freshCompletedCount] = await Promise.all([api.tasks.list(), api.tasks.list({ status: "COMPLETED" })]);
@@ -191,6 +196,70 @@ export default function TasksDashboard({
       .slice(0, REALISTIC_TODAY_LIMIT_CLIENT);
   }, [todayOverloaded, buckets.today]);
 
+  const visibleOrderedTasks = useMemo(() => {
+    const list: Task[] = [];
+    if (filters.bucket === "ALL" || filters.bucket === "TODAY") {
+      list.push(...(todayOverloaded ? focusToday : buckets.today));
+      if (todayOverloaded) list.push(...buckets.today.filter((t) => !focusToday.some((f) => f.id === t.id)));
+    }
+    if (filters.bucket === "ALL" || filters.bucket === "NOW") list.push(...buckets.now);
+    if (filters.bucket === "ALL" || filters.bucket === "NEXT") list.push(...buckets.next);
+    if (filters.bucket === "ALL" || filters.bucket === "LATER") list.push(...buckets.later);
+    return list;
+  }, [filters.bucket, todayOverloaded, focusToday, buckets]);
+
+  useEffect(() => {
+    function isTypingTarget(el: EventTarget | null) {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (paletteOpen) setPaletteOpen(false);
+        else if (cheatsheetOpen) setCheatsheetOpen(false);
+        else if (selectedTaskId) setSelectedTaskId(null);
+        return;
+      }
+      if (isTypingTarget(e.target) || paletteOpen) return;
+
+      if (e.key === "/") {
+        e.preventDefault();
+        setPaletteOpen(true);
+      } else if (e.key === "?") {
+        e.preventDefault();
+        setCheatsheetOpen((v) => !v);
+      } else if (e.key === "j" || e.key === "k") {
+        e.preventDefault();
+        if (visibleOrderedTasks.length === 0) return;
+        const idx = visibleOrderedTasks.findIndex((t) => t.id === cursorId);
+        const nextIdx =
+          idx === -1 ? 0 : e.key === "j" ? Math.min(visibleOrderedTasks.length - 1, idx + 1) : Math.max(0, idx - 1);
+        setCursorId(visibleOrderedTasks[nextIdx].id);
+      } else if ((e.key === "e" || e.key === "Enter") && cursorId) {
+        e.preventDefault();
+        setSelectedTaskId(cursorId);
+      } else if (e.key === "x" && cursorId) {
+        e.preventDefault();
+        const t = visibleOrderedTasks.find((vt) => vt.id === cursorId);
+        if (t) api.tasks.update(t.id, { status: t.status === "COMPLETED" ? "NOT_STARTED" : "COMPLETED" }).then(handleChange);
+      } else if (["1", "2", "3", "4"].includes(e.key)) {
+        e.preventDefault();
+        const map: Record<string, Filters["bucket"]> = { "1": "TODAY", "2": "NOW", "3": "NEXT", "4": "LATER" };
+        setFilters((f) => ({ ...f, bucket: map[e.key] }));
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [paletteOpen, cheatsheetOpen, selectedTaskId, cursorId, visibleOrderedTasks]);
+
   return (
     <>
     <div className="flex items-start">
@@ -259,6 +328,7 @@ export default function TasksDashboard({
             onChange={handleChange}
             onSelect={(t) => setSelectedTaskId(t.id)}
             selectedTaskId={selectedTaskId}
+            cursorId={cursorId}
             onReorder={(ids) => handleReorder(buckets.today, ids)}
             emptyState="You're clear for today."
             highlightId={highlightId}
@@ -271,6 +341,7 @@ export default function TasksDashboard({
             onChange={handleChange}
             onSelect={(t) => setSelectedTaskId(t.id)}
             selectedTaskId={selectedTaskId}
+            cursorId={cursorId}
             onReorder={(ids) => handleReorder(buckets.today, ids)}
             emptyState=""
             highlightId={highlightId}
@@ -284,6 +355,7 @@ export default function TasksDashboard({
             onChange={handleChange}
             onSelect={(t) => setSelectedTaskId(t.id)}
             selectedTaskId={selectedTaskId}
+            cursorId={cursorId}
             onReorder={(ids) => handleReorder(buckets.now, ids)}
             emptyState="Nothing outstanding in the next 48 hours."
             highlightId={highlightId}
@@ -297,6 +369,7 @@ export default function TasksDashboard({
             onChange={handleChange}
             onSelect={(t) => setSelectedTaskId(t.id)}
             selectedTaskId={selectedTaskId}
+            cursorId={cursorId}
             onReorder={(ids) => handleReorder(buckets.next, ids)}
             emptyState="Nothing outstanding this week."
             highlightId={highlightId}
@@ -310,6 +383,7 @@ export default function TasksDashboard({
             onChange={handleChange}
             onSelect={(t) => setSelectedTaskId(t.id)}
             selectedTaskId={selectedTaskId}
+            cursorId={cursorId}
             onReorder={(ids) => handleReorder(buckets.later, ids)}
             emptyState="Nothing outstanding."
             highlightId={highlightId}
@@ -333,6 +407,7 @@ export default function TasksDashboard({
                 onChange={handleChange}
                 onSelect={(t) => setSelectedTaskId(t.id)}
                 selectedTaskId={selectedTaskId}
+                cursorId={cursorId}
                 onReorder={() => {}}
                 emptyState="Nothing completed yet."
                 highlightId={highlightId}
@@ -359,7 +434,18 @@ export default function TasksDashboard({
       totalAll={totalAll}
       overdue={overdueCount}
       waiting={waitingCount}
+      onShowShortcuts={() => setCheatsheetOpen(true)}
     />
+    <CommandPalette
+      open={paletteOpen}
+      onClose={() => setPaletteOpen(false)}
+      tasks={tasks}
+      onSelectTask={(t) => setSelectedTaskId(t.id)}
+      onSetBucket={(bucket) => setFilters((f) => ({ ...f, bucket }))}
+      onNewTask={() => document.getElementById("new-task-trigger")?.click()}
+      onManageCategories={() => setManagingCategories(true)}
+    />
+    <ShortcutsCheatsheet open={cheatsheetOpen} onClose={() => setCheatsheetOpen(false)} />
     </>
   );
 }

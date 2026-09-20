@@ -14,6 +14,7 @@ export default function TaskSection({
   onReorder,
   onSelect,
   selectedTaskId,
+  cursorId,
   emptyState,
   highlightId,
 }: {
@@ -24,6 +25,7 @@ export default function TaskSection({
   onReorder: (orderedIds: string[]) => void;
   onSelect: (task: Task) => void;
   selectedTaskId?: string | null;
+  cursorId?: string | null;
   emptyState: string;
   highlightId?: string | null;
 }) {
@@ -66,6 +68,7 @@ export default function TaskSection({
                   onChange={onChange}
                   onSelect={onSelect}
                   selected={selectedTaskId === task.id}
+                  cursor={cursorId === task.id}
                   highlighted={highlightId === task.id}
                 />
               ))}

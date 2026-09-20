@@ -55,6 +55,7 @@ export default function NewTaskForm({
   if (!open) {
     return (
       <button
+        id="new-task-trigger"
         onClick={() => setOpen(true)}
         className="w-full text-left border border-dashed border-border rounded-lg px-3 py-2.5 text-sm text-muted hover:text-foreground hover:border-muted-2 transition-colors mb-6"
       >
