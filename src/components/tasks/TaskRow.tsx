@@ -3,11 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Task, Category, Effort, TaskStatus } from "@/lib/types";
+import type { Task, TaskStatus } from "@/lib/types";
 import { api } from "@/lib/api-client";
-import TaskDetail from "./TaskDetail";
 
-const EFFORT_CYCLE: Effort[] = ["LOW", "MEDIUM", "HIGH"];
 const STATUS_CYCLE: TaskStatus[] = ["NOT_STARTED", "IN_PROGRESS", "WAITING", "COMPLETED"];
 
 const STATUS_TAG: Record<TaskStatus, string> = {
@@ -40,24 +38,19 @@ function formatDue(dueDate: string | null, dueTime: string | null, overdue: bool
 
 export default function TaskRow({
   task,
-  categories,
-  people,
-  allTasks,
   onChange,
-  onDelete,
+  onSelect,
+  selected,
   dragDisabled,
   highlighted,
 }: {
   task: Task;
-  categories: Category[];
-  people: { id: string; name: string }[];
-  allTasks: { id: string; title: string }[];
   onChange: (task: Task) => void;
-  onDelete: (id: string) => void;
+  onSelect: (task: Task) => void;
+  selected?: boolean;
   dragDisabled?: boolean;
   highlighted?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(!!highlighted);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(!!highlighted);
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -65,6 +58,7 @@ export default function TaskRow({
   useEffect(() => {
     if (!highlighted) return;
     rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    onSelect(task);
     const t = setTimeout(() => setFlash(false), 2200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,20 +86,6 @@ export default function TaskRow({
     setBusy(true);
     try {
       const updated = await api.tasks.update(task.id, { status: next });
-      onChange(updated);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function cycleEffort(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (busy) return;
-    const idx = EFFORT_CYCLE.indexOf(task.effort);
-    const next = EFFORT_CYCLE[(idx + 1) % EFFORT_CYCLE.length];
-    setBusy(true);
-    try {
-      const updated = await api.tasks.update(task.id, { effort: next });
       onChange(updated);
     } finally {
       setBusy(false);
@@ -157,14 +137,18 @@ export default function TaskRow({
       }}
       style={style}
       className={`group relative border-b border-border/60 transition-colors ${
-        flash ? "bg-surface-hover" : task.overdue ? "bg-overdue/[0.06] hover:bg-overdue/[0.1]" : "hover:bg-surface-hover"
+        flash || selected
+          ? "bg-surface-hover"
+          : task.overdue
+            ? "bg-overdue/[0.06] hover:bg-overdue/[0.1]"
+            : "hover:bg-surface-hover"
       } ${task.isBlocked ? "opacity-60" : ""}`}
     >
-      <div
-        className="flex items-stretch h-10 cursor-pointer select-none"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <span className="w-[3px] shrink-0" style={{ backgroundColor: edgeColor }} />
+      <div className="flex items-stretch h-10 cursor-pointer select-none" onClick={() => onSelect(task)}>
+        <span
+          className="w-[3px] shrink-0"
+          style={{ backgroundColor: selected ? "var(--accent)" : edgeColor }}
+        />
 
         <span
           {...attributes}
@@ -228,18 +212,6 @@ export default function TaskRow({
           {due?.label ?? ""}
         </span>
       </div>
-
-      {expanded && (
-        <TaskDetail
-          task={task}
-          categories={categories}
-          people={people}
-          allTasks={allTasks}
-          onChange={onChange}
-          onDelete={onDelete}
-          onCycleEffort={cycleEffort}
-        />
-      )}
     </div>
   );
 }

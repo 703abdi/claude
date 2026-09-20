@@ -2,7 +2,7 @@
 
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import type { Task, Category } from "@/lib/types";
+import type { Task } from "@/lib/types";
 import { api } from "@/lib/api-client";
 import TaskRow from "./TaskRow";
 
@@ -10,24 +10,20 @@ export default function TaskSection({
   title,
   subtitle,
   tasks,
-  categories,
-  people,
-  allTasks,
   onChange,
-  onDelete,
   onReorder,
+  onSelect,
+  selectedTaskId,
   emptyState,
   highlightId,
 }: {
   title: string;
   subtitle?: string;
   tasks: Task[];
-  categories: Category[];
-  people: { id: string; name: string }[];
-  allTasks: { id: string; title: string }[];
   onChange: (task: Task) => void;
-  onDelete: (id: string) => void;
   onReorder: (orderedIds: string[]) => void;
+  onSelect: (task: Task) => void;
+  selectedTaskId?: string | null;
   emptyState: string;
   highlightId?: string | null;
 }) {
@@ -67,11 +63,9 @@ export default function TaskSection({
                 <TaskRow
                   key={task.id}
                   task={task}
-                  categories={categories}
-                  people={people}
-                  allTasks={allTasks}
                   onChange={onChange}
-                  onDelete={onDelete}
+                  onSelect={onSelect}
+                  selected={selectedTaskId === task.id}
                   highlighted={highlightId === task.id}
                 />
               ))}

@@ -120,7 +120,7 @@ export default function TaskDetail({
   }
 
   return (
-    <div className="border-t border-border px-4 py-4 space-y-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+    <div className="px-4 py-4 space-y-4" onClick={(e) => e.stopPropagation()}>
       {/* Title / description */}
       <div className="grid gap-2">
         <input

@@ -9,10 +9,14 @@ import FilterBar, { DEFAULT_FILTERS, type Filters } from "./FilterBar";
 import SecondaryFiltersPopover from "./SecondaryFiltersPopover";
 import LeftRail from "./LeftRail";
 import TaskSection from "./TaskSection";
+import TaskDetailPanel from "./TaskDetailPanel";
+import TodayTimeline from "./TodayTimeline";
 import NewTaskForm from "./NewTaskForm";
 import CategoryManager from "./CategoryManager";
 import SuggestionsPanel from "./SuggestionsPanel";
 import { REALISTIC_TODAY_LIMIT_CLIENT } from "@/lib/client-constants";
+
+const EFFORT_CYCLE = ["LOW", "MEDIUM", "HIGH"] as const;
 
 type PersonLite = { id: string; name: string };
 
@@ -36,6 +40,7 @@ export default function TasksDashboard({
   const [completedTasks, setCompletedTasks] = useState<Task[] | null>(null);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [managingCategories, setManagingCategories] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   async function refreshTasks() {
     const [freshActive, freshCompletedCount] = await Promise.all([api.tasks.list(), api.tasks.list({ status: "COMPLETED" })]);
@@ -90,6 +95,7 @@ export default function TasksDashboard({
   function handleDelete(id: string) {
     setTasks((prev) => prev.filter((t) => t.id !== id));
     setCompletedTasks((prev) => (prev ? prev.filter((t) => t.id !== id) : prev));
+    setSelectedTaskId((prev) => (prev === id ? null : prev));
   }
 
   function handleCreated(task: Task) {
@@ -151,6 +157,20 @@ export default function TasksDashboard({
   }, [filtered]);
 
   const taskTitles = useMemo(() => tasks.map((t) => ({ id: t.id, title: t.title })), [tasks]);
+
+  const selectedTask = useMemo(() => {
+    if (!selectedTaskId) return null;
+    return tasks.find((t) => t.id === selectedTaskId) ?? completedTasks?.find((t) => t.id === selectedTaskId) ?? null;
+  }, [selectedTaskId, tasks, completedTasks]);
+
+  async function cycleSelectedEffort(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!selectedTask) return;
+    const idx = EFFORT_CYCLE.indexOf(selectedTask.effort);
+    const next = EFFORT_CYCLE[(idx + 1) % EFFORT_CYCLE.length];
+    const updated = await api.tasks.update(selectedTask.id, { effort: next });
+    handleChange(updated);
+  }
 
   const totalActive = tasks.length;
   const totalAll = totalActive + completedCount;
@@ -223,16 +243,18 @@ export default function TasksDashboard({
           </div>
         )}
 
+        {(filters.bucket === "ALL" || filters.bucket === "TODAY") && buckets.today.length > 0 && (
+          <TodayTimeline tasks={buckets.today} selectedTaskId={selectedTaskId} onSelect={(t) => setSelectedTaskId(t.id)} />
+        )}
+
         {(filters.bucket === "ALL" || filters.bucket === "TODAY") && (
           <TaskSection
             title="Today"
             subtitle={todayOverloaded ? "focus set" : undefined}
             tasks={todayOverloaded ? focusToday : buckets.today}
-            categories={categories}
-            people={people}
-            allTasks={taskTitles}
             onChange={handleChange}
-            onDelete={handleDelete}
+            onSelect={(t) => setSelectedTaskId(t.id)}
+            selectedTaskId={selectedTaskId}
             onReorder={(ids) => handleReorder(buckets.today, ids)}
             emptyState="You're clear for today."
             highlightId={highlightId}
@@ -242,11 +264,9 @@ export default function TasksDashboard({
           <TaskSection
             title="Also pinned to Today"
             tasks={buckets.today.filter((t) => !focusToday.some((f) => f.id === t.id))}
-            categories={categories}
-            people={people}
-            allTasks={taskTitles}
             onChange={handleChange}
-            onDelete={handleDelete}
+            onSelect={(t) => setSelectedTaskId(t.id)}
+            selectedTaskId={selectedTaskId}
             onReorder={(ids) => handleReorder(buckets.today, ids)}
             emptyState=""
             highlightId={highlightId}
@@ -257,11 +277,9 @@ export default function TasksDashboard({
           <TaskSection
             title="Now"
             tasks={buckets.now}
-            categories={categories}
-            people={people}
-            allTasks={taskTitles}
             onChange={handleChange}
-            onDelete={handleDelete}
+            onSelect={(t) => setSelectedTaskId(t.id)}
+            selectedTaskId={selectedTaskId}
             onReorder={(ids) => handleReorder(buckets.now, ids)}
             emptyState="Nothing outstanding in the next 48 hours."
             highlightId={highlightId}
@@ -272,11 +290,9 @@ export default function TasksDashboard({
           <TaskSection
             title="Next"
             tasks={buckets.next}
-            categories={categories}
-            people={people}
-            allTasks={taskTitles}
             onChange={handleChange}
-            onDelete={handleDelete}
+            onSelect={(t) => setSelectedTaskId(t.id)}
+            selectedTaskId={selectedTaskId}
             onReorder={(ids) => handleReorder(buckets.next, ids)}
             emptyState="Nothing outstanding this week."
             highlightId={highlightId}
@@ -287,11 +303,9 @@ export default function TasksDashboard({
           <TaskSection
             title="Later"
             tasks={buckets.later}
-            categories={categories}
-            people={people}
-            allTasks={taskTitles}
             onChange={handleChange}
-            onDelete={handleDelete}
+            onSelect={(t) => setSelectedTaskId(t.id)}
+            selectedTaskId={selectedTaskId}
             onReorder={(ids) => handleReorder(buckets.later, ids)}
             emptyState="Nothing outstanding."
             highlightId={highlightId}
@@ -312,11 +326,9 @@ export default function TasksDashboard({
               <TaskSection
                 title=""
                 tasks={completedTasks}
-                categories={categories}
-                people={people}
-                allTasks={taskTitles}
                 onChange={handleChange}
-                onDelete={handleDelete}
+                onSelect={(t) => setSelectedTaskId(t.id)}
+                selectedTaskId={selectedTaskId}
                 onReorder={() => {}}
                 emptyState="Nothing completed yet."
                 highlightId={highlightId}
@@ -325,6 +337,17 @@ export default function TasksDashboard({
           )}
         </div>
       </div>
+
+      <TaskDetailPanel
+        task={selectedTask}
+        categories={categories}
+        people={people}
+        allTasks={taskTitles}
+        onChange={handleChange}
+        onDelete={handleDelete}
+        onClose={() => setSelectedTaskId(null)}
+        onCycleEffort={cycleSelectedEffort}
+      />
     </div>
   );
 }
