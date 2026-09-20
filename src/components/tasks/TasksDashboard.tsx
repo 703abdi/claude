@@ -170,11 +170,11 @@ export default function TasksDashboard({
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-6">
       <ProgressHeader completed={completedCount} total={totalAll} />
 
-      <div className="mt-6 flex items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start gap-x-2 gap-y-2">
         <FilterBar filters={filters} onChange={setFilters} categories={categories} people={people} />
         <button
           onClick={() => setManagingCategories(true)}
-          className="text-xs text-muted hover:text-foreground shrink-0 mt-0.5"
+          className="text-xs text-muted hover:text-foreground shrink-0 mt-2 ml-auto"
         >
           Manage categories
         </button>

@@ -7,6 +7,7 @@ import type { Task, Category, Effort, TaskStatus } from "@/lib/types";
 import { api } from "@/lib/api-client";
 import StatusDot, { STATUS_LABEL } from "@/components/shared/StatusDot";
 import EffortBars from "@/components/shared/EffortBars";
+import Avatar from "@/components/shared/Avatar";
 import TaskDetail from "./TaskDetail";
 
 const EFFORT_CYCLE: Effort[] = ["LOW", "MEDIUM", "HIGH"];
@@ -123,22 +124,22 @@ export default function TaskCard({
         cardRef.current = node;
       }}
       style={style}
-      className={`group border rounded-lg transition-colors ${
+      className={`group border rounded-xl transition-colors ${
         flash ? "border-foreground bg-surface-2" : "border-border bg-surface"
       } ${task.isBlocked ? "opacity-70" : ""} ${expanded ? "" : "hover:border-muted-2"}`}
     >
       <div
-        className="flex items-center gap-3 px-3 py-3 cursor-pointer select-none"
+        className="flex items-center gap-3 px-4 py-3.5 cursor-pointer select-none"
         onClick={() => setExpanded((v) => !v)}
       >
         <span
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="cursor-grab active:cursor-grabbing text-muted-2 hover:text-muted px-0.5 touch-none"
+          className="hidden sm:flex items-center justify-center cursor-grab active:cursor-grabbing text-muted-2 hover:text-muted touch-none shrink-0 w-4"
           aria-label="Drag to reorder"
         >
-          ⠿
+          <GripIcon className="w-3.5 h-3.5" />
         </span>
 
         <button onClick={cycleStatus} disabled={busy} className="shrink-0" aria-label={`Status: ${STATUS_LABEL[task.status]}`}>
@@ -148,57 +149,75 @@ export default function TaskCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span
-              className={`font-bold text-[15px] leading-tight truncate ${
+              className={`font-semibold text-[15px] leading-tight truncate ${
                 task.status === "COMPLETED" ? "line-through text-muted" : ""
               }`}
             >
               {task.title}
             </span>
             {task.followUpRequired && task.status !== "COMPLETED" && (
-              <span className="text-[10px] uppercase tracking-wide text-status-yellow shrink-0">
-                follow-up
+              <span className="text-[10px] font-medium uppercase tracking-wide text-status-yellow shrink-0">
+                Follow-up
               </span>
             )}
             {task.isBlocked && (
-              <span className="text-[10px] uppercase tracking-wide text-muted shrink-0">blocked</span>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-muted shrink-0">Blocked</span>
             )}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
             {task.category && (
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: task.category.color }} />
                 {task.category.name}
               </span>
             )}
             {due && (
-              <span className={due.overdue ? "text-status-red font-medium" : ""}>
-                {due.overdue ? "Overdue · " : ""}
-                {due.label}
-                {task.dueTime ? ` ${task.dueTime}` : ""}
-              </span>
+              <>
+                {task.category && <Dot />}
+                <span className={due.overdue ? "text-status-red font-medium" : ""}>
+                  {due.overdue ? "Overdue · " : ""}
+                  {due.label}
+                  {task.dueTime ? ` ${task.dueTime}` : ""}
+                </span>
+              </>
             )}
             {task.steps.length > 0 && (
-              <span>
-                {doneSteps}/{task.steps.length} steps
-              </span>
+              <>
+                {(task.category || due) && <Dot />}
+                <span>
+                  {doneSteps}/{task.steps.length} steps
+                </span>
+              </>
             )}
-            {task.people.length > 0 && <span>{task.people.map((p) => p.name).join(", ")}</span>}
           </div>
         </div>
+
+        {task.people.length > 0 && (
+          <span className="flex items-center -space-x-1.5 shrink-0">
+            {task.people.slice(0, 2).map((p) => (
+              <Avatar key={p.id} name={p.name} size="sm" className="ring-2 ring-surface" />
+            ))}
+            {task.people.length > 2 && (
+              <span className="w-8 h-8 rounded-full ring-2 ring-surface bg-surface-2 border border-border flex items-center justify-center text-[10px] font-semibold text-muted">
+                +{task.people.length - 2}
+              </span>
+            )}
+          </span>
+        )}
 
         <button
           onClick={togglePinnedToday}
           title={task.pinnedToday ? "Remove from Today" : "Pin to Today"}
-          className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded border ${
+          className={`shrink-0 text-[11px] font-medium px-2 py-1 rounded-md border transition-opacity ${
             task.pinnedToday
-              ? "border-foreground text-foreground"
+              ? "border-foreground/30 bg-surface-2 text-foreground"
               : "border-border text-muted-2 opacity-0 group-hover:opacity-100"
-          } transition-opacity`}
+          }`}
         >
           Today
         </button>
 
-        <EffortBars effort={task.effort} onClick={() => {}} className="pointer-events-none" />
+        <EffortBars effort={task.effort} onClick={() => {}} className="pointer-events-none shrink-0" />
       </div>
 
       {expanded && (
@@ -213,5 +232,22 @@ export default function TaskCard({
         />
       )}
     </div>
+  );
+}
+
+function Dot() {
+  return <span className="w-0.5 h-0.5 rounded-full bg-muted-2" />;
+}
+
+function GripIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className={className}>
+      <circle cx="5" cy="3" r="1.2" />
+      <circle cx="11" cy="3" r="1.2" />
+      <circle cx="5" cy="8" r="1.2" />
+      <circle cx="11" cy="8" r="1.2" />
+      <circle cx="5" cy="13" r="1.2" />
+      <circle cx="11" cy="13" r="1.2" />
+    </svg>
   );
 }

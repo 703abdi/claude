@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Task, Category } from "@/lib/types";
 import { api } from "@/lib/api-client";
+import Avatar from "@/components/shared/Avatar";
 
 export default function TaskDetail({
   task,
@@ -330,11 +331,12 @@ export default function TaskDetail({
               <button
                 key={p.id}
                 onClick={() => togglePerson(p.id)}
-                className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                  active ? "border-foreground text-foreground" : "border-border text-muted"
+                className={`inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border transition-colors ${
+                  active ? "border-foreground/40 bg-surface-2 text-foreground" : "border-border text-muted"
                 }`}
               >
-                {p.name}
+                <Avatar name={p.name} size="sm" className="w-5 h-5 text-[9px]" />
+                <span className="text-xs">{p.name}</span>
               </button>
             );
           })}
