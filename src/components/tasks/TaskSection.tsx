@@ -4,7 +4,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEn
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import type { Task, Category } from "@/lib/types";
 import { api } from "@/lib/api-client";
-import TaskCard from "./TaskCard";
+import TaskRow from "./TaskRow";
 
 export default function TaskSection({
   title,
@@ -48,23 +48,23 @@ export default function TaskSection({
   }
 
   return (
-    <section className="mb-8">
+    <section className="mb-6">
       {title && (
-        <div className="flex items-baseline gap-2 mb-2.5">
-          <h2 className="text-sm font-bold uppercase tracking-wide">{title}</h2>
-          <span className="text-xs text-muted-2">{tasks.length}</span>
-          {subtitle && <span className="text-xs text-muted ml-1">{subtitle}</span>}
+        <div className="flex items-baseline gap-2 mb-1.5 px-0.5">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted">{title}</h2>
+          <span className="font-mono text-[11px] text-muted-2">{tasks.length}</span>
+          {subtitle && <span className="text-[11px] text-muted-2 ml-1">{subtitle}</span>}
         </div>
       )}
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-muted-2 py-3">{emptyState}</p>
+        <p className="text-sm text-muted-2 py-3 px-0.5">{emptyState}</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
+            <div className="border border-border rounded overflow-hidden">
               {tasks.map((task) => (
-                <TaskCard
+                <TaskRow
                   key={task.id}
                   task={task}
                   categories={categories}

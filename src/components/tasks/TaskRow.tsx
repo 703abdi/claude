@@ -1,0 +1,266 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { Task, Category, Effort, TaskStatus } from "@/lib/types";
+import { api } from "@/lib/api-client";
+import TaskDetail from "./TaskDetail";
+
+const EFFORT_CYCLE: Effort[] = ["LOW", "MEDIUM", "HIGH"];
+const STATUS_CYCLE: TaskStatus[] = ["NOT_STARTED", "IN_PROGRESS", "WAITING", "COMPLETED"];
+
+const STATUS_TAG: Record<TaskStatus, string> = {
+  NOT_STARTED: "TODO",
+  IN_PROGRESS: "WIP",
+  WAITING: "WAIT",
+  COMPLETED: "DONE",
+};
+
+function daysBetween(a: Date, b: Date) {
+  const startA = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const startB = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((startB.getTime() - startA.getTime()) / 86400000);
+}
+
+function formatDue(dueDate: string | null, dueTime: string | null, overdue: boolean) {
+  if (!dueDate) return null;
+  const d = new Date(dueDate);
+  const now = new Date();
+  const diffDays = daysBetween(now, d);
+  let label: string;
+  if (diffDays === 0) label = dueTime ? dueTime : "today";
+  else if (diffDays === 1) label = "tomorrow";
+  else if (diffDays === -1) label = "1d late";
+  else if (overdue) label = `${Math.abs(diffDays)}d late`;
+  else
+    label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" }).toLowerCase();
+  return { label, overdue, dueToday: diffDays === 0 };
+}
+
+export default function TaskRow({
+  task,
+  categories,
+  people,
+  allTasks,
+  onChange,
+  onDelete,
+  dragDisabled,
+  highlighted,
+}: {
+  task: Task;
+  categories: Category[];
+  people: { id: string; name: string }[];
+  allTasks: { id: string; title: string }[];
+  onChange: (task: Task) => void;
+  onDelete: (id: string) => void;
+  dragDisabled?: boolean;
+  highlighted?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(!!highlighted);
+  const [busy, setBusy] = useState(false);
+  const [flash, setFlash] = useState(!!highlighted);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!highlighted) return;
+    rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setFlash(false), 2200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    disabled: dragDisabled,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const due = formatDue(task.dueDate, task.dueTime, task.overdue);
+  const doneSteps = task.steps.filter((s) => s.done).length;
+
+  async function cycleStatus(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (busy) return;
+    const idx = STATUS_CYCLE.indexOf(task.status);
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    setBusy(true);
+    try {
+      const updated = await api.tasks.update(task.id, { status: next });
+      onChange(updated);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cycleEffort(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (busy) return;
+    const idx = EFFORT_CYCLE.indexOf(task.effort);
+    const next = EFFORT_CYCLE[(idx + 1) % EFFORT_CYCLE.length];
+    setBusy(true);
+    try {
+      const updated = await api.tasks.update(task.id, { effort: next });
+      onChange(updated);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function togglePinnedToday(e: React.MouseEvent) {
+    e.stopPropagation();
+    setBusy(true);
+    try {
+      const updated = await api.tasks.update(task.id, { pinnedToday: !task.pinnedToday });
+      onChange(updated);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function markComplete(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (busy || task.status === "COMPLETED") return;
+    setBusy(true);
+    try {
+      const updated = await api.tasks.update(task.id, { status: "COMPLETED" });
+      onChange(updated);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Edge bar: overdue/due-today (semantic) takes priority over category (identity)
+  const edgeColor = task.overdue
+    ? "var(--overdue)"
+    : due?.dueToday
+      ? "var(--due-today)"
+      : task.category?.color || "var(--border)";
+
+  const metaBits: string[] = [];
+  if (task.category) metaBits.push(task.category.name.toLowerCase());
+  if (task.steps.length > 0) metaBits.push(`${doneSteps}/${task.steps.length}`);
+  if (task.people.length > 0) metaBits.push(task.people.map((p) => p.name.toLowerCase()).join("+"));
+  if (task.followUpRequired && task.status !== "COMPLETED") metaBits.push("follow-up");
+  if (task.isBlocked) metaBits.push("blocked");
+
+  return (
+    <div
+      ref={(node) => {
+        setNodeRef(node);
+        rowRef.current = node;
+      }}
+      style={style}
+      className={`group relative border-b border-border/60 transition-colors ${
+        flash ? "bg-surface-hover" : task.overdue ? "bg-overdue/[0.06] hover:bg-overdue/[0.1]" : "hover:bg-surface-hover"
+      } ${task.isBlocked ? "opacity-60" : ""}`}
+    >
+      <div
+        className="flex items-stretch h-10 cursor-pointer select-none"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <span className="w-[3px] shrink-0" style={{ backgroundColor: edgeColor }} />
+
+        <span
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+          className="hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-muted-2 hover:text-muted touch-none shrink-0 w-4 transition-opacity"
+          aria-label="Drag to reorder"
+        >
+          <GripIcon className="w-3 h-3" />
+        </span>
+
+        <button
+          onClick={cycleStatus}
+          disabled={busy}
+          className="shrink-0 w-11 flex items-center px-1.5 font-mono text-[10px] tracking-wide text-muted-2 hover:text-muted"
+        >
+          {STATUS_TAG[task.status]}
+        </button>
+
+        <span
+          className={`min-w-0 flex-1 flex items-center text-[13.5px] font-medium truncate pr-2 ${
+            task.status === "COMPLETED" ? "line-through text-muted" : "text-foreground"
+          }`}
+        >
+          {task.title}
+        </span>
+
+        {metaBits.length > 0 && (
+          <span className="hidden md:flex items-center font-mono text-[11px] text-muted-2 opacity-70 shrink-0 px-2 truncate max-w-[220px]">
+            {metaBits.join(" · ")}
+          </span>
+        )}
+
+        {/* hover-revealed actions */}
+        <span className="hidden sm:flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity px-1">
+          <button
+            onClick={togglePinnedToday}
+            title={task.pinnedToday ? "Remove from Today" : "Pin to Today"}
+            className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+              task.pinnedToday ? "border-accent/40 text-accent" : "border-border text-muted-2 hover:text-muted"
+            }`}
+          >
+            TODAY
+          </button>
+          {task.status !== "COMPLETED" && (
+            <button
+              onClick={markComplete}
+              title="Mark complete"
+              className="w-5 h-5 flex items-center justify-center rounded border border-border text-muted-2 hover:text-accent hover:border-accent/40"
+            >
+              <CheckIcon className="w-3 h-3" />
+            </button>
+          )}
+        </span>
+
+        <span
+          className={`shrink-0 w-16 text-right font-mono text-[11px] pr-3 ${
+            task.overdue ? "text-overdue font-semibold" : due?.dueToday ? "text-due-today font-semibold" : "text-muted-2"
+          }`}
+        >
+          {due?.label ?? ""}
+        </span>
+      </div>
+
+      {expanded && (
+        <TaskDetail
+          task={task}
+          categories={categories}
+          people={people}
+          allTasks={allTasks}
+          onChange={onChange}
+          onDelete={onDelete}
+          onCycleEffort={cycleEffort}
+        />
+      )}
+    </div>
+  );
+}
+
+function GripIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className={className}>
+      <circle cx="5" cy="3" r="1.2" />
+      <circle cx="11" cy="3" r="1.2" />
+      <circle cx="5" cy="8" r="1.2" />
+      <circle cx="11" cy="8" r="1.2" />
+      <circle cx="5" cy="13" r="1.2" />
+      <circle cx="11" cy="13" r="1.2" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className}>
+      <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
