@@ -11,6 +11,7 @@ import LeftRail from "./LeftRail";
 import TaskSection from "./TaskSection";
 import TaskDetailPanel from "./TaskDetailPanel";
 import TodayTimeline from "./TodayTimeline";
+import StatusBar from "./StatusBar";
 import NewTaskForm from "./NewTaskForm";
 import CategoryManager from "./CategoryManager";
 import SuggestionsPanel from "./SuggestionsPanel";
@@ -157,6 +158,8 @@ export default function TasksDashboard({
   }, [filtered]);
 
   const taskTitles = useMemo(() => tasks.map((t) => ({ id: t.id, title: t.title })), [tasks]);
+  const overdueCount = useMemo(() => tasks.filter((t) => t.overdue).length, [tasks]);
+  const waitingCount = useMemo(() => tasks.filter((t) => t.status === "WAITING").length, [tasks]);
 
   const selectedTask = useMemo(() => {
     if (!selectedTaskId) return null;
@@ -189,6 +192,7 @@ export default function TasksDashboard({
   }, [todayOverloaded, buckets.today]);
 
   return (
+    <>
     <div className="flex items-start">
       <LeftRail
         tasks={tasks}
@@ -314,7 +318,7 @@ export default function TasksDashboard({
 
         {totalActive === 0 && <p className="text-sm text-muted-2 py-6 text-center">Nothing outstanding.</p>}
 
-        <div className="mt-8 border-t border-border pt-4 pb-16 lg:pb-8">
+        <div className="mt-8 border-t border-border pt-4 pb-16 lg:pb-14">
           <button
             onClick={loadCompleted}
             className="font-mono text-[11px] font-medium text-muted hover:text-foreground uppercase tracking-wide"
@@ -349,5 +353,13 @@ export default function TasksDashboard({
         onCycleEffort={cycleSelectedEffort}
       />
     </div>
+    <StatusBar
+      total={totalActive}
+      completed={completedCount}
+      totalAll={totalAll}
+      overdue={overdueCount}
+      waiting={waitingCount}
+    />
+    </>
   );
 }

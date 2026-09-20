@@ -49,7 +49,7 @@ export default function LeftRail({
 
   if (collapsed) {
     return (
-      <div className="hidden lg:flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border py-3 sticky top-14 h-[calc(100vh-3.5rem)]">
+      <div className="hidden lg:flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border py-3 sticky top-14 h-[calc(100vh-3.5rem-2rem)]">
         <button
           onClick={() => setCollapsed(false)}
           className="w-8 h-8 flex items-center justify-center rounded text-muted-2 hover:text-foreground hover:bg-surface-hover"
@@ -62,7 +62,7 @@ export default function LeftRail({
   }
 
   return (
-    <div className="hidden lg:flex w-[220px] shrink-0 flex-col border-r border-border sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
+    <div className="hidden lg:flex w-[220px] shrink-0 flex-col border-r border-border sticky top-14 h-[calc(100vh-3.5rem-2rem)] overflow-y-auto">
       <div className="flex items-center justify-between px-3 pt-3 pb-1">
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted-2">Views</span>
         <button

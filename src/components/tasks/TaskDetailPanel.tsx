@@ -42,7 +42,7 @@ export default function TaskDetailPanel({
       </div>
 
       {/* desktop: docked right panel */}
-      <div className="hidden lg:block w-[360px] shrink-0 border-l border-border sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
+      <div className="hidden lg:block w-[360px] shrink-0 border-l border-border sticky top-14 h-[calc(100vh-3.5rem-2rem)] overflow-y-auto">
         <Header onClose={onClose} />
         <TaskDetail
           task={task}
