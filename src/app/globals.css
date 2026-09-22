@@ -10,7 +10,7 @@
   /* Text — three levels only */
   --foreground: #ededef;
   --muted: #8a8a93;
-  --muted-2: #5a5a62;
+  --muted-2: #82828e;
 
   --border: #242428;
 
@@ -123,6 +123,39 @@ body {
 }
 .animate-slide-up {
   animation: slide-up 0.18s ease-out;
+}
+
+@keyframes complete-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-complete-pop {
+  animation: complete-pop 0.18s ease-out;
+}
+
+@keyframes complete-fade {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+.animate-complete-fade {
+  animation: complete-fade 0.16s ease-out forwards;
+  animation-delay: 0.14s;
 }
 
 @media (prefers-reduced-motion: reduce) {

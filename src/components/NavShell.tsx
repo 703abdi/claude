@@ -29,7 +29,7 @@ export default function NavShell({
   return (
     <div className="flex flex-col min-h-screen">
       {/* Desktop top bar */}
-      <header className="hidden md:flex items-center justify-between border-b border-border px-6 py-3 sticky top-0 bg-background/95 backdrop-blur z-40">
+      <header className="hidden md:flex items-center justify-between border-b border-border px-6 py-3 sticky top-0 bg-background z-40">
         <div className="flex items-center gap-8">
           <span className="font-bold text-sm tracking-tight">abdi&apos;s os</span>
           <nav className="flex items-center gap-1">
@@ -67,7 +67,7 @@ export default function NavShell({
       </header>
 
       {/* Mobile top bar */}
-      <header className="md:hidden flex items-center justify-between border-b border-border px-4 py-3 sticky top-0 bg-background/95 backdrop-blur z-40">
+      <header className="md:hidden flex items-center justify-between border-b border-border px-4 py-3 sticky top-0 bg-background z-40">
         <span className="font-bold text-sm tracking-tight">abdi&apos;s os</span>
         <div className="flex items-center gap-3">
           <Link href="/settings" className="text-muted hover:text-foreground transition-colors" aria-label="Settings">
@@ -82,7 +82,7 @@ export default function NavShell({
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-border bg-background/95 backdrop-blur z-40 flex items-stretch pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-border bg-background z-40 flex items-stretch pb-[env(safe-area-inset-bottom)]">
         {NAV_ITEMS.map((item) => {
           const active = pathname.startsWith(item.href);
           return (

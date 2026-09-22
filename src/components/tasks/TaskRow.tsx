@@ -55,6 +55,7 @@ export default function TaskRow({
 }) {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(!!highlighted);
+  const [completing, setCompleting] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -92,11 +93,31 @@ export default function TaskRow({
   const due = formatDue(task.dueDate, task.dueTime, task.overdue);
   const doneSteps = task.steps.filter((s) => s.done).length;
 
+  async function completeWithAnimation() {
+    if (busy || completing || task.status === "COMPLETED") return;
+    const reducedMotion =
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setCompleting(true);
+    if (!reducedMotion) await new Promise((r) => setTimeout(r, 300));
+    setBusy(true);
+    try {
+      const updated = await api.tasks.update(task.id, { status: "COMPLETED" });
+      onChange(updated);
+    } finally {
+      setBusy(false);
+      setCompleting(false);
+    }
+  }
+
   async function cycleStatus(e: React.MouseEvent) {
     e.stopPropagation();
     if (busy) return;
     const idx = STATUS_CYCLE.indexOf(task.status);
     const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    if (next === "COMPLETED") {
+      completeWithAnimation();
+      return;
+    }
     setBusy(true);
     try {
       const updated = await api.tasks.update(task.id, { status: next });
@@ -117,16 +138,9 @@ export default function TaskRow({
     }
   }
 
-  async function markComplete(e: React.MouseEvent) {
+  function markComplete(e: React.MouseEvent) {
     e.stopPropagation();
-    if (busy || task.status === "COMPLETED") return;
-    setBusy(true);
-    try {
-      const updated = await api.tasks.update(task.id, { status: "COMPLETED" });
-      onChange(updated);
-    } finally {
-      setBusy(false);
-    }
+    completeWithAnimation();
   }
 
   function onTouchStart(e: React.TouchEvent) {
@@ -155,7 +169,7 @@ export default function TaskRow({
       e.preventDefault();
       justSwiped.current = true;
       if (swipeX > SWIPE_COMPLETE_THRESHOLD) {
-        markComplete({ stopPropagation() {} } as React.MouseEvent);
+        completeWithAnimation();
       }
     }
     setSwiping(false);
@@ -191,7 +205,9 @@ export default function TaskRow({
           : task.overdue
             ? "bg-overdue/[0.06] hover:bg-overdue/[0.1]"
             : "hover:bg-surface-hover"
-      } ${task.isBlocked ? "opacity-60" : ""} ${cursor ? "ring-1 ring-inset ring-muted-2" : ""}`}
+      } ${task.isBlocked ? "opacity-60" : ""} ${cursor ? "ring-1 ring-inset ring-muted-2" : ""} ${
+        completing ? "animate-complete-fade pointer-events-none" : ""
+      }`}
     >
       {swipeX > 0 && (
         <div
@@ -206,7 +222,7 @@ export default function TaskRow({
         className="relative flex items-stretch h-14 md:h-10 cursor-pointer select-none"
         style={{
           transform: swipeX ? `translateX(${swipeX}px)` : undefined,
-          transition: swiping ? "none" : "transform 0.2s ease-out",
+          transition: swiping ? "none" : "transform 0.18s ease-out",
           touchAction: "pan-y",
         }}
         onClick={() => {
@@ -222,7 +238,7 @@ export default function TaskRow({
       >
         <span
           className="w-[3px] shrink-0"
-          style={{ backgroundColor: selected ? "var(--accent)" : edgeColor }}
+          style={{ backgroundColor: completing ? "var(--accent)" : selected ? "var(--accent)" : edgeColor }}
         />
 
         <span
@@ -240,12 +256,16 @@ export default function TaskRow({
           disabled={busy}
           className="shrink-0 w-11 flex items-center px-1.5 font-mono text-[10px] tracking-wide text-muted-2 hover:text-muted"
         >
-          {STATUS_TAG[task.status]}
+          {completing ? (
+            <CheckIcon className="w-3.5 h-3.5 text-accent animate-complete-pop" />
+          ) : (
+            STATUS_TAG[task.status]
+          )}
         </button>
 
         <span
-          className={`min-w-0 flex-1 flex items-center text-[13.5px] font-medium truncate pr-2 ${
-            task.status === "COMPLETED" ? "line-through text-muted" : "text-foreground"
+          className={`min-w-0 flex-1 flex items-center text-[13.5px] font-medium truncate pr-2 transition-colors ${
+            task.status === "COMPLETED" || completing ? "line-through text-muted" : "text-foreground"
           }`}
         >
           {task.title}
