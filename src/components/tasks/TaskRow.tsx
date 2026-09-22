@@ -55,7 +55,15 @@ export default function TaskRow({
 }) {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(!!highlighted);
+  const [swipeX, setSwipeX] = useState(0);
+  const [swiping, setSwiping] = useState(false);
   const rowRef = useRef<HTMLDivElement | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeAxis = useRef<"horizontal" | "vertical" | null>(null);
+  const justSwiped = useRef(false);
+
+  const SWIPE_COMPLETE_THRESHOLD = 90;
+  const SWIPE_MAX = 140;
 
   useEffect(() => {
     if (!highlighted) return;
@@ -121,6 +129,41 @@ export default function TaskRow({
     }
   }
 
+  function onTouchStart(e: React.TouchEvent) {
+    if (task.status === "COMPLETED") return;
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+    swipeAxis.current = null;
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (!touchStart.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    if (!swipeAxis.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      swipeAxis.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+    }
+    if (swipeAxis.current === "horizontal") {
+      setSwiping(true);
+      setSwipeX(Math.max(0, Math.min(SWIPE_MAX, dx)));
+    }
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    if (swipeAxis.current === "horizontal") {
+      e.preventDefault();
+      justSwiped.current = true;
+      if (swipeX > SWIPE_COMPLETE_THRESHOLD) {
+        markComplete({ stopPropagation() {} } as React.MouseEvent);
+      }
+    }
+    setSwiping(false);
+    setSwipeX(0);
+    touchStart.current = null;
+    swipeAxis.current = null;
+  }
+
   // Edge bar: overdue/due-today (semantic) takes priority over category (identity)
   const edgeColor = task.overdue
     ? "var(--overdue)"
@@ -142,7 +185,7 @@ export default function TaskRow({
         rowRef.current = node;
       }}
       style={style}
-      className={`group relative border-b border-border/60 transition-colors ${
+      className={`group relative border-b border-border/60 transition-colors overflow-hidden ${
         flash || selected
           ? "bg-surface-hover"
           : task.overdue
@@ -150,7 +193,33 @@ export default function TaskRow({
             : "hover:bg-surface-hover"
       } ${task.isBlocked ? "opacity-60" : ""} ${cursor ? "ring-1 ring-inset ring-muted-2" : ""}`}
     >
-      <div className="flex items-stretch h-10 cursor-pointer select-none" onClick={() => onSelect(task)}>
+      {swipeX > 0 && (
+        <div
+          className="absolute inset-y-0 left-0 flex items-center pl-3 text-background font-mono text-[10px] font-semibold tracking-wide"
+          style={{ width: swipeX, backgroundColor: "var(--accent)", opacity: swipeX / SWIPE_COMPLETE_THRESHOLD }}
+        >
+          DONE
+        </div>
+      )}
+
+      <div
+        className="relative flex items-stretch h-14 md:h-10 cursor-pointer select-none"
+        style={{
+          transform: swipeX ? `translateX(${swipeX}px)` : undefined,
+          transition: swiping ? "none" : "transform 0.2s ease-out",
+          touchAction: "pan-y",
+        }}
+        onClick={() => {
+          if (justSwiped.current) {
+            justSwiped.current = false;
+            return;
+          }
+          onSelect(task);
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <span
           className="w-[3px] shrink-0"
           style={{ backgroundColor: selected ? "var(--accent)" : edgeColor }}
