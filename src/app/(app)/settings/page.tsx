@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import MorningBriefSettings from "@/components/settings/MorningBriefSettings";
 import ChatGPTUploader from "@/components/settings/ChatGPTUploader";
+import ClaudeUploader from "@/components/settings/ClaudeUploader";
 import ProcessContextButton from "@/components/settings/ProcessContextButton";
 import DailyRefreshButton from "@/components/settings/DailyRefreshButton";
 
@@ -13,6 +14,7 @@ export default async function SettingsPage() {
   const syncSources = await prisma.syncSource.findMany();
   const obsidian = syncSources.find((s) => s.type === "OBSIDIAN");
   const chatgpt = syncSources.find((s) => s.type === "CHATGPT");
+  const claude = syncSources.find((s) => s.type === "CLAUDE");
   const recentContext = await prisma.contextItem.findMany({
     orderBy: { timestamp: "desc" },
     take: 15,
@@ -22,6 +24,7 @@ export default async function SettingsPage() {
   const anthropicConfigured = !!process.env.ANTHROPIC_API_KEY;
   const obsidianTokenConfigured = !!process.env.OBSIDIAN_SYNC_TOKEN;
   const chatgptTokenConfigured = !!process.env.CHATGPT_CONNECTOR_TOKEN;
+  const claudeTokenConfigured = !!process.env.CLAUDE_CONNECTOR_TOKEN;
   const ttsConfigured = !!process.env.TTS_PROVIDER;
   const cronConfigured = !!process.env.CRON_SECRET;
 
@@ -84,6 +87,22 @@ export default async function SettingsPage() {
         {!chatgptTokenConfigured && (
           <p className="text-xs text-muted-2 mt-2">
             (Optional) Set CHATGPT_CONNECTOR_TOKEN to also enable the automated bearer-token ingestion endpoint for
+            future tooling — the manual upload above works without it.
+          </p>
+        )}
+      </section>
+
+      <section className="border border-border bg-surface rounded-lg p-4">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-bold uppercase tracking-wide">Claude context</h2>
+          <StatusBadge configured lastSyncAt={claude?.lastSyncAt ?? null} />
+        </div>
+        <div className="mt-2">
+          <ClaudeUploader />
+        </div>
+        {!claudeTokenConfigured && (
+          <p className="text-xs text-muted-2 mt-2">
+            (Optional) Set CLAUDE_CONNECTOR_TOKEN to also enable the automated bearer-token ingestion endpoint for
             future tooling — the manual upload above works without it.
           </p>
         )}

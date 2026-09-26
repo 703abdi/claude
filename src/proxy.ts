@@ -8,7 +8,13 @@ const PUBLIC_PREFIXES = ["/login", "/api/auth/login"];
 // with a bearer token (see src/lib/sync-auth.ts), not the session cookie.
 // Sibling paths like /api/connectors/chatgpt/upload are NOT exempted here —
 // those are browser-only and must go through the normal session check.
-const PUBLIC_EXACT = ["/api/sync/obsidian", "/api/connectors/chatgpt", "/api/cron/daily-refresh", "/api/setup"];
+const PUBLIC_EXACT = [
+  "/api/sync/obsidian",
+  "/api/connectors/chatgpt",
+  "/api/connectors/claude",
+  "/api/cron/daily-refresh",
+  "/api/setup",
+];
 
 async function isValidSession(token: string | undefined) {
   if (!token) return false;

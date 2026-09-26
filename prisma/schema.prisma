@@ -219,6 +219,7 @@ model CalendarEvent {
 enum ContextSourceType {
   OBSIDIAN
   CHATGPT
+  CLAUDE
   MANUAL
   TASK
   CALENDAR

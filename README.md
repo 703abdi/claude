@@ -26,7 +26,7 @@ what's here and how to run it.
 ## Architecture
 
 ```
-EXTERNAL SOURCES (Obsidian, ChatGPT export)
+EXTERNAL SOURCES (Obsidian, ChatGPT export, Claude export)
         ↓ authenticated ingestion endpoints
    CONTEXT ENGINE (src/lib/context/)
         ↓ normalize → extract (Claude, or graceful no-op)
@@ -86,6 +86,7 @@ See `.env.example` for the full list with comments. Summary:
 | `TTS_PROVIDER` (`openai`/`elevenlabs`) + matching API key | no | Enables morning brief audio |
 | `OBSIDIAN_SYNC_TOKEN` | no | Enables the local Obsidian sync agent |
 | `CHATGPT_CONNECTOR_TOKEN` | no | Enables the bearer-token ChatGPT ingestion endpoint (the manual upload in Settings works without it) |
+| `CLAUDE_CONNECTOR_TOKEN` | no | Enables the bearer-token Claude ingestion endpoint (the manual upload in Settings works without it) |
 | `CRON_SECRET` | no | Enables the daily-refresh Vercel Cron job |
 
 ## Deploying to Vercel
@@ -135,6 +136,16 @@ Settings → ChatGPT context. A bearer-token batch endpoint
 (`/api/connectors/chatgpt`) also exists for future automation if OpenAI
 ever exposes a live API, or for a script you write yourself.
 
+## The Claude connector
+
+Same constraint, same shape of workaround: Anthropic has no public API
+for pulling a user's own Claude conversation history either. Export your
+data from claude.ai (Settings → Account → Export data), unzip it, and
+upload the `conversations.json` file in Settings → Claude context. A
+bearer-token batch endpoint (`/api/connectors/claude`) exists for the
+same reason as the ChatGPT one — future automation, or a script you
+write yourself.
+
 ## Project structure
 
 ```
@@ -156,6 +167,6 @@ own credentials:
 
 - **Commitment/blocker extraction & AI-composed briefs**: need `ANTHROPIC_API_KEY`. Without it, context is still ingested and stored, and a deterministic rule-based brief/suggestion engine keeps running.
 - **Morning brief audio**: needs `TTS_PROVIDER` + an API key. Without it, the brief is text-only with sentence-by-sentence display (no fake "audio player" shown).
-- **Obsidian / ChatGPT sync**: need their respective tokens/exports as described above.
+- **Obsidian / ChatGPT / Claude sync**: need their respective tokens/exports as described above.
 
 No feature pretends to work when it doesn't — every degraded state says so in the UI.
