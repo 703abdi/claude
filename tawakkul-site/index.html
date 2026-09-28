@@ -115,21 +115,11 @@
   .icon svg { width: 22px; height: 22px; }
 
   /* About */
-  .about { display: grid; grid-template-columns: .8fr 1.2fr; gap: 56px; align-items: center; }
+  .about > div { max-width: 760px; }
   .about .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 26px; }
   .fact { border-left: 2px solid var(--gold); padding-left: 14px; }
   .fact b { display: block; font-family: Fraunces, Georgia, serif; font-size: 1.5rem; }
   .fact span { font-size: .88rem; color: var(--muted); }
-  .portrait {
-    aspect-ratio: 4 / 5; border-radius: 20px; border: 1px solid var(--line);
-    background: linear-gradient(160deg, #1b2e27, #0f1a16);
-    display: grid; place-items: center; text-align: center; color: var(--muted); padding: 24px;
-  }
-  .portrait svg { width: 90px; height: 90px; opacity: .9; margin-bottom: 12px; }
-  @media (max-width: 900px) {
-    .about { grid-template-columns: 1fr; gap: 32px; }
-    .portrait { aspect-ratio: 16 / 9; }
-  }
   @media (max-width: 520px) { .about .facts { grid-template-columns: 1fr; } }
 
   /* Curriculum */
@@ -281,17 +271,9 @@
   <!-- About -->
   <section id="about">
     <div class="wrap about">
-      <div class="portrait">
-        <!-- Replace this block with <img src="abdi.jpg" alt="Abdi"> once you have a photo -->
-        <div>
-          <svg viewBox="0 0 24 24" fill="none" stroke="#d9b45a" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-          <div>Abdi · Founder</div>
-        </div>
-      </div>
       <div>
-        <span class="eyebrow">Meet your mentor</span>
-        <h2>Abdi trades full time from Madinah.</h2>
-        <p>He's been trading for five years, and he's made the same mistakes you're making: overtrading, holding losers because they "should" come back, and switching strategies every month.</p>
+        <h2>Meet your mentor</h2>
+        <p>Abdi has been trading for five years, and he's made the same mistakes you're making: overtrading, holding losers because they "should" come back, and switching strategies every month.</p>
         <p class="muted">Tawakkul Trading is what he wished he'd had. It's one specific strategy taught end to end, from reading a single candle to executing a full trade plan, with Abdi trading live alongside you. He doesn't sell hype and he doesn't promise returns. Rizq is from Allah. Our job is to make sure you do your part properly.</p>
         <div class="facts">
           <div class="fact"><b>5 years</b><span>trading experience</span></div>
@@ -436,6 +418,7 @@
     </div>
     <p class="disclaimer">
       Tawakkul Trading provides trading education only. Nothing on this website or in our programs is financial advice or a recommendation to buy or sell any security. Trading involves substantial risk and you can lose some or all of your capital. Past performance, including any trades shown live, does not guarantee future results. Only trade with money you can afford to lose.
+      <br><br>Refund policy: No refunds, except at the owner's sole discretion. Once payment is made, all sales are final.
       <br><br>© <span id="year">2026</span> Tawakkul Trading. All rights reserved.
     </p>
   </div>
