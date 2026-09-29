@@ -58,3 +58,72 @@ export type Task = {
   overdue: boolean;
   isBlocked: boolean;
 };
+
+export type TaskWithDate = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  dueDate: string;
+  dueTime: string | null;
+  category: Category | null;
+};
+
+export type TranscriptSegment = { start: number; end: number; text: string };
+
+export type MorningBrief = {
+  id: string;
+  date: string;
+  textContent: string;
+  transcriptSegments: TranscriptSegment[];
+  audioDuration: number | null;
+  hasAudio: boolean;
+  voiceStyle: string | null;
+  ttsProvider: string | null;
+  ttsStatus: string;
+  ttsError: string | null;
+  lastPlaybackPosition: number;
+  createdAt: string;
+};
+
+export type SuggestionType =
+  | "UNFINISHED_STEP"
+  | "UNFINISHED_FOLLOW_UP"
+  | "ABANDONED_TASK"
+  | "BLOCKER"
+  | "OVERDUE"
+  | "PERSON_FOLLOW_UP"
+  | "MISSING_TASK"
+  | "OPPORTUNITY"
+  | "PRIORITY_CHANGE"
+  | "CROSS_SOURCE_LINK";
+
+export type Suggestion = {
+  id: string;
+  type: SuggestionType;
+  title: string;
+  body: string;
+  reason: string;
+  confidence: number;
+  status: string;
+  createdAt: string;
+  relatedTask: { id: string; title: string; status: TaskStatus } | null;
+  relatedPerson: { id: string; name: string } | null;
+  relatedContext: { id: string; content: string; source: string; sourceUrl: string | null; timestamp: string } | null;
+};
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  allDay: boolean;
+  location: string | null;
+  notes: string | null;
+  category: Category | null;
+  task: { id: string; title: string; status: TaskStatus } | null;
+  person: Person | null;
+  isSeed?: boolean;
+  createdAt: string;
+  updatedAt: string;
+};

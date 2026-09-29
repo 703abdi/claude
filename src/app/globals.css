@@ -1,14 +1,35 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090a;
-  --surface: #131315;
-  --surface-2: #1a1a1d;
-  --border: #26262a;
-  --foreground: #f3f3f4;
-  --muted: #8b8b90;
-  --muted-2: #5c5c62;
+  /* Base surfaces — near-black, one step up for cards, one more for hover */
+  --background: #0a0a0c;
+  --surface: #141419;
+  --surface-2: #1c1c24;
+  --surface-hover: #21212a;
 
+  /* Text — three levels only */
+  --foreground: #f2f2f5;
+  --muted: #9797a6;
+  --muted-2: #6f6f7e;
+
+  --border: #26262f;
+
+  /* Primary brand accent — nav active state, focus rings, morning brief player */
+  --accent: #7c6df2;
+  --accent-hover: #8f82f5;
+
+  /* Header stat cards */
+  --stat-green: #22c55e;
+  --stat-amber: #f5a623;
+  --stat-blue: #3b82f6;
+  --pink: #ec4899;
+
+  /* Semantic — red for overdue, amber for due-today/needs-a-decision. */
+  --overdue: #ef4444;
+  --due-today: #f5a623;
+
+  /* Legacy status/effort colors — still used by People/Calendar and other
+     screens outside the Tasks workspace rebuild; not used by TaskCard. */
   --status-red: #ef4444;
   --status-orange: #f59e0b;
   --status-yellow: #eab308;
@@ -23,10 +44,20 @@
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
   --color-border: var(--border);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-2: var(--muted-2);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-stat-green: var(--stat-green);
+  --color-stat-amber: var(--stat-amber);
+  --color-stat-blue: var(--stat-blue);
+  --color-pink: var(--pink);
+  --color-overdue: var(--overdue);
+  --color-due-today: var(--due-today);
 
   --color-status-red: var(--status-red);
   --color-status-orange: var(--status-orange);
@@ -37,8 +68,8 @@
   --color-effort-2: var(--effort-2);
   --color-effort-3: var(--effort-3);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
 }
 
 * {
@@ -54,6 +85,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+.font-mono,
+.mono {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-variant-numeric: tabular-nums;
 }
 
 ::-webkit-scrollbar {
@@ -83,4 +121,76 @@ body {
 }
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.18s ease-out;
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.18s ease-out;
+}
+
+@keyframes complete-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-complete-pop {
+  animation: complete-pop 0.18s ease-out;
+}
+
+@keyframes complete-fade {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+.animate-complete-fade {
+  animation: complete-fade 0.16s ease-out forwards;
+  animation-delay: 0.14s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

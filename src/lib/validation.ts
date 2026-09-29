@@ -74,3 +74,29 @@ export const personUpdateSchema = z.object({
 export const dependencySchema = z.object({
   blockerId: z.string(),
 });
+
+export const calendarEventCreateSchema = z.object({
+  title: z.string().min(1).max(300),
+  date: z.string().datetime(),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
+  allDay: z.boolean().optional(),
+  location: z.string().max(300).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  taskId: z.string().optional().nullable(),
+  personId: z.string().optional().nullable(),
+});
+
+export const calendarEventUpdateSchema = z.object({
+  title: z.string().min(1).max(300).optional(),
+  date: z.string().datetime().optional(),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
+  allDay: z.boolean().optional(),
+  location: z.string().max(300).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  taskId: z.string().optional().nullable(),
+  personId: z.string().optional().nullable(),
+});

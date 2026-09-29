@@ -1,39 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { personCreateSchema } from "@/lib/validation";
-import { TaskStatus } from "@prisma/client";
+import { getPeopleWithCounts } from "@/lib/people-data";
 
 export async function GET() {
-  const people = await prisma.person.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      tasks: { include: { task: { select: { id: true, status: true, dueDate: true } } } },
-      followUpTasks: { select: { id: true, status: true, followUpRequired: true } },
-    },
-  });
-
-  const result = people.map((p) => {
-    const linkedTasks = p.tasks.map((tp) => tp.task);
-    const allTasks = [...linkedTasks, ...p.followUpTasks];
-    const activeCount = allTasks.filter((t) => t.status !== TaskStatus.COMPLETED).length;
-    const waitingCount = allTasks.filter((t) => t.status === TaskStatus.WAITING).length;
-    const completedCount = allTasks.filter((t) => t.status === TaskStatus.COMPLETED).length;
-    const upcomingCount = linkedTasks.filter(
-      (t) => t.dueDate && t.status !== TaskStatus.COMPLETED
-    ).length;
-
-    return {
-      id: p.id,
-      name: p.name,
-      notes: p.notes,
-      isSeed: p.isSeed,
-      activeCount,
-      waitingCount,
-      completedCount,
-      upcomingCount,
-    };
-  });
-
+  const result = await getPeopleWithCounts();
   return NextResponse.json(result);
 }
 
