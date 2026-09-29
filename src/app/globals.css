@@ -2,27 +2,34 @@
 
 :root {
   /* Base surfaces — near-black, one step up for cards, one more for hover */
-  --background: #0a0a0b;
-  --surface: #131315;
-  --surface-2: #1c1c1f;
-  --surface-hover: #1c1c1f;
+  --background: #0a0a0c;
+  --surface: #141419;
+  --surface-2: #1c1c24;
+  --surface-hover: #21212a;
 
   /* Text — three levels only */
-  --foreground: #ededef;
-  --muted: #8a8a93;
-  --muted-2: #82828e;
+  --foreground: #f2f2f5;
+  --muted: #9797a6;
+  --muted-2: #6f6f7e;
 
-  --border: #242428;
+  --border: #26262f;
 
-  /* The one accent — focus, active state, and signature elements only */
-  --accent: #00e5ff;
+  /* Primary brand accent — nav active state, focus rings, morning brief player */
+  --accent: #7c6df2;
+  --accent-hover: #8f82f5;
 
-  /* Semantic — red for overdue, amber for due-today. Nothing else. */
+  /* Header stat cards */
+  --stat-green: #22c55e;
+  --stat-amber: #f5a623;
+  --stat-blue: #3b82f6;
+  --pink: #ec4899;
+
+  /* Semantic — red for overdue, amber for due-today/needs-a-decision. */
   --overdue: #ef4444;
-  --due-today: #f59e0b;
+  --due-today: #f5a623;
 
   /* Legacy status/effort colors — still used by People/Calendar and other
-     screens outside the Tasks workspace rebuild; not used by TaskRow. */
+     screens outside the Tasks workspace rebuild; not used by TaskCard. */
   --status-red: #ef4444;
   --status-orange: #f59e0b;
   --status-yellow: #eab308;
@@ -44,6 +51,11 @@
   --color-muted-2: var(--muted-2);
 
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-stat-green: var(--stat-green);
+  --color-stat-amber: var(--stat-amber);
+  --color-stat-blue: var(--stat-blue);
+  --color-pink: var(--pink);
   --color-overdue: var(--overdue);
   --color-due-today: var(--due-today);
 
@@ -123,6 +135,20 @@ body {
 }
 .animate-slide-up {
   animation: slide-up 0.18s ease-out;
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.18s ease-out;
 }
 
 @keyframes complete-pop {

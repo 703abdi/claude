@@ -6,7 +6,7 @@ const ROWS: [string, string][] = [
   ["j / k", "Move focus down / up"],
   ["e / Enter", "Open focused task"],
   ["x", "Toggle complete"],
-  ["1 – 4", "Jump to Today / Now / Next / Later"],
+  ["1 – 6", "Jump to Focus / Upcoming / Waiting / Someday / Done / Auto-cleared"],
   ["Esc", "Close panel or palette"],
   ["?", "Toggle this cheatsheet"],
 ];

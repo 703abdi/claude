@@ -26,8 +26,9 @@ export default function TaskDetailPanel({
 
   return (
     <>
+      <div className="fixed inset-0 z-40 bg-black/60 animate-fade-in" onClick={onClose} />
+
       {/* mobile: bottom sheet */}
-      <div className="lg:hidden fixed inset-0 z-40 bg-black/60 animate-fade-in" onClick={onClose} />
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t border-t border-border bg-surface animate-slide-up pb-[env(safe-area-inset-bottom)]">
         <Header onClose={onClose} />
         <TaskDetail
@@ -41,8 +42,8 @@ export default function TaskDetailPanel({
         />
       </div>
 
-      {/* desktop: docked right panel */}
-      <div className="hidden lg:block w-[360px] shrink-0 border-l border-border sticky top-14 h-[calc(100vh-3.5rem-2rem)] overflow-y-auto">
+      {/* desktop: right-edge slide-over */}
+      <div className="hidden lg:block fixed right-0 top-0 bottom-0 z-50 w-[420px] overflow-y-auto border-l border-border bg-surface animate-slide-in-right">
         <Header onClose={onClose} />
         <TaskDetail
           task={task}

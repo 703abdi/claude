@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
-import type { Filters } from "./FilterBar";
+import type { RailView } from "./railView";
 
 type StaticCommand = { id: string; label: string; run: () => void };
 type Item = { kind: "command"; command: StaticCommand } | { kind: "task"; task: Task };
@@ -12,7 +12,7 @@ export default function CommandPalette({
   onClose,
   tasks,
   onSelectTask,
-  onSetBucket,
+  onSetRailView,
   onNewTask,
   onManageCategories,
 }: {
@@ -20,7 +20,7 @@ export default function CommandPalette({
   onClose: () => void;
   tasks: Task[];
   onSelectTask: (task: Task) => void;
-  onSetBucket: (bucket: Filters["bucket"]) => void;
+  onSetRailView: (view: RailView) => void;
   onNewTask: () => void;
   onManageCategories: () => void;
 }) {
@@ -45,15 +45,16 @@ export default function CommandPalette({
 
   const staticCommands: StaticCommand[] = useMemo(
     () => [
-      { id: "go-all", label: "Go to All", run: () => onSetBucket("ALL") },
-      { id: "go-today", label: "Go to Today", run: () => onSetBucket("TODAY") },
-      { id: "go-now", label: "Go to Now", run: () => onSetBucket("NOW") },
-      { id: "go-next", label: "Go to Next", run: () => onSetBucket("NEXT") },
-      { id: "go-later", label: "Go to Later", run: () => onSetBucket("LATER") },
+      { id: "go-focus", label: "Go to Focus", run: () => onSetRailView("FOCUS") },
+      { id: "go-upcoming", label: "Go to Upcoming", run: () => onSetRailView("UPCOMING") },
+      { id: "go-waiting", label: "Go to Waiting on others", run: () => onSetRailView("WAITING") },
+      { id: "go-someday", label: "Go to Someday", run: () => onSetRailView("SOMEDAY") },
+      { id: "go-done", label: "Go to Done", run: () => onSetRailView("DONE") },
+      { id: "go-auto-cleared", label: "Go to Auto-cleared", run: () => onSetRailView("AUTO_CLEARED") },
       { id: "new-task", label: "New task", run: onNewTask },
-      { id: "manage-categories", label: "Manage categories", run: onManageCategories },
+      { id: "manage-categories", label: "Manage areas", run: onManageCategories },
     ],
-    [onSetBucket, onNewTask, onManageCategories]
+    [onSetRailView, onNewTask, onManageCategories]
   );
 
   const q = query.trim().toLowerCase();

@@ -4,7 +4,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEn
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import type { Task } from "@/lib/types";
 import { api } from "@/lib/api-client";
-import TaskRow from "./TaskRow";
+import TaskCard from "./TaskCard";
 
 export default function TaskSection({
   title,
@@ -15,6 +15,7 @@ export default function TaskSection({
   onSelect,
   selectedTaskId,
   cursorId,
+  showFocusActions,
   emptyState,
   highlightId,
 }: {
@@ -26,6 +27,7 @@ export default function TaskSection({
   onSelect: (task: Task) => void;
   selectedTaskId?: string | null;
   cursorId?: string | null;
+  showFocusActions?: boolean;
   emptyState: string;
   highlightId?: string | null;
 }) {
@@ -48,8 +50,8 @@ export default function TaskSection({
   return (
     <section className="mb-6">
       {title && (
-        <div className="flex items-baseline gap-2 mb-1.5 px-0.5">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted">{title}</h2>
+        <div className="flex items-baseline gap-2 mb-2 px-0.5">
+          <h2 className="text-[13px] font-semibold text-muted">{title}</h2>
           <span className="font-mono text-[11px] text-muted-2">{tasks.length}</span>
           {subtitle && <span className="text-[11px] text-muted-2 ml-1">{subtitle}</span>}
         </div>
@@ -60,15 +62,16 @@ export default function TaskSection({
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-            <div className="border border-border rounded overflow-hidden">
+            <div className="space-y-2">
               {tasks.map((task) => (
-                <TaskRow
+                <TaskCard
                   key={task.id}
                   task={task}
                   onChange={onChange}
                   onSelect={onSelect}
                   selected={selectedTaskId === task.id}
                   cursor={cursorId === task.id}
+                  showFocusActions={showFocusActions}
                   highlighted={highlightId === task.id}
                 />
               ))}
