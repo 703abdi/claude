@@ -210,6 +210,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
 .pay,.shot{height:auto}
 .enough{margin-top:56px}.enough .lead{margin:0 auto 24px;color:var(--ink);font-size:20px;font-weight:600;max-width:600px}
 .about-photo{height:auto;object-fit:cover}
+.vsl-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.62)}.vsl .play,.vsl .vsl-label{position:relative;z-index:1}.vsl .vsl-label{position:absolute}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -221,7 +222,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
     <div class="nav-r">
       <button class="nav-link" data-go="results">Results</button>
       <button class="nav-link" data-go="faq">FAQ</button>
-      <a class="btn btn-gold btn-sm" href="https://calendly.com/abdiyassin/1on1">Book a call</a>
+      <a class="btn btn-gold btn-sm" href="https://abdiform.vercel.app/apply/tawakkul-1-1-app">Book a call</a>
     </div>
   </div>
 </nav>
@@ -237,7 +238,8 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
     <div class="vwrap">
       <div class="pill"><svg viewBox="0 0 24 24" fill="#03150a"><path d="M6 4l14 8-14 8z"/></svg>Find out here</div>
       <!-- VIDEO: replace the contents of .vsl with your embed, e.g. <iframe src="https://player.vimeo.com/video/XXXX" allow="autoplay; fullscreen"></iframe> -->
-      <div class="vsl" id="vsl">
+      <div class="vsl" id="vsl" role="button" tabindex="0" aria-label="Play the video">
+        <img class="vsl-poster" src="https://i.ytimg.com/vi/TE6VBH29ygo/maxresdefault.jpg" alt="" width="1280" height="720">
         <div class="play"><svg viewBox="0 0 24 24" fill="#0d1711"><path d="M6 4l14 8-14 8z"/></svg></div>
         <div class="vsl-label">Tap to play with sound</div>
       </div>
@@ -245,7 +247,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
 
     <div class="under">
       <p>If this is what you're looking for, book a call, and we'll talk about the next steps.</p>
-      <a class="btn btn-gold" href="https://calendly.com/abdiyassin/1on1">Book a call</a>
+      <a class="btn btn-gold" href="https://abdiform.vercel.app/apply/tawakkul-1-1-app">Book a call</a>
     </div>
   </div>
 </header>
@@ -286,7 +288,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
   <div class="narrow center">
     <h2>Take the next step and <span class="grad">see if it works out</span></h2>
     <p class="lead">Applications are open for now. Spots are limited. Book a call if it makes sense for you.</p>
-    <a class="btn btn-gold" href="https://calendly.com/abdiyassin/1on1" style="margin-top:28px">Book a call</a>
+    <a class="btn btn-gold" href="https://abdiform.vercel.app/apply/tawakkul-1-1-app" style="margin-top:28px">Book a call</a>
     <p class="notready" hidden>Not ready yet?</p>
     <button class="btn btn-gold-line" type="button" id="guide-open" hidden>Get the free guide</button>
   </div>
@@ -318,7 +320,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
     <div class="shots" id="shots"></div>
     <div class="center enough">
       <p class="lead">Okay, that's enough screenshots. Other people's results can't trade for you. Book the call and let's find out how we get you yours.</p>
-      <a class="btn btn-gold" href="https://calendly.com/abdiyassin/1on1">Book a call</a>
+      <a class="btn btn-gold" href="https://abdiform.vercel.app/apply/tawakkul-1-1-app">Book a call</a>
     </div>
   </div>
 </section>
@@ -326,7 +328,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
 
 <footer>
   <div class="wrap foot">
-    <div class="soc"><a href="https://instagram.com/abdi.yassinn">Instagram</a></div>
+    <div class="soc"><a href="https://instagram.com/abdi.yassinn">Instagram</a><a href="https://www.youtube.com/@Abdi.Yassin">YouTube</a><a href="mailto:abdi@tawakkultrading.com">Email</a></div>
     <p class="fine"><b>Disclaimer.</b> Education only, not financial advice. Trading carries substantial risk. Past performance does not guarantee future results. Only risk money you can afford to lose.</p>
     <p class="fine"><b>Refunds.</b> No refunds except at the owner's sole discretion. All sales are final once payment is made.</p>
     <p>&copy; 2026 Tawakkul Trading. All rights reserved.</p>
@@ -383,6 +385,11 @@ document.getElementById("leadform").addEventListener("submit",async e=>{
   }catch(_){msg.style.color="var(--gold-d)";msg.textContent="Something went wrong. Please try again."}
 });
 
+// video: load the YouTube player on click so the page stays fast
+const vsl=document.getElementById("vsl");
+function playVsl(){vsl.removeAttribute("role");vsl.removeAttribute("tabindex");vsl.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/TE6VBH29ygo?autoplay=1&rel=0&playsinline=1" title="Watch this first" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>'}
+vsl.addEventListener("click",playVsl,{once:true});
+vsl.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();playVsl()}});
 function go(v){
   const view=v==="faq"?"home":v;
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("on",x.id==="view-"+view));
