@@ -7,6 +7,8 @@ import Avatar from "@/components/shared/Avatar";
 
 const NAV_ITEMS = [
   { href: "/tasks", label: "Tasks", icon: TasksIcon },
+  { href: "/hub", label: "Hub", icon: HubIcon },
+  { href: "/town", label: "Town", icon: TownIcon },
   { href: "/people", label: "People", icon: PeopleIcon },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon },
 ];
@@ -178,6 +180,24 @@ function PeopleIcon({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+function HubIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+function TownIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M3 21V10l9-6 9 6v11" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9 21v-6h6v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
 }

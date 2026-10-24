@@ -100,3 +100,26 @@ export const calendarEventUpdateSchema = z.object({
   taskId: z.string().optional().nullable(),
   personId: z.string().optional().nullable(),
 });
+
+export const agentCreateSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  kind: z.enum(["GROK", "LOCAL"]),
+  model: z.string().trim().max(100).optional().nullable(),
+  systemPrompt: z.string().max(8000).optional().nullable(),
+});
+
+export const agentDispatchSchema = z.object({
+  prompt: z.string().trim().min(1).max(20000),
+  taskId: z.string().optional().nullable(),
+});
+
+export const localPollSchema = z.object({
+  agent: z.string().trim().min(1).max(60),
+});
+
+export const localCompleteSchema = z.object({
+  runId: z.string().min(1),
+  agent: z.string().trim().min(1).max(60),
+  output: z.string().max(200000).optional().nullable(),
+  error: z.string().max(5000).optional().nullable(),
+});

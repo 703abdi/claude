@@ -380,3 +380,57 @@ model SyncSource {
 
   @@unique([type, name])
 }
+
+// ─────────────────────────────────────────────────────────────
+// AGENTS (Grok bots + local agents that work through the task queue)
+// ─────────────────────────────────────────────────────────────
+
+enum AgentKind {
+  GROK
+  LOCAL
+}
+
+enum AgentStatus {
+  IDLE
+  WORKING
+  BLOCKED
+  OFFLINE
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+model Agent {
+  id           String      @id @default(cuid())
+  name         String      @unique
+  kind         AgentKind
+  status       AgentStatus @default(OFFLINE)
+  model        String? // Grok model id; GROK agents only
+  systemPrompt String?
+  lastSeenAt   DateTime?
+  createdAt    DateTime    @default(now())
+
+  runs AgentRun[]
+}
+
+model AgentRun {
+  id      String    @id @default(cuid())
+  agentId String
+  agent   Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  taskId  String?
+  prompt  String
+  status  RunStatus @default(QUEUED)
+  output  String?
+  error   String?
+
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  @@index([agentId, status])
+  @@index([createdAt])
+}
