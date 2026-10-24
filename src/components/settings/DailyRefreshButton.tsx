@@ -19,7 +19,7 @@ export default function DailyRefreshButton() {
         return;
       }
       setResult(
-        `Context: ${data.extraction.processed} processed, ${data.extraction.suggestionsCreated} new suggestion(s). Rule-based: ${data.suggestions.created} new. Priorities updated for ${data.priorities.updated}/${data.priorities.total} active tasks. New brief generated.`
+        `Context: ${data.extraction.processed} processed, ${data.extraction.suggestionsCreated} new suggestion(s). Cross-item: ${data.synthesis.created} new from ${data.synthesis.considered} item(s)${data.synthesis.skipped ? ` (${data.synthesis.skipped})` : ""}. Rule-based: ${data.suggestions.created} new. Priorities updated for ${data.priorities.updated}/${data.priorities.total} active tasks. New brief generated.`
       );
       router.refresh();
     } finally {

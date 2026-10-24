@@ -50,6 +50,19 @@ function ruleBasedBrief(ctx: MorningBriefContext, today: Date): string {
     parts.push(`People waiting on you: ${ctx.peopleWaitingOn.join(", ")}.`);
   }
 
+  if (ctx.context.dangling.length > 0) {
+    const d = ctx.context.dangling[0];
+    // Spoken aloud, so keep the quote shorter than the written digest's.
+    const quote = d.snippet.length > 140 ? `${d.snippet.slice(0, 139)}…` : d.snippet;
+    parts.push(
+      `From your notes ${d.ageDays} days ago, never turned into a task: ${quote}${
+        ctx.context.dangling.length > 1
+          ? ` (plus ${ctx.context.dangling.length - 1} more like it).`
+          : "."
+      }`
+    );
+  }
+
   if (ctx.pendingSuggestions.length > 0) {
     parts.push(`There ${ctx.pendingSuggestions.length === 1 ? "is" : "are"} ${ctx.pendingSuggestions.length} open suggestion${ctx.pendingSuggestions.length === 1 ? "" : "s"} worth reviewing.`);
   }
@@ -86,6 +99,39 @@ function summarizeForPrompt(ctx: MorningBriefContext): string {
       .join("; ") || "none"}`
   );
   lines.push(`Total active tasks: ${ctx.totalActive}`);
+
+  // Grounding from the Context Database (Obsidian / Claude / ChatGPT imports).
+  // These are things abdi actually wrote or said — they are evidence, not tasks,
+  // and the prompt below is explicit that they must not be reported as tasks.
+  const { relevant, dangling, newSinceLastBrief, totalProcessed } = ctx.context;
+  lines.push("");
+  lines.push(
+    `Context Database: ${totalProcessed} processed item(s), ${newSinceLastBrief} new since the last brief.`
+  );
+  lines.push(
+    `Relevant context (${relevant.length}):` +
+      (relevant.length
+        ? "\n" +
+          relevant
+            .map(
+              (c) =>
+                `  - [${c.contentType}, ${c.source}, ${c.ageDays}d ago${
+                  c.personName ? `, mentions ${c.personName}` : ""
+                }] ${c.snippet}`
+            )
+            .join("\n")
+        : " none")
+  );
+  lines.push(
+    `Commitments found in context that never became a task (${dangling.length}):` +
+      (dangling.length
+        ? "\n" +
+          dangling
+            .map((c) => `  - [${c.ageDays}d ago, from ${c.source}] ${c.snippet}`)
+            .join("\n")
+        : " none")
+  );
+
   return lines.join("\n");
 }
 
@@ -100,6 +146,8 @@ Today: ${fmtDate(today)}
 ${summarizeForPrompt(ctx)}
 
 Priority order when deciding what to emphasize: 1) overdue/responsibility items and people waiting on abdi, 2) small tasks that unlock other work (blockers), 3) deadlines, 4) everything else. Keep it concise — a few short spoken sentences, not an essay. Sound like a calm, competent assistant, not a robot reading a list. If everything is genuinely clear, say so briefly instead of padding.
+
+How to use the context section: those are things abdi actually wrote or said in his own notes and conversations. They are evidence, not tasks — never report one as if it were on his task list. Use them for at most one sentence, and only when a context item genuinely changes what he should do today: a commitment that never became a task, or something in his own words that bears directly on an item above. Say where it came from and how long ago ("three weeks ago you wrote..."). If none of them does that, leave the context out entirely — omitting it is the right call far more often than not.
 
 Respond with ONLY the brief text (plain sentences, no markdown, no headers, no JSON).`;
 

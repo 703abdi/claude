@@ -3,6 +3,7 @@ import { TaskStatus } from "@prisma/client";
 import { computeAiPriority } from "./priority-engine";
 import { runSuggestionDetectors } from "./suggestion-detectors";
 import { runExtractionPipeline } from "./context/extract";
+import { runContextSynthesis } from "./context/synthesize";
 import { gatherMorningBriefContext } from "./morning-brief/gather";
 import { generateMorningBriefText } from "./morning-brief/generate";
 import { buildTranscriptSegments, totalDuration } from "./morning-brief/segments";
@@ -46,6 +47,10 @@ export async function recomputePriorities() {
  */
 export async function runDailyRefresh() {
   const extraction = await runExtractionPipeline(50);
+  // Cross-item pass: runs after extraction so freshly ingested items are
+  // already classified, and before the detectors so its output is deduped
+  // against the same pending set they see.
+  const synthesis = await runContextSynthesis();
   const suggestions = await runSuggestionDetectors();
   const priorities = await recomputePriorities();
 
@@ -90,5 +95,5 @@ export async function runDailyRefresh() {
     select: { id: true },
   });
 
-  return { extraction, suggestions, priorities, briefId: brief.id };
+  return { extraction, synthesis, suggestions, priorities, briefId: brief.id };
 }

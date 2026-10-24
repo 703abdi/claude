@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { extractJson } from "@/lib/ai";
 import { ContextType, SuggestionType, TaskStatus } from "@prisma/client";
+import { adjustConfidence, loadFeedbackProfile, passesFeedbackBar } from "@/lib/suggestion-feedback";
 
 type ExtractionResult = {
   contentType: keyof typeof ContextType;
@@ -72,7 +73,8 @@ export async function runExtractionPipeline(limit = 20) {
 
   if (pending.length === 0) return { processed: 0, suggestionsCreated: 0, skipped: 0 };
 
-  const [people, openTasks] = await Promise.all([
+  const [profile, people, openTasks] = await Promise.all([
+    loadFeedbackProfile(),
     prisma.person.findMany({ select: { id: true, name: true } }),
     prisma.task.findMany({
       where: { status: { not: TaskStatus.COMPLETED } },
@@ -130,19 +132,25 @@ export async function runExtractionPipeline(limit = 20) {
           ? (result.suggestion.type as SuggestionType)
           : SuggestionType.MISSING_TASK;
 
-        await prisma.suggestion.create({
-          data: {
-            type,
-            title: result.suggestion.title,
-            body: result.suggestion.body,
-            reason: result.suggestion.reason,
-            confidence,
-            relatedContextId: item.id,
-            relatedPersonId: matchedPerson?.id ?? null,
-            relatedTaskId: matchedTask?.id ?? null,
-          },
-        });
-        suggestionsCreated++;
+        // Weight the model's confidence by how this suggestion type has
+        // actually landed before (see @/lib/suggestion-feedback). The bar is
+        // tested against the model's own confidence, not the weighted value.
+        if (passesFeedbackBar(profile, type, confidence)) {
+          const weighted = adjustConfidence(profile, type, confidence);
+          await prisma.suggestion.create({
+            data: {
+              type,
+              title: result.suggestion.title,
+              body: result.suggestion.body,
+              reason: result.suggestion.reason,
+              confidence: weighted,
+              relatedContextId: item.id,
+              relatedPersonId: matchedPerson?.id ?? null,
+              relatedTaskId: matchedTask?.id ?? null,
+            },
+          });
+          suggestionsCreated++;
+        }
       }
     }
   }
