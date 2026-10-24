@@ -194,3 +194,30 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+@keyframes town-bob-fast {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes town-bob-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes town-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(124, 109, 242, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(124, 109, 242, 0);
+  }
+}

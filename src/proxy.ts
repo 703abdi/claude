@@ -14,6 +14,8 @@ const PUBLIC_EXACT = [
   "/api/connectors/claude",
   "/api/cron/daily-refresh",
   "/api/setup",
+  "/api/agents/local/poll",
+  "/api/agents/local/complete",
 ];
 
 async function isValidSession(token: string | undefined) {
