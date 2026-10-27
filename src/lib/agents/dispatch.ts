@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { callGrok, defaultGrokModel } from "@/lib/agents/grok";
+import { runServerAgent, type ServerAgentKind } from "@/lib/agents/providers";
+import { defaultModelFor } from "@/lib/agents/providers";
 
 type Outcome = { status: "DONE"; output: string } | { status: "FAILED"; error: string };
 
@@ -22,12 +23,12 @@ async function finishRun(runId: string, agentId: string, outcome: Outcome) {
   ]);
 }
 
-export async function executeGrokRun(runId: string) {
+export async function executeServerRun(runId: string) {
   const run = await prisma.agentRun.findUnique({
     where: { id: runId },
     include: { agent: true },
   });
-  if (!run || run.agent.kind !== "GROK" || run.status !== "QUEUED") return;
+  if (!run || run.agent.kind === "LOCAL" || run.status !== "QUEUED") return;
 
   await prisma.$transaction([
     prisma.agentRun.update({
@@ -41,9 +42,10 @@ export async function executeGrokRun(runId: string) {
   ]);
 
   try {
-    const output = await callGrok({
-      model: run.agent.model || defaultGrokModel(),
-      systemPrompt: run.agent.systemPrompt,
+    const output = await runServerAgent({
+      kind: run.agent.kind as ServerAgentKind,
+      model: run.agent.model || defaultModelFor(run.agent.kind) || "",
+      system: run.agent.systemPrompt,
       prompt: run.prompt,
     });
     await finishRun(runId, run.agentId, { status: "DONE", output });

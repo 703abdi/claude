@@ -103,7 +103,7 @@ export const calendarEventUpdateSchema = z.object({
 
 export const agentCreateSchema = z.object({
   name: z.string().trim().min(1).max(60),
-  kind: z.enum(["GROK", "LOCAL"]),
+  kind: z.enum(["GROK", "NVIDIA", "CLAUDE", "LOCAL"]),
   model: z.string().trim().max(100).optional().nullable(),
   systemPrompt: z.string().max(8000).optional().nullable(),
 });

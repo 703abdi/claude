@@ -162,11 +162,13 @@ export default function HubView() {
             <form onSubmit={onCreate} className="space-y-3 mb-4 pb-4 border-b border-border">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" required className={inputClass} />
               <select value={kind} onChange={(e) => setKind(e.target.value as AgentKind)} className={inputClass}>
-                <option value="GROK">Grok bot (runs in the cloud via xAI)</option>
+                <option value="GROK">Grok bot (xAI)</option>
+                <option value="NVIDIA">NVIDIA NIM model (free build.nvidia.com key)</option>
+                <option value="CLAUDE">Claude agent (Anthropic)</option>
                 <option value="LOCAL">Local agent (runs on my machine)</option>
               </select>
-              {kind === "GROK" && (
-                <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model (blank = XAI_MODEL)" className={inputClass} />
+              {kind !== "LOCAL" && (
+                <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model id (blank = default for this provider)" className={inputClass} />
               )}
               <textarea
                 value={systemPrompt}

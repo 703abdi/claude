@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { agentDispatchSchema } from "@/lib/validation";
-import { executeGrokRun } from "@/lib/agents/dispatch";
+import { executeServerRun } from "@/lib/agents/dispatch";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,8 +24,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
 
-  if (agent.kind === "GROK") {
-    after(() => executeGrokRun(run.id));
+  if (agent.kind !== "LOCAL") {
+    after(() => executeServerRun(run.id));
   }
 
   return NextResponse.json(run, { status: 201 });

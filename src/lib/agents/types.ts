@@ -1,6 +1,6 @@
 import type { Zone } from "@/lib/agents/town";
 
-export type AgentKind = "GROK" | "LOCAL";
+export type AgentKind = "GROK" | "NVIDIA" | "CLAUDE" | "LOCAL";
 export type AgentStatus = "IDLE" | "WORKING" | "BLOCKED" | "OFFLINE";
 export type RunStatus = "QUEUED" | "RUNNING" | "DONE" | "FAILED";
 
