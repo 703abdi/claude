@@ -212,6 +212,11 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
 .about-photo{height:auto;object-fit:cover}
 .vsl-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.62)}.vsl .play,.vsl .vsl-label{position:relative;z-index:1}.vsl .vsl-label{position:absolute}
 [hidden]{display:none!important}
+.reassure{margin-top:14px;font-size:14px;color:var(--muted)}
+.fit{list-style:none;display:grid;gap:12px;margin-top:34px}
+.fit li{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px 18px 56px;font-weight:600;box-shadow:var(--shadow)}
+.fit li::before{content:"";position:absolute;left:20px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;background:var(--green-t) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318c964' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/12px no-repeat}
+.not-fit{margin-top:22px;text-align:center;color:var(--gold-d);font-weight:600}
 </style>
 </head>
 <body>
@@ -237,7 +242,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
     <div class="vwrap">
       <div class="pill"><svg viewBox="0 0 24 24" fill="#03150a"><path d="M6 4l14 8-14 8z"/></svg>Find out here</div>
       <div class="vsl" id="vsl" role="button" tabindex="0" aria-label="Play the video">
-        <img class="vsl-poster" src="https://i.ytimg.com/vi/TE6VBH29ygo/maxresdefault.jpg" alt="" width="1280" height="720">
+        <img class="vsl-poster" src="https://i.ytimg.com/vi/7UiUAxwDPA0/maxresdefault.jpg" alt="" width="1280" height="720">
         <div class="play"><svg viewBox="0 0 24 24" fill="#0d1711"><path d="M6 4l14 8-14 8z"/></svg></div>
         <div class="vsl-label">Tap to play with sound</div>
       </div>
@@ -246,6 +251,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
     <div class="under">
       <p>If this is what you're looking for, book a call, and we'll talk about the next steps.</p>
       <a class="btn btn-gold" href="https://abdiform.vercel.app/apply/tawakkul-1-1-app">Book a call</a>
+      <p class="reassure">Takes 2 minutes &middot; Every application is reviewed personally</p>
     </div>
   </div>
 </header>
@@ -258,6 +264,19 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
     <div class="track" id="track"></div>
   </div>
   <button class="see-all" data-go="results">See all results &rarr;</button>
+</section>
+
+<section class="reveal">
+  <div class="narrow">
+    <div class="center"><span class="eyebrow">Is this you?</span><h2>This is for you if&hellip;</h2></div>
+    <ul class="fit">
+      <li>You've tried trading but can't stay consistent</li>
+      <li>You want a clear, rules-based strategy instead of tips and signals</li>
+      <li>You can set aside time each week to actually learn and practise</li>
+      <li>You're ready to invest in yourself and be coached</li>
+    </ul>
+    <p class="not-fit">Not for you if you're looking for a get-rich-quick shortcut.</p>
+  </div>
 </section>
 
 <section class="reveal">
@@ -285,6 +304,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
     <h2>Take the next step and <span class="grad">see if it works out</span></h2>
     <p class="lead">Applications are open for now. Spots are limited. Book a call if it makes sense for you.</p>
     <a class="btn btn-gold" href="https://abdiform.vercel.app/apply/tawakkul-1-1-app" style="margin-top:28px">Book a call</a>
+    <p class="reassure">No pressure. If it's not a fit, I'll point you to the right next step.</p>
     <p class="notready" hidden>Not ready yet?</p>
     <button class="btn btn-gold-line" type="button" id="guide-open" hidden>Get the free guide</button>
   </div>
@@ -297,7 +317,7 @@ dialog .msg{margin-top:12px;font-size:14px;min-height:20px}
       <details><summary>What happens on the call?</summary><p>We talk about where your trading is now and what keeps going wrong. If I can help, I'll say how. If I can't, I'll say that too.</p></details>
       <details><summary>Is trading halal? Isn't it gambling?</summary><p>I'm a trader, not a scholar, so I can't give you a ruling. I teach process and risk management, and I'd ask you to speak with a scholar you trust before you start.</p></details>
       <details><summary>Can you guarantee I'll make money?</summary><p>No one can. Rizq comes from Allah. You get a system, live examples and accountability.</p></details>
-      <details><summary>I'm a complete beginner. Is this for me?</summary><p>Tell me where you are when we talk, and I'll tell you honestly whether the timing is right.</p></details>
+      <details><summary>I'm a complete beginner. Is this for me?</summary><p>You don't need experience. I start from where you are, beginner or experienced. Tell me where you are when we talk, and I'll tell you honestly whether the timing is right.</p></details>
       <details><summary>How much does it cost?</summary><p>We cover pricing on the call, once we both know it is a fit.</p></details>
       <details><summary>How much time do I need?</summary><p>Consistency counts more than hours. A short daily practice beats a long weekend binge.</p></details>
     </div>

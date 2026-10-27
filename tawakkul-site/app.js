@@ -36,7 +36,7 @@ document.getElementById("leadform").addEventListener("submit",async e=>{
 
 // video: load the YouTube player on click so the page stays fast
 const vsl=document.getElementById("vsl");
-function playVsl(){vsl.removeAttribute("role");vsl.removeAttribute("tabindex");vsl.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/TE6VBH29ygo?autoplay=1&rel=0&playsinline=1" title="Watch this first" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>'}
+function playVsl(){vsl.removeAttribute("role");vsl.removeAttribute("tabindex");vsl.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/7UiUAxwDPA0?autoplay=1&rel=0&playsinline=1" title="Welcome to Tawakkul Trading" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>'}
 vsl.addEventListener("click",playVsl,{once:true});
 vsl.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();playVsl()}});
 function go(v){
