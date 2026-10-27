@@ -387,6 +387,8 @@ model SyncSource {
 
 enum AgentKind {
   GROK
+  NVIDIA
+  CLAUDE
   LOCAL
 }
 

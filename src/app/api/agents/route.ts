@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { agentCreateSchema } from "@/lib/validation";
 import { zoneFor } from "@/lib/agents/town";
-import { defaultGrokModel } from "@/lib/agents/grok";
+import { defaultModelFor } from "@/lib/agents/providers";
 
 export async function GET() {
   const [agents, queuedGroups, recentRuns] = await Promise.all([
@@ -72,9 +72,9 @@ export async function POST(req: NextRequest) {
     data: {
       name: data.name,
       kind: data.kind,
-      model: data.kind === "GROK" ? data.model || defaultGrokModel() : null,
+      model: data.kind === "LOCAL" ? null : data.model || defaultModelFor(data.kind),
       systemPrompt: data.systemPrompt ?? null,
-      status: data.kind === "GROK" ? "IDLE" : "OFFLINE",
+      status: data.kind === "LOCAL" ? "OFFLINE" : "IDLE",
     },
   });
 
