@@ -1,5 +1,14 @@
 document.documentElement.classList.add("js");
 
+// Vercel Web Analytics + Speed Insights (cookieless, no personal data).
+// They only collect once both are switched on in the Vercel dashboard for this project.
+window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};
+window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments)};
+["/_vercel/insights/script.js","/_vercel/speed-insights/script.js"].forEach(src=>{
+  const s=document.createElement("script");s.src=src;s.defer=true;document.head.appendChild(s);
+});
+const track=(name,data)=>{try{window.va("event",{name,data})}catch(_){}};
+
 // student wins: add a file to assets/wins/ and a line here
 const WINS=[
   ["win-01.jpg","$4,525 profit in one day"],
@@ -23,6 +32,7 @@ const vsl=document.getElementById("vsl");
 let played=false;
 function playVsl(){
   if(played)return;played=true;
+  track("Video Play",{video:"welcome"});
   vsl.removeAttribute("role");vsl.removeAttribute("tabindex");
   vsl.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/7UiUAxwDPA0?autoplay=1&rel=0&playsinline=1" title="Welcome to Tawakkul Trading" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>';
 }
@@ -48,3 +58,24 @@ if("IntersectionObserver" in window){
 }
 phone.addEventListener("change",syncBar);
 syncBar();
+
+// click tracking: which button people press, and where on the page it was
+const where=el=>el.closest("nav")?"nav":el.closest("#mbar")?"sticky bar":el.closest("#top")?"hero":el.closest("#book")?"bottom":el.closest("#faq")?"after FAQ":"other";
+document.addEventListener("click",e=>{
+  const a=e.target.closest("a[href]");if(!a)return;
+  const h=a.getAttribute("href");
+  if(h.includes("abdiform.vercel.app/apply"))track("Book a Call Click",{location:where(a)});
+  else if(h.includes("whop.com"))track("Trading Room Click",{location:where(a)});
+  else if(/instagram\.com|youtube\.com|^mailto:/.test(h))track("Social Click",{network:h.startsWith("mailto:")?"email":h.includes("instagram")?"instagram":"youtube"});
+});
+
+// which FAQ questions people open (the objections that matter most)
+document.querySelectorAll("#faq details").forEach(d=>d.addEventListener("toggle",()=>{if(d.open)track("FAQ Open",{question:d.querySelector("summary").textContent})}));
+
+// how far down the page people get
+const depth=new Set();
+addEventListener("scroll",()=>{
+  const max=document.documentElement.scrollHeight-innerHeight;if(max<=0)return;
+  const pct=scrollY/max*100;
+  [25,50,75,100].forEach(m=>{if(pct>=m-1&&!depth.has(m)){depth.add(m);track("Scroll Depth",{percent:String(m)})}});
+},{passive:true});
