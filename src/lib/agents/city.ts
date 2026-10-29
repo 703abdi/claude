@@ -1,13 +1,6 @@
 import type { Zone } from "@/lib/agents/town";
 
 export const N = 13;
-export const TILE = 44;
-export const FLOOR_H = 13;
-
-export const W = N * TILE + 60;
-export const H = (N * TILE) / 2 + 200;
-const OX = W / 2;
-const OY = 112;
 
 export type Pt = { c: number; r: number };
 
@@ -16,28 +9,13 @@ export type Dest = "tasks" | "calendar" | "people" | "metrics";
 export type Cell =
   | { kind: "road" }
   | { kind: "park" }
-  | {
-      kind: "building";
-      floors: number;
-      palette: number;
-      label?: string;
-      zone?: Zone;
-      dest?: Dest;
-      tint?: { top: string; left: string; right: string };
-    };
+  | { kind: "building"; floors: number; zone?: Zone; dest?: Dest };
 
 export const DEST_LABEL: Record<Dest, string> = {
   tasks: "Task Tower",
   calendar: "Calendar Hall",
   people: "People Office",
   metrics: "Metrics Lab",
-};
-
-export const DEST_DOOR: Record<Dest, Pt> = {
-  calendar: { c: 4, r: 1 },
-  people: { c: 8, r: 11 },
-  tasks: { c: 12, r: 11 },
-  metrics: { c: 12, r: 5 },
 };
 
 const DEST_CELLS: [number, number, Dest][] = [
@@ -47,8 +25,6 @@ const DEST_CELLS: [number, number, Dest][] = [
   [11, 5, "metrics"],
 ];
 
-const DEST_PALETTE = { top: "#bfe9e1", left: "#8fcfc2", right: "#73b5a8" };
-
 export const ZONE_DOOR: Record<Zone, Pt> = {
   INBOX: { c: 0, r: 1 },
   WORKSHOP: { c: 12, r: 1 },
@@ -57,19 +33,11 @@ export const ZONE_DOOR: Record<Zone, Pt> = {
   AWAY: { c: 0, r: 0 },
 };
 
-const LANDMARKS: [number, number, Zone, string][] = [
-  [1, 1, "INBOX", "Depot"],
-  [11, 1, "WORKSHOP", "Workshop"],
-  [1, 11, "DESK", "Front desk"],
+const LANDMARKS: [number, number, Zone][] = [
+  [1, 1, "INBOX"],
+  [11, 1, "WORKSHOP"],
+  [1, 11, "DESK"],
 ];
-
-export const PALETTES = [
-  { top: "#ebe8e1", left: "#cfcbc0", right: "#b4afa2" },
-  { top: "#dccdb0", left: "#bca98b", right: "#a18d72" },
-  { top: "#c2d0df", left: "#98a9bd", right: "#7f8fa4" },
-  { top: "#d9a690", left: "#b98470", right: "#9d6c59" },
-];
-export const LANDMARK_PALETTE = { top: "#cbbff9", left: "#a596e8", right: "#8b7dd6" };
 
 export function isRoad(c: number, r: number) {
   return c >= 0 && r >= 0 && c < N && r < N && (c % 4 === 0 || r % 4 === 0);
@@ -95,20 +63,12 @@ export function buildCity(): Cell[][] {
       if (isRoad(c, r)) grid[c][r] = { kind: "road" };
       else if (c >= 5 && c <= 7 && r >= 5 && r <= 7) grid[c][r] = { kind: "park" };
       else if (rand() < 0.12) grid[c][r] = { kind: "park" };
-      else grid[c][r] = { kind: "building", floors: 1 + Math.floor(rand() * 4), palette: Math.floor(rand() * 4) };
+      else grid[c][r] = { kind: "building", floors: 1 + Math.floor(rand() * 4) };
     }
   }
-  for (const [c, r, zone, label] of LANDMARKS) {
-    grid[c][r] = { kind: "building", floors: 5 + Math.floor(rand() * 2), palette: 4, label, zone };
-  }
-  for (const [c, r, dest] of DEST_CELLS) {
-    grid[c][r] = { kind: "building", floors: 6, palette: 2, label: DEST_LABEL[dest], dest, tint: DEST_PALETTE };
-  }
+  for (const [c, r, zone] of LANDMARKS) grid[c][r] = { kind: "building", floors: 5, zone };
+  for (const [c, r, dest] of DEST_CELLS) grid[c][r] = { kind: "building", floors: 6, dest };
   return grid;
-}
-
-export function project(c: number, r: number, lift = 0) {
-  return { x: OX + (c - r) * (TILE / 2), y: OY + ((c + r) * TILE) / 4 - lift };
 }
 
 export function findPath(from: Pt, to: Pt): Pt[] {

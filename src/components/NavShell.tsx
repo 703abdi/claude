@@ -6,8 +6,8 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import Avatar from "@/components/shared/Avatar";
 
 const NAV_ITEMS = [
-  { href: "/tasks", label: "Tasks", icon: TasksIcon },
   { href: "/hub", label: "Hub", icon: HubIcon },
+  { href: "/tasks", label: "Tasks", icon: TasksIcon },
   { href: "/town", label: "Town", icon: TownIcon },
   { href: "/metrics", label: "Metrics", icon: MetricsIcon },
   { href: "/people", label: "People", icon: PeopleIcon },
@@ -58,7 +58,7 @@ export default function NavShell({
       {/* Desktop top bar */}
       <header className="hidden md:flex items-center justify-between gap-4 border-b border-border px-6 py-2.5 sticky top-0 bg-background z-40">
         <div className="flex items-center gap-6 shrink-0">
-          <Link href="/tasks" className="flex items-center gap-2">
+          <Link href="/hub" className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-accent flex items-center justify-center text-white text-xs font-bold shrink-0">
               a
             </span>

@@ -1,5 +1,5 @@
-import CityView from "@/components/agents/CityView";
+import TownPage from "@/components/town3d/TownPage";
 
-export default function TownPage() {
-  return <CityView />;
+export default function Page() {
+  return <TownPage />;
 }

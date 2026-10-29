@@ -221,3 +221,132 @@ body {
     box-shadow: 0 0 0 14px rgba(124, 109, 242, 0);
   }
 }
+
+/* ── 3D town labels ─────────────────────────────────────────── */
+.town-label {
+  pointer-events: auto;
+  cursor: pointer;
+  font: 600 11px/1 var(--font-sans), system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  color: #f4f2ff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(12, 14, 22, 0.78);
+  border: 1px solid color-mix(in srgb, var(--accent, #7c6df2) 70%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent, #7c6df2) 45%, transparent);
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.town-label:hover {
+  transform: translateY(-2px) scale(1.05);
+  background: color-mix(in srgb, var(--accent, #7c6df2) 35%, rgba(12, 14, 22, 0.85));
+}
+.agent-label {
+  pointer-events: auto;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 10px/1 var(--font-sans), system-ui, sans-serif;
+  color: #f4f2ff;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(12, 14, 22, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+.agent-label[data-selected="true"] {
+  border-color: #fff;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.45);
+}
+.agent-label[data-status="working"] {
+  border-color: rgba(167, 139, 250, 0.8);
+}
+.agent-label[data-status="blocked"] {
+  border-color: rgba(239, 68, 68, 0.8);
+}
+.agent-label-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+.agent-label-state {
+  font-weight: 500;
+  color: rgba(244, 242, 255, 0.6);
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* ── Hub look ───────────────────────────────────────────────── */
+.hub-bg {
+  background:
+    radial-gradient(60rem 30rem at 10% -10%, rgba(124, 109, 242, 0.22), transparent 60%),
+    radial-gradient(50rem 28rem at 100% 0%, rgba(45, 212, 191, 0.12), transparent 60%),
+    var(--background);
+}
+.glass {
+  background: linear-gradient(180deg, rgba(28, 28, 36, 0.72), rgba(20, 20, 25, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+}
+.glow-border {
+  position: relative;
+}
+.glow-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(124, 109, 242, 0.9), rgba(45, 212, 191, 0.6), rgba(245, 166, 35, 0.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+@keyframes hub-aurora {
+  0% {
+    transform: translate3d(-10%, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(10%, 4%, 0) rotate(8deg);
+  }
+  100% {
+    transform: translate3d(-10%, 0, 0) rotate(0deg);
+  }
+}
+.hub-aurora {
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(from 90deg, rgba(124, 109, 242, 0.35), rgba(45, 212, 191, 0.25), rgba(245, 166, 35, 0.2), rgba(124, 109, 242, 0.35));
+  filter: blur(60px);
+  animation: hub-aurora 18s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes hub-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.hub-wave span {
+  display: inline-block;
+  width: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: hub-wave 1.1s ease-in-out infinite;
+}
+@media (max-width: 640px) {
+  .agent-label-state {
+    display: none;
+  }
+  .town-label {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+}
