@@ -3,11 +3,13 @@
 import { useState } from "react";
 import type { Task, Category } from "@/lib/types";
 import { api } from "@/lib/api-client";
+import Avatar from "@/components/shared/Avatar";
 
 export default function TaskDetail({
   task,
   categories,
   people,
+  allTasks,
   onChange,
   onDelete,
   onCycleEffort,
@@ -15,6 +17,7 @@ export default function TaskDetail({
   task: Task;
   categories: Category[];
   people: { id: string; name: string }[];
+  allTasks: { id: string; title: string }[];
   onChange: (task: Task) => void;
   onDelete: (id: string) => void;
   onCycleEffort: (e: React.MouseEvent) => void;
@@ -25,12 +28,16 @@ export default function TaskDetail({
   const [notes, setNotes] = useState(task.notes ?? "");
   const [location, setLocation] = useState(task.location ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function patch(data: Record<string, unknown>) {
     setSaving(true);
+    setError(null);
     try {
       const updated = await api.tasks.update(task.id, data);
       onChange(updated);
+    } catch {
+      setError("Couldn't save that change. Try again.");
     } finally {
       setSaving(false);
     }
@@ -76,6 +83,36 @@ export default function TaskDetail({
     await patch({ personIds });
   }
 
+  const blockerOptions = allTasks.filter(
+    (t) => t.id !== task.id && !task.blockedBy.some((b) => b.id === t.id)
+  );
+
+  async function addDependency(blockerId: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await api.tasks.addDependency(task.id, blockerId);
+      onChange(updated);
+    } catch {
+      setError("Couldn't add that dependency. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeDependency(blockerId: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await api.tasks.removeDependency(task.id, blockerId);
+      onChange(updated);
+    } catch {
+      setError("Couldn't remove that dependency. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleDelete() {
     if (!confirm(`Delete "${task.title}"? This can't be undone.`)) return;
     await api.tasks.delete(task.id);
@@ -83,7 +120,7 @@ export default function TaskDetail({
   }
 
   return (
-    <div className="border-t border-border px-4 py-4 space-y-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+    <div className="px-4 py-4 space-y-4" onClick={(e) => e.stopPropagation()}>
       {/* Title / description */}
       <div className="grid gap-2">
         <input
@@ -101,6 +138,21 @@ export default function TaskDetail({
           className="w-full bg-surface-2 border border-border rounded-md px-2.5 py-2 text-sm text-muted resize-none outline-none focus:border-muted-2"
         />
       </div>
+
+      {task.aiPriorityReason && task.aiPriorityScore !== null && task.aiPriorityScore > 0 && (
+        <div className="flex items-start gap-2 text-xs border border-border rounded-md px-2.5 py-2 text-muted">
+          <span className="text-muted-2 shrink-0">AI:</span>
+          <span>{task.aiPriorityReason}</span>
+          {!task.pinnedToday && (
+            <button
+              onClick={() => patch({ pinnedToday: true })}
+              className="ml-auto shrink-0 text-foreground hover:underline"
+            >
+              Pin to Today
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Steps */}
       <div>
@@ -279,11 +331,12 @@ export default function TaskDetail({
               <button
                 key={p.id}
                 onClick={() => togglePerson(p.id)}
-                className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                  active ? "border-foreground text-foreground" : "border-border text-muted"
+                className={`inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border transition-colors ${
+                  active ? "border-foreground/40 bg-surface-2 text-foreground" : "border-border text-muted"
                 }`}
               >
-                {p.name}
+                <Avatar name={p.name} size="sm" className="w-5 h-5 text-[9px]" />
+                <span className="text-xs">{p.name}</span>
               </button>
             );
           })}
@@ -291,23 +344,39 @@ export default function TaskDetail({
       </div>
 
       {/* Blocked by */}
-      {task.blockedBy.length > 0 && (
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted-2 font-semibold mb-1.5">Blocked by</p>
-          <div className="flex flex-wrap gap-1.5">
-            {task.blockedBy.map((b) => (
-              <span
-                key={b.id}
-                className={`text-xs px-2 py-1 rounded-full border border-border ${
-                  b.status === "COMPLETED" ? "text-muted line-through" : "text-status-red"
-                }`}
-              >
-                {b.title}
-              </span>
-            ))}
-          </div>
+      <div>
+        <p className="text-[11px] uppercase tracking-wide text-muted-2 font-semibold mb-1.5">Blocked by</p>
+        <div className="flex flex-wrap gap-1.5 mb-1.5">
+          {task.blockedBy.map((b) => (
+            <span
+              key={b.id}
+              className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-border ${
+                b.status === "COMPLETED" ? "text-muted line-through" : "text-status-red"
+              }`}
+            >
+              {b.title}
+              <button onClick={() => removeDependency(b.id)} className="text-muted-2 hover:text-foreground">
+                ✕
+              </button>
+            </span>
+          ))}
+          {task.blockedBy.length === 0 && <span className="text-xs text-muted-2">Nothing blocking this.</span>}
         </div>
-      )}
+        {blockerOptions.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => e.target.value && addDependency(e.target.value)}
+            className="bg-surface-2 border border-border rounded-md px-2 py-1.5 text-xs outline-none"
+          >
+            <option value="">+ Add blocker...</option>
+            {blockerOptions.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {/* Notes */}
       <div>
@@ -322,7 +391,9 @@ export default function TaskDetail({
       </div>
 
       <div className="flex items-center justify-between pt-1">
-        <span className="text-[11px] text-muted-2">{saving ? "Saving..." : task.isSeed ? "Seed data" : ""}</span>
+        <span className="text-[11px] text-muted-2">
+          {error ? <span className="text-status-red">{error}</span> : saving ? "Saving..." : task.isSeed ? "Seed data" : ""}
+        </span>
         <button onClick={handleDelete} className="text-xs text-status-red hover:underline">
           Delete task
         </button>

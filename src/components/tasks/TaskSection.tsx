@@ -2,7 +2,7 @@
 
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import type { Task, Category } from "@/lib/types";
+import type { Task } from "@/lib/types";
 import { api } from "@/lib/api-client";
 import TaskCard from "./TaskCard";
 
@@ -10,22 +10,26 @@ export default function TaskSection({
   title,
   subtitle,
   tasks,
-  categories,
-  people,
   onChange,
-  onDelete,
   onReorder,
+  onSelect,
+  selectedTaskId,
+  cursorId,
+  showFocusActions,
   emptyState,
+  highlightId,
 }: {
   title: string;
   subtitle?: string;
   tasks: Task[];
-  categories: Category[];
-  people: { id: string; name: string }[];
   onChange: (task: Task) => void;
-  onDelete: (id: string) => void;
   onReorder: (orderedIds: string[]) => void;
+  onSelect: (task: Task) => void;
+  selectedTaskId?: string | null;
+  cursorId?: string | null;
+  showFocusActions?: boolean;
   emptyState: string;
+  highlightId?: string | null;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -44,17 +48,17 @@ export default function TaskSection({
   }
 
   return (
-    <section className="mb-8">
+    <section className="mb-6">
       {title && (
-        <div className="flex items-baseline gap-2 mb-2.5">
-          <h2 className="text-sm font-bold uppercase tracking-wide">{title}</h2>
-          <span className="text-xs text-muted-2">{tasks.length}</span>
-          {subtitle && <span className="text-xs text-muted ml-1">{subtitle}</span>}
+        <div className="flex items-baseline gap-2 mb-2 px-0.5">
+          <h2 className="text-[13px] font-semibold text-muted">{title}</h2>
+          <span className="font-mono text-[11px] text-muted-2">{tasks.length}</span>
+          {subtitle && <span className="text-[11px] text-muted-2 ml-1">{subtitle}</span>}
         </div>
       )}
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-muted-2 py-3">{emptyState}</p>
+        <p className="text-sm text-muted-2 py-3 px-0.5">{emptyState}</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
@@ -63,10 +67,12 @@ export default function TaskSection({
                 <TaskCard
                   key={task.id}
                   task={task}
-                  categories={categories}
-                  people={people}
                   onChange={onChange}
-                  onDelete={onDelete}
+                  onSelect={onSelect}
+                  selected={selectedTaskId === task.id}
+                  cursor={cursorId === task.id}
+                  showFocusActions={showFocusActions}
+                  highlighted={highlightId === task.id}
                 />
               ))}
             </div>
