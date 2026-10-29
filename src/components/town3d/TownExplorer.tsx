@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { AnimatePresence, motion } from "motion/react";
 import { FormEvent, useMemo, useState } from "react";
 import DestPanel from "@/components/agents/DestPanel";
 import { ZONE_LABEL } from "@/lib/agents/town";
@@ -40,6 +41,8 @@ export default function TownExplorer({
       overdue: summary?.tasks.overdue ?? 0,
       queued: agents.reduce((n, a) => n + a.queued, 0),
       working: agents.filter((a) => a.status === "WORKING").length,
+      openTasks: summary?.tasks.open ?? 0,
+      leadsToday: summary?.metrics && "data" in summary.metrics ? summary.metrics.data.overview.today : null,
     }),
     [summary, agents]
   );
@@ -57,8 +60,16 @@ export default function TownExplorer({
       </div>
       <div className="pointer-events-none absolute bottom-4 left-4 text-[11px] text-muted-2">Drag to rotate · scroll to zoom · click anything</div>
 
+      <AnimatePresence>
       {selected && (
-        <aside className="absolute right-3 top-3 bottom-3 w-[min(360px,calc(100%-24px))] overflow-y-auto rounded-2xl glass p-5 animate-slide-in-right">
+        <motion.aside
+          key="panel"
+          initial={{ opacity: 0, x: 40, filter: "blur(6px)" }}
+          animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+          exit={{ opacity: 0, x: 40, filter: "blur(6px)" }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute right-3 top-3 bottom-3 z-10 w-[min(360px,calc(100%-24px))] overflow-y-auto rounded-2xl glass hud-corners p-5"
+        >
           <button onClick={() => setSelected(null)} className="absolute right-3 top-3 text-lg leading-none text-muted-2 hover:text-foreground" aria-label="Close">
             ×
           </button>
@@ -89,8 +100,9 @@ export default function TownExplorer({
           ) : (
             <DestPanel dest={selected.dest} agents={agents} />
           )}
-        </aside>
+        </motion.aside>
       )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -121,7 +133,7 @@ function AgentPanel({ agent, runs, onSent }: { agent: AgentView | null; runs: Ru
         <div className="text-xs text-muted-2 font-mono uppercase">{agent.kind.toLowerCase()} agent</div>
         <div className="text-lg font-semibold">{agent.name}</div>
         <div className="text-xs text-muted font-mono">
-          {agent.status.toLowerCase()} · {ZONE_LABEL[agent.zone]}
+          {agent.status.toLowerCase()} · {agent.status === "WORKING" && agent.currentTaskId ? "Task Tower" : ZONE_LABEL[agent.zone]}
           {agent.model ? ` · ${agent.model}` : ""}
         </div>
       </div>

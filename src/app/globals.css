@@ -290,9 +290,6 @@ body {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
 }
-.glow-border {
-  position: relative;
-}
 .glow-border::before {
   content: "";
   position: absolute;
@@ -349,4 +346,138 @@ body {
     font-size: 10px;
     padding: 4px 8px;
   }
+}
+
+/* ── Futuristic HUD layer ───────────────────────────────────── */
+@keyframes grid-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 0 48px, 48px 0;
+  }
+}
+.hud-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(34, 225, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(155, 123, 255, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 75%);
+  animation: grid-drift 12s linear infinite;
+}
+.hud-corners::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  border-radius: inherit;
+  --c: rgba(34, 225, 255, 0.7);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 14px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) top left / 1.5px 14px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 14px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 1.5px 14px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 14px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 1.5px 14px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 14px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 1.5px 14px no-repeat;
+}
+@keyframes scan-sweep {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+.hud-scan {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.hud-scan::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
+}
+.hud-scan::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(180deg, transparent, rgba(34, 225, 255, 0.07), transparent);
+  animation: scan-sweep 6s linear infinite;
+}
+@keyframes shimmer-text {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+.neon-text {
+  background: linear-gradient(90deg, #9b7bff, #22e1ff, #ff4fd8, #9b7bff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-text 6s linear infinite;
+  filter: drop-shadow(0 0 18px rgba(34, 225, 255, 0.35));
+}
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.orbit-spin {
+  animation: orbit-spin 24s linear infinite;
+  transform-origin: center;
+}
+.orbit-spin-rev {
+  animation: orbit-spin 36s linear infinite reverse;
+  transform-origin: center;
+}
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: ticker 28s linear infinite;
+}
+@keyframes blink-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.blink-dot {
+  animation: blink-dot 1.6s ease-in-out infinite;
+}
+.hover-glare {
+  transition: opacity 0.25s ease;
+}
+*:hover > .hover-glare {
+  opacity: 1;
+}
+.nav-active {
+  background: linear-gradient(135deg, #7c6df2, #22a8ff);
+  box-shadow: 0 0 22px rgba(124, 109, 242, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }

@@ -43,6 +43,8 @@ export async function GET() {
         }),
         currentPrompt:
           lastRun && (lastRun.status === "RUNNING" || lastRun.status === "QUEUED") ? lastRun.prompt : null,
+        currentTaskId:
+          lastRun && (lastRun.status === "RUNNING" || lastRun.status === "QUEUED") ? lastRun.taskId : null,
       };
     }),
     runs: recentRuns.map((r) => ({

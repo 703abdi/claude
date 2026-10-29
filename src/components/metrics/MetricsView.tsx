@@ -1,6 +1,9 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useEffect, useState } from "react";
+import CountUp from "@/components/fx/CountUp";
+import Reveal from "@/components/fx/Reveal";
 import type { AbdiformForm, AbdiformMetrics, AbdiformResult } from "@/lib/abdiform-types";
 
 function pct(v: number | null) {
@@ -71,17 +74,20 @@ function Dashboard({ data }: { data: AbdiformMetrics }) {
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card label="Responses" value={o.total} />
-        <Card label="Today" value={o.today} />
-        <Card label="Last 7 days" value={o.last7} sub={`${delta >= 0 ? "+" : ""}${delta} vs prior week`} />
-        <Card label="Completion" value={pct(o.completion)} sub="responses ÷ views" />
-        <Card label="Win rate" value={pct(o.winRate)} sub="won ÷ responses" />
+        <Card label="Responses" value={o.total} i={0} />
+        <Card label="Today" value={o.today} i={1} />
+        <Card label="Last 7 days" value={o.last7} sub={`${delta >= 0 ? "+" : ""}${delta} vs prior week`} i={2} />
+        <Card label="Completion" value={o.completion === null ? null : Math.round(o.completion * 100)} suffix="%" sub="responses ÷ views" i={3} />
+        <Card label="Win rate" value={Math.round(o.winRate * 100)} suffix="%" sub="won ÷ responses" i={4} />
       </div>
 
-      <section className="rounded-2xl border border-border bg-surface p-5">
-        <h2 className="text-sm font-semibold mb-3">Responses per day · last 30 days</h2>
-        <Timeline points={data.timeline} />
-      </section>
+      <Reveal delay={0.2}>
+        <section className="relative overflow-hidden rounded-2xl glass hud-corners p-5">
+          <div className="hud-scan" />
+          <h2 className="relative text-sm font-semibold mb-3">Responses per day · last 30 days</h2>
+          <Timeline points={data.timeline} />
+        </section>
+      </Reveal>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
         <section className="rounded-2xl border border-border bg-surface p-5">
@@ -91,9 +97,13 @@ function Dashboard({ data }: { data: AbdiformMetrics }) {
               <li key={status} className="flex items-center gap-3 text-sm">
                 <span className="w-24 capitalize text-muted">{status}</span>
                 <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
-                  <div
-                    className="h-full bg-accent"
-                    style={{ width: `${o.total ? Math.round((count / o.total) * 100) : 0}%` }}
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ background: "linear-gradient(90deg, #9b7bff, #22e1ff)", boxShadow: "0 0 12px rgba(34,225,255,0.5)" }}
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${o.total ? Math.round((count / o.total) * 100) : 0}%` }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
                   />
                 </div>
                 <span className="w-8 text-right font-mono">{count}</span>
@@ -149,13 +159,18 @@ function FormRow({ form: f }: { form: AbdiformForm }) {
   );
 }
 
-function Card({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
+function Card({ label, value, suffix, sub, i }: { label: string; value: number | null; suffix?: string; sub?: string; i: number }) {
   return (
-    <div className="rounded-xl border border-border bg-surface px-4 py-3">
-      <div className="text-xs text-muted-2">{label}</div>
-      <div className="text-2xl font-bold font-mono">{value}</div>
-      {sub && <div className="text-[11px] text-muted-2 mt-0.5">{sub}</div>}
-    </div>
+    <Reveal delay={i * 0.06}>
+      <div className="relative overflow-hidden rounded-xl glass px-4 py-3">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#22e1ff] to-transparent" />
+        <div className="text-[11px] font-mono uppercase tracking-[0.15em] text-muted-2">{label}</div>
+        <div className="text-2xl font-bold font-mono drop-shadow-[0_0_14px_rgba(34,225,255,0.35)]">
+          {value === null ? "—" : <CountUp value={value} suffix={suffix} />}
+        </div>
+        {sub && <div className="text-[11px] text-muted-2 mt-0.5">{sub}</div>}
+      </div>
+    </Reveal>
   );
 }
 
@@ -166,21 +181,31 @@ function Timeline({ points }: { points: { day: string; label: string; count: num
   const gap = 2;
   const bw = w / points.length - gap;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-32" role="img" aria-label="Responses per day">
+    <svg viewBox={`0 0 ${w} ${h}`} className="relative w-full h-32" role="img" aria-label="Responses per day">
+      <defs>
+        <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#22e1ff" />
+          <stop offset="100%" stopColor="#9b7bff" />
+        </linearGradient>
+      </defs>
       {points.map((p, i) => {
         const bh = Math.max(p.count > 0 ? 2 : 0, (p.count / max) * (h - 8));
         return (
-          <rect
+          <motion.rect
             key={p.day}
             x={i * (bw + gap)}
             y={h - bh}
             width={bw}
             height={bh}
             rx={1.5}
-            style={{ fill: "var(--accent)", opacity: p.count > 0 ? 0.9 : 0.2 }}
+            style={{ fill: "url(#barGrad)", opacity: p.count > 0 ? 1 : 0.2, transformBox: "fill-box", transformOrigin: "bottom" }}
+            initial={{ scaleY: 0 }}
+            whileInView={{ scaleY: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: i * 0.02, ease: [0.16, 1, 0.3, 1] }}
           >
             <title>{`${p.label}: ${p.count}`}</title>
-          </rect>
+          </motion.rect>
         );
       })}
     </svg>

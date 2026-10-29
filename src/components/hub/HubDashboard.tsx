@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import CountUp from "@/components/fx/CountUp";
+import Reveal from "@/components/fx/Reveal";
+import Tilt from "@/components/fx/Tilt";
 import TownExplorer from "@/components/town3d/TownExplorer";
 import { KIND_COLOR } from "@/components/town3d/kinds";
 import { useAgents } from "@/lib/agents/useAgents";
@@ -55,83 +58,160 @@ export default function HubDashboard({ name }: { name: string }) {
     .filter(Boolean)
     .join(" · ");
 
+  const ticker = [
+    `SYS ONLINE`,
+    `AGENTS ${working}/${agents.length} ACTIVE`,
+    `QUEUE ${queued}`,
+    summary ? `TASKS ${summary.tasks.open} OPEN · ${summary.tasks.overdue} LATE` : "TASKS ···",
+    metrics ? `LEADS ${metrics.overview.today} TODAY · ${metrics.overview.last7} THIS WEEK` : "ABDIFORM OFFLINE",
+    summary?.calendar.items[0] ? `NEXT ${summary.calendar.items[0].title.toUpperCase()}` : "CALENDAR CLEAR",
+  ];
+
   return (
-    <div className="hub-bg min-h-full">
-      <div className="px-4 md:px-8 py-6 max-w-[1400px] mx-auto space-y-6">
+    <div className="hub-bg relative min-h-full overflow-hidden">
+      <div className="hud-grid" />
+      <div className="relative z-10 px-4 md:px-8 py-6 max-w-[1400px] mx-auto space-y-6">
         <section className="grid gap-5 lg:grid-cols-[1.15fr_1fr]">
-          <div className="relative overflow-hidden rounded-3xl glass glow-border p-7 md:p-9 min-h-[240px] flex flex-col justify-between">
-            <div className="hub-aurora" />
-            <div className="relative">
-              <div className="text-xs font-mono uppercase tracking-[0.2em] text-muted">abdi hub</div>
-              <h1 className="mt-3 text-3xl md:text-5xl font-bold tracking-tight">
-                {now ? greeting(now.getHours()) : "Welcome"}, <span className="bg-gradient-to-r from-[#a78bfa] via-[#2dd4bf] to-[#f5a623] bg-clip-text text-transparent">{name}</span>
-              </h1>
-              <p className="mt-3 text-sm md:text-base text-muted">{statusLine || "Loading your world…"}</p>
+          <Reveal className="min-w-0">
+            <div className="relative h-full overflow-hidden rounded-3xl glass glow-border hud-corners p-7 md:p-9 min-h-[260px] flex flex-col justify-between">
+              <div className="hub-aurora" />
+              <div className="hud-scan" />
+              <HeroOrbit />
+              <div className="relative">
+                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.25em] text-[#22e1ff]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#22e1ff] blink-dot shadow-[0_0_10px_#22e1ff]" />
+                  abdi hub · command center
+                </div>
+                <h1 className="mt-3 text-3xl md:text-5xl font-bold tracking-tight">
+                  {now ? greeting(now.getHours()) : "Welcome"}, <span className="neon-text">{name}</span>
+                </h1>
+                <p className="mt-3 text-sm md:text-base text-muted">{statusLine || "Loading your world…"}</p>
+              </div>
+              <div className="relative mt-6 flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <div className="font-mono text-4xl md:text-6xl font-bold tabular-nums tracking-tight drop-shadow-[0_0_24px_rgba(34,225,255,0.35)]">
+                    {now ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"}
+                    <span className="ml-1 text-lg md:text-2xl text-[#22e1ff]/70">{now ? String(now.getSeconds()).padStart(2, "0") : "--"}</span>
+                  </div>
+                  <div className="text-sm text-muted mt-1">
+                    {now ? now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Link href="/tasks" className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-sm font-medium backdrop-blur hover:border-[#22e1ff]/60 hover:shadow-[0_0_18px_rgba(34,225,255,0.35)] transition">
+                    Tasks
+                  </Link>
+                  <Link href="/metrics" className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-sm font-medium backdrop-blur hover:border-[#9b7bff]/60 hover:shadow-[0_0_18px_rgba(155,123,255,0.35)] transition">
+                    Metrics
+                  </Link>
+                </div>
+              </div>
             </div>
-            <div className="relative mt-6 flex items-end justify-between gap-4">
-              <div>
-                <div className="font-mono text-4xl md:text-6xl font-bold tabular-nums tracking-tight">
-                  {now ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"}
-                </div>
-                <div className="text-sm text-muted mt-1">
-                  {now ? now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : ""}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Link href="/tasks" className="rounded-xl bg-white/10 px-3.5 py-2 text-sm font-medium hover:bg-white/15">
-                  Tasks
-                </Link>
-                <Link href="/metrics" className="rounded-xl bg-white/10 px-3.5 py-2 text-sm font-medium hover:bg-white/15">
-                  Metrics
-                </Link>
-              </div>
+          </Reveal>
+          <Reveal delay={0.1} className="min-w-0">
+            <BriefCard />
+          </Reveal>
+        </section>
+
+        <Reveal delay={0.15}>
+          <div className="overflow-hidden rounded-full border border-white/10 bg-black/30 py-2 font-mono text-[11px] tracking-[0.2em] text-[#22e1ff]/80">
+            <div className="ticker-track">
+              {[...ticker, ...ticker].map((item, i) => (
+                <span key={i} className="mx-6">
+                  ◆ {item}
+                </span>
+              ))}
             </div>
           </div>
-          <BriefCard />
-        </section>
+        </Reveal>
 
         <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-          <StatTile label="Open tasks" value={summary?.tasks.open} accent="#7c6df2" href="/tasks" />
-          <StatTile label="Overdue" value={summary?.tasks.overdue} accent="#ef4444" href="/tasks" hot={(summary?.tasks.overdue ?? 0) > 0} />
-          <StatTile label="Due today" value={summary?.tasks.dueToday} accent="#f5a623" href="/tasks" />
-          <StatTile label="Agents working" value={agents.length ? `${working}/${agents.length}` : 0} accent="#2dd4bf" sub={queued ? `${queued} queued` : "queue clear"} />
-          <StatTile
-            label="Leads today"
-            value={metrics ? metrics.overview.today : "—"}
-            accent="#60a5fa"
-            href="/metrics"
-            sub={metrics ? `${metrics.overview.last7} this week` : "abdiform not connected"}
-            spark={metrics?.timeline.slice(-14).map((d) => d.count)}
-          />
-          <StatTile
-            label="Form completion"
-            value={metrics?.overview.completion != null ? `${Math.round(metrics.overview.completion * 100)}%` : "—"}
-            accent="#a78bfa"
-            href="/metrics"
-            sub={metrics ? `${Math.round(metrics.overview.winRate * 100)}% win rate` : undefined}
-          />
+          {[
+            { label: "Open tasks", value: summary?.tasks.open, accent: "#9b7bff", href: "/tasks" },
+            { label: "Overdue", value: summary?.tasks.overdue, accent: "#ff4d5e", href: "/tasks", hot: (summary?.tasks.overdue ?? 0) > 0 },
+            { label: "Due today", value: summary?.tasks.dueToday, accent: "#ffb347", href: "/tasks" },
+            {
+              label: "Agents working",
+              value: working,
+              total: agents.length,
+              accent: "#22e1ff",
+              sub: queued ? `${queued} queued` : "queue clear",
+            },
+            {
+              label: "Leads today",
+              value: metrics ? metrics.overview.today : undefined,
+              accent: "#60a5fa",
+              href: "/metrics",
+              sub: metrics ? `${metrics.overview.last7} this week` : "abdiform not connected",
+              spark: metrics?.timeline.slice(-14).map((d) => d.count),
+            },
+            {
+              label: "Form completion",
+              value: metrics?.overview.completion != null ? Math.round(metrics.overview.completion * 100) : undefined,
+              suffix: "%",
+              accent: "#ff4fd8",
+              href: "/metrics",
+              sub: metrics ? `${Math.round(metrics.overview.winRate * 100)}% win rate` : undefined,
+            },
+          ].map((tile, i) => (
+            <Reveal key={tile.label} delay={0.2 + i * 0.06} className="min-w-0">
+              <StatTile {...tile} />
+            </Reveal>
+          ))}
         </section>
 
-        <section className="space-y-3">
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Town</h2>
-              <p className="text-sm text-muted">Every building is part of your OS. Agents walk to where their work is.</p>
+        <Reveal delay={0.1}>
+          <section className="space-y-3">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="font-mono text-[11px] tracking-[0.25em] text-[#22e1ff]">LIVE</span> Town
+                </h2>
+                <p className="text-sm text-muted">Every building is part of your OS. Agents walk to where their work is.</p>
+              </div>
+              <Link href="/town" className="shrink-0 whitespace-nowrap text-xs text-accent hover:underline">
+                Full screen →
+              </Link>
             </div>
-            <Link href="/town" className="shrink-0 whitespace-nowrap text-xs text-accent hover:underline">
-              Full screen →
-            </Link>
-          </div>
-          <TownExplorer agents={agents} runs={runs} summary={summary} onWorkSent={refresh} />
-        </section>
+            <TownExplorer agents={agents} runs={runs} summary={summary} onWorkSent={refresh} />
+          </section>
+        </Reveal>
 
         <section className="grid gap-5 xl:grid-cols-[1.1fr_1fr_0.8fr]">
-          <AgentRoster agents={agents} onChanged={refresh} />
-          <ActivityFeed runs={runs} />
-          <Connectors />
+          <Reveal className="min-w-0">
+            <AgentRoster agents={agents} onChanged={refresh} />
+          </Reveal>
+          <Reveal delay={0.08} className="min-w-0">
+            <ActivityFeed runs={runs} />
+          </Reveal>
+          <Reveal delay={0.16} className="min-w-0">
+            <Connectors />
+          </Reveal>
         </section>
       </div>
     </div>
+  );
+}
+
+function HeroOrbit() {
+  return (
+    <svg aria-hidden viewBox="0 0 200 200" className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 opacity-60 md:opacity-80">
+      <defs>
+        <linearGradient id="orbitGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#22e1ff" />
+          <stop offset="100%" stopColor="#9b7bff" />
+        </linearGradient>
+      </defs>
+      <g className="orbit-spin">
+        <circle cx="100" cy="100" r="80" fill="none" stroke="url(#orbitGrad)" strokeWidth="0.6" strokeDasharray="2 6" />
+        <circle cx="180" cy="100" r="3" fill="#22e1ff" />
+      </g>
+      <g className="orbit-spin-rev">
+        <circle cx="100" cy="100" r="58" fill="none" stroke="#ff4fd8" strokeOpacity="0.5" strokeWidth="0.6" strokeDasharray="12 8" />
+        <circle cx="42" cy="100" r="2.5" fill="#ff4fd8" />
+      </g>
+      <circle cx="100" cy="100" r="34" fill="none" stroke="#9b7bff" strokeOpacity="0.35" strokeWidth="0.6" />
+    </svg>
   );
 }
 
@@ -167,10 +247,11 @@ function BriefCard() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-3xl glass p-6 md:p-7 flex flex-col">
-      <div className="flex items-center justify-between">
+    <div className="relative h-full overflow-hidden rounded-3xl glass hud-corners p-6 md:p-7 flex flex-col">
+      <div className="hud-scan" />
+      <div className="relative flex items-center justify-between">
         <div>
-          <div className="text-xs font-mono uppercase tracking-[0.2em] text-muted">morning brief</div>
+          <div className="text-xs font-mono uppercase tracking-[0.25em] text-[#ff4fd8]">morning brief</div>
           <div className="text-sm text-muted-2 mt-1">
             {brief ? new Date(brief.date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) : " "}
           </div>
@@ -200,7 +281,7 @@ function BriefCard() {
           onEnded={() => setPlaying(false)}
         />
       )}
-      <div className="mt-4 flex-1">
+      <div className="relative mt-4 flex-1">
         {brief === undefined ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : brief === null ? (
@@ -215,7 +296,7 @@ function BriefCard() {
         )}
       </div>
       {brief && (
-        <div className="mt-4 flex items-center justify-between text-xs">
+        <div className="relative mt-4 flex items-center justify-between text-xs">
           <Link href="/brief" className="text-accent hover:underline">
             Read the full brief →
           </Link>
@@ -231,6 +312,8 @@ function BriefCard() {
 function StatTile({
   label,
   value,
+  total,
+  suffix,
   accent,
   sub,
   href,
@@ -238,7 +321,9 @@ function StatTile({
   spark,
 }: {
   label: string;
-  value: number | string | undefined;
+  value: number | undefined;
+  total?: number;
+  suffix?: string;
   accent: string;
   sub?: string;
   href?: string;
@@ -246,16 +331,31 @@ function StatTile({
   spark?: number[];
 }) {
   const body = (
-    <div
-      className="relative h-full overflow-hidden rounded-2xl glass px-4 py-4 transition-transform hover:-translate-y-0.5"
-      style={{ boxShadow: hot ? `0 0 0 1px ${accent}88, 0 0 28px -6px ${accent}` : undefined }}
-    >
-      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl" style={{ background: `${accent}40` }} />
-      <div className="relative text-xs text-muted">{label}</div>
-      <div className="relative mt-1 text-3xl font-bold font-mono tabular-nums">{value ?? "·"}</div>
-      {sub && <div className="relative mt-1 text-[11px] text-muted-2">{sub}</div>}
-      {spark && spark.length > 1 && <Sparkline points={spark} color={accent} />}
-    </div>
+    <Tilt className="h-full rounded-2xl">
+      <div
+        className="relative h-full overflow-hidden rounded-2xl glass px-4 py-4"
+        style={{ boxShadow: hot ? `0 0 0 1px ${accent}aa, 0 0 32px -6px ${accent}` : `inset 0 1px 0 ${accent}22` }}
+      >
+        <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl" style={{ background: `${accent}55` }} />
+        <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+        <div className="relative flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.15em] text-muted">
+          {label}
+          {hot && <span className="h-1.5 w-1.5 rounded-full blink-dot" style={{ background: accent, boxShadow: `0 0 8px ${accent}` }} />}
+        </div>
+        <div className="relative mt-1.5 text-3xl font-bold font-mono tabular-nums" style={{ textShadow: `0 0 18px ${accent}66` }}>
+          {value === undefined ? (
+            <span className="text-muted-2">—</span>
+          ) : (
+            <>
+              <CountUp value={value} suffix={suffix} />
+              {total !== undefined && <span className="text-lg text-muted-2">/{total}</span>}
+            </>
+          )}
+        </div>
+        {sub && <div className="relative mt-1 text-[11px] text-muted-2">{sub}</div>}
+        {spark && spark.length > 1 && <Sparkline points={spark} color={accent} />}
+      </div>
+    </Tilt>
   );
   return href ? (
     <Link href={href} className="block h-full">

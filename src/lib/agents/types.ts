@@ -14,6 +14,7 @@ export type AgentView = {
   queued: number;
   zone: Zone;
   currentPrompt: string | null;
+  currentTaskId: string | null;
 };
 
 export type RunView = {

@@ -25,6 +25,13 @@ const DEST_CELLS: [number, number, Dest][] = [
   [11, 5, "metrics"],
 ];
 
+export const DEST_DOOR: Record<Dest, Pt> = {
+  calendar: { c: 4, r: 1 },
+  people: { c: 8, r: 11 },
+  tasks: { c: 12, r: 11 },
+  metrics: { c: 12, r: 5 },
+};
+
 export const ZONE_DOOR: Record<Zone, Pt> = {
   INBOX: { c: 0, r: 1 },
   WORKSHOP: { c: 12, r: 1 },

@@ -56,10 +56,10 @@ export default function NavShell({
   return (
     <div className="flex flex-col min-h-screen">
       {/* Desktop top bar */}
-      <header className="hidden md:flex items-center justify-between gap-4 border-b border-border px-6 py-2.5 sticky top-0 bg-background z-40">
+      <header className="hidden md:flex items-center justify-between gap-4 border-b border-white/5 px-6 py-2.5 sticky top-0 bg-background/70 backdrop-blur-xl z-40">
         <div className="flex items-center gap-6 shrink-0">
           <Link href="/hub" className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-md bg-accent flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <span className="w-6 h-6 rounded-md nav-active flex items-center justify-center text-white text-xs font-bold shrink-0">
               a
             </span>
             <span className="font-bold text-sm tracking-tight">abdi&apos;s os</span>
@@ -72,7 +72,7 @@ export default function NavShell({
                   key={item.href}
                   href={item.href}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    active ? "bg-accent text-white" : "text-muted hover:text-foreground"
+                    active ? "nav-active text-white" : "text-muted hover:text-foreground hover:bg-white/5"
                   }`}
                 >
                   <item.icon className="w-4 h-4" />
