@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/tasks", label: "Tasks", icon: TasksIcon },
   { href: "/hub", label: "Hub", icon: HubIcon },
   { href: "/town", label: "Town", icon: TownIcon },
+  { href: "/metrics", label: "Metrics", icon: MetricsIcon },
   { href: "/people", label: "People", icon: PeopleIcon },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon },
 ];
@@ -190,6 +191,13 @@ function HubIcon({ className }: { className?: string }) {
       <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+function MetricsIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

@@ -2,6 +2,7 @@
 
 import { FormEvent, ReactElement, useEffect, useMemo, useRef, useState } from "react";
 import { ZONE_LABEL, type Zone } from "@/lib/agents/town";
+import DestPanel from "@/components/agents/DestPanel";
 import {
   buildCity,
   findPath,
@@ -15,6 +16,7 @@ import {
   W,
   ZONE_DOOR,
   type Cell,
+  type Dest,
   type Pt,
 } from "@/lib/agents/city";
 import type { AgentView, AgentsResponse, RunView } from "@/lib/agents/types";
@@ -53,7 +55,7 @@ function Building({
   selected: boolean;
   onClick: () => void;
 }) {
-  const pal = cell.label ? LANDMARK_PALETTE : PALETTES[cell.palette];
+  const pal = cell.tint ?? (cell.label ? LANDMARK_PALETTE : PALETTES[cell.palette]);
   const a = c + 0.12, b = c + 0.88, ra = r + 0.12, rb = r + 0.88;
   const h = cell.floors * FLOOR_H;
   const p = (x: number, y: number, lift = 0) => project(x, y, lift);
@@ -105,6 +107,7 @@ export default function CityView() {
   const [positions, setPositions] = useState<Record<string, Pt>>({});
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [selectedDest, setSelectedDest] = useState<Dest | null>(null);
   const [prompt, setPrompt] = useState("");
   const [sending, setSending] = useState(false);
   const plans = useRef<Record<string, Plan>>({});
@@ -197,9 +200,16 @@ export default function CityView() {
               c={c}
               r={r}
               cell={cell}
-              selected={zone !== null && zone === selectedZone}
+              selected={(zone !== null && zone === selectedZone) || (cell.dest !== undefined && cell.dest === selectedDest)}
               onClick={() => {
-                if (zone) setSelectedZone(zone);
+                if (zone) {
+                  setSelectedZone(zone);
+                  setSelectedDest(null);
+                }
+                if (cell.dest) {
+                  setSelectedDest(cell.dest);
+                  setSelectedZone(null);
+                }
                 setSelectedAgent(null);
               }}
             />
@@ -253,6 +263,7 @@ export default function CityView() {
                   onClick={() => {
                     setSelectedAgent(a.id);
                     setSelectedZone(null);
+                    setSelectedDest(null);
                   }}
                 >
                   <title>{`${a.name} · ${a.status.toLowerCase()} · ${ZONE_LABEL[a.zone]}`}</title>
@@ -330,6 +341,8 @@ export default function CityView() {
                 </ul>
               )}
             </>
+          ) : selectedDest ? (
+            <DestPanel dest={selectedDest} agents={agents} />
           ) : (
             <p className="text-sm text-muted">Click a building to see who is there, or click an agent to send it work.</p>
           )}

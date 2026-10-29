@@ -11,10 +11,43 @@ const OY = 112;
 
 export type Pt = { c: number; r: number };
 
+export type Dest = "tasks" | "calendar" | "people" | "metrics";
+
 export type Cell =
   | { kind: "road" }
   | { kind: "park" }
-  | { kind: "building"; floors: number; palette: number; label?: string; zone?: Zone };
+  | {
+      kind: "building";
+      floors: number;
+      palette: number;
+      label?: string;
+      zone?: Zone;
+      dest?: Dest;
+      tint?: { top: string; left: string; right: string };
+    };
+
+export const DEST_LABEL: Record<Dest, string> = {
+  tasks: "Task Tower",
+  calendar: "Calendar Hall",
+  people: "People Office",
+  metrics: "Metrics Lab",
+};
+
+export const DEST_DOOR: Record<Dest, Pt> = {
+  calendar: { c: 4, r: 1 },
+  people: { c: 8, r: 11 },
+  tasks: { c: 12, r: 11 },
+  metrics: { c: 12, r: 5 },
+};
+
+const DEST_CELLS: [number, number, Dest][] = [
+  [5, 1, "calendar"],
+  [9, 11, "people"],
+  [11, 11, "tasks"],
+  [11, 5, "metrics"],
+];
+
+const DEST_PALETTE = { top: "#bfe9e1", left: "#8fcfc2", right: "#73b5a8" };
 
 export const ZONE_DOOR: Record<Zone, Pt> = {
   INBOX: { c: 0, r: 1 },
@@ -67,6 +100,9 @@ export function buildCity(): Cell[][] {
   }
   for (const [c, r, zone, label] of LANDMARKS) {
     grid[c][r] = { kind: "building", floors: 5 + Math.floor(rand() * 2), palette: 4, label, zone };
+  }
+  for (const [c, r, dest] of DEST_CELLS) {
+    grid[c][r] = { kind: "building", floors: 6, palette: 2, label: DEST_LABEL[dest], dest, tint: DEST_PALETTE };
   }
   return grid;
 }
