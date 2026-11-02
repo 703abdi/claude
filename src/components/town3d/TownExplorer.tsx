@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { removeAgent } from "@/lib/agents/removeAgent";
 import { AnimatePresence, motion } from "motion/react";
 import { FormEvent, useMemo, useState } from "react";
 import DestPanel from "@/components/agents/DestPanel";
@@ -129,18 +130,27 @@ function AgentPanel({ agent, runs, onSent }: { agent: AgentView | null; runs: Ru
   }
 
   async function remove() {
-    if (!agent || !window.confirm(`Remove ${agent.name}? Its run history goes too.`)) return;
+    if (!agent) return;
     setRemoving(true);
-    await fetch(`/api/agents/${agent.id}`, { method: "DELETE" });
+    const removed = await removeAgent(agent);
     setRemoving(false);
-    onSent?.();
+    if (removed) onSent?.();
   }
 
   return (
     <div className="space-y-4">
       <div>
         <div className="text-xs text-muted-2 font-mono uppercase">{agent.kind.toLowerCase()} agent</div>
-        <div className="text-lg font-semibold">{agent.name}</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-lg font-semibold truncate">{agent.name}</div>
+          <button
+            onClick={remove}
+            disabled={removing}
+            className="shrink-0 rounded-lg border border-overdue/40 px-2.5 py-1 text-xs font-medium text-overdue hover:bg-overdue/10 disabled:opacity-40"
+          >
+            {removing ? "Removing…" : "Remove"}
+          </button>
+        </div>
         <div className="text-xs text-muted font-mono">
           {agent.status.toLowerCase()} · {agent.status === "WORKING" && agent.currentTaskId ? "Task Tower" : ZONE_LABEL[agent.zone]}
           {agent.model ? ` · ${agent.model}` : ""}
@@ -164,21 +174,21 @@ function AgentPanel({ agent, runs, onSent }: { agent: AgentView | null; runs: Ru
           <p className="text-sm text-muted">No work yet.</p>
         ) : (
           mine.map((r) => (
-            <details key={r.id} className="rounded-xl border border-border p-3">
+            <details key={r.id} open={r.status === "FAILED" || undefined} className="rounded-xl border border-border p-3">
               <summary className="cursor-pointer text-sm">
                 <span className="font-mono text-xs text-muted-2 mr-2">{r.status.toLowerCase()}</span>
                 {r.prompt.length > 70 ? `${r.prompt.slice(0, 70)}…` : r.prompt}
               </summary>
-              {(r.output || r.error) && (
-                <pre className="mt-2 whitespace-pre-wrap text-xs text-muted bg-surface-2 rounded-lg p-2 max-h-56 overflow-auto">{r.error ?? r.output}</pre>
+              {r.status === "FAILED" && r.error && (
+                <p className="mt-2 text-xs text-overdue break-words">{r.error}</p>
+              )}
+              {r.output && (
+                <pre className="mt-2 whitespace-pre-wrap text-xs text-muted bg-surface-2 rounded-lg p-2 max-h-56 overflow-auto">{r.output}</pre>
               )}
             </details>
           ))
         )}
       </div>
-      <button onClick={remove} disabled={removing} className="text-xs text-muted-2 hover:text-red-400 disabled:opacity-40">
-        {removing ? "Removing…" : "Remove agent"}
-      </button>
     </div>
   );
 }

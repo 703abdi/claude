@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { removeAgent } from "@/lib/agents/removeAgent";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import CountUp from "@/components/fx/CountUp";
 import Reveal from "@/components/fx/Reveal";
@@ -462,6 +463,16 @@ function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChanged: ()
                 </div>
               </div>
               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_PILL[a.status]}`}>{a.status.toLowerCase()}</span>
+              <button
+                onClick={async () => {
+                  if (await removeAgent(a)) onChanged();
+                }}
+                aria-label={`Remove ${a.name}`}
+                title={`Remove ${a.name}`}
+                className="shrink-0 rounded-lg px-2 py-1 text-xs text-muted-2 hover:bg-overdue/10 hover:text-overdue"
+              >
+                Remove
+              </button>
             </li>
           ))}
         </ul>
