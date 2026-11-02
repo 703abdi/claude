@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { looksLikeApiKey } from "@/lib/agents/secrets";
 
 export const taskCreateSchema = z.object({
   title: z.string().min(1).max(300),
@@ -104,7 +105,15 @@ export const calendarEventUpdateSchema = z.object({
 export const agentCreateSchema = z.object({
   name: z.string().trim().min(1).max(60),
   kind: z.enum(["GROK", "NVIDIA", "CLAUDE", "LOCAL"]),
-  model: z.string().trim().max(100).optional().nullable(),
+  model: z
+    .string()
+    .trim()
+    .max(100)
+    .refine((v) => !looksLikeApiKey(v), {
+      message: "That's an API key, not a model id. Put it in your env vars and leave the model blank.",
+    })
+    .optional()
+    .nullable(),
   systemPrompt: z.string().max(8000).optional().nullable(),
 });
 

@@ -110,6 +110,7 @@ export default function TownExplorer({
 function AgentPanel({ agent, runs, onSent }: { agent: AgentView | null; runs: RunView[]; onSent?: () => void }) {
   const [prompt, setPrompt] = useState("");
   const [sending, setSending] = useState(false);
+  const [removing, setRemoving] = useState(false);
   if (!agent) return <p className="text-sm text-muted">This agent is gone.</p>;
   const mine = runs.filter((r) => r.agentId === agent.id).slice(0, 4);
 
@@ -124,6 +125,14 @@ function AgentPanel({ agent, runs, onSent }: { agent: AgentView | null; runs: Ru
     });
     setSending(false);
     setPrompt("");
+    onSent?.();
+  }
+
+  async function remove() {
+    if (!agent || !window.confirm(`Remove ${agent.name}? Its run history goes too.`)) return;
+    setRemoving(true);
+    await fetch(`/api/agents/${agent.id}`, { method: "DELETE" });
+    setRemoving(false);
     onSent?.();
   }
 
@@ -167,6 +176,9 @@ function AgentPanel({ agent, runs, onSent }: { agent: AgentView | null; runs: Ru
           ))
         )}
       </div>
+      <button onClick={remove} disabled={removing} className="text-xs text-muted-2 hover:text-red-400 disabled:opacity-40">
+        {removing ? "Removing…" : "Remove agent"}
+      </button>
     </div>
   );
 }

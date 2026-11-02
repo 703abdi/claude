@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { runServerAgent, type ServerAgentKind } from "@/lib/agents/providers";
 import { defaultModelFor } from "@/lib/agents/providers";
+import { looksLikeApiKey } from "@/lib/agents/secrets";
 
 type Outcome = { status: "DONE"; output: string } | { status: "FAILED"; error: string };
 
@@ -44,7 +45,7 @@ export async function executeServerRun(runId: string) {
   try {
     const output = await runServerAgent({
       kind: run.agent.kind as ServerAgentKind,
-      model: run.agent.model || defaultModelFor(run.agent.kind) || "",
+      model: (!looksLikeApiKey(run.agent.model) && run.agent.model) || defaultModelFor(run.agent.kind) || "",
       system: run.agent.systemPrompt,
       prompt: run.prompt,
     });

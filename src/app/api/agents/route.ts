@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { agentCreateSchema } from "@/lib/validation";
 import { zoneFor } from "@/lib/agents/town";
 import { defaultModelFor } from "@/lib/agents/providers";
+import { looksLikeApiKey } from "@/lib/agents/secrets";
 
 export async function GET() {
   const [agents, queuedGroups, recentRuns] = await Promise.all([
@@ -33,7 +34,8 @@ export async function GET() {
         name: a.name,
         kind: a.kind,
         status: a.status,
-        model: a.model,
+        // Never echo a key someone pasted into the model field.
+        model: looksLikeApiKey(a.model) ? defaultModelFor(a.kind) : a.model,
         lastSeenAt: a.lastSeenAt,
         queued,
         zone: zoneFor({

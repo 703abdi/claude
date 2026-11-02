@@ -405,7 +405,9 @@ function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChanged: ()
       body: JSON.stringify({ name, kind, model: model || null, systemPrompt: systemPrompt || null }),
     });
     if (!res.ok) {
-      setError("Could not create agent. Names must be unique.");
+      const body = await res.json().catch(() => null);
+      const modelError = body?.error?.fieldErrors?.model?.[0];
+      setError(modelError ?? "Could not create agent. Names must be unique.");
       return;
     }
     setName("");
@@ -432,7 +434,7 @@ function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChanged: ()
             <option value="CLAUDE">Claude (Anthropic)</option>
             <option value="LOCAL">Local agent (runs on my machine)</option>
           </select>
-          {kind !== "LOCAL" && <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model id (blank = provider default)" className={inputClass} />}
+          {kind !== "LOCAL" && <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model id, not your API key (blank = default)" className={inputClass} />}
           <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={2} placeholder="Role / instructions (optional)" className={inputClass} />
           {error && <p className="text-xs text-overdue">{error}</p>}
           <button type="submit" className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white">

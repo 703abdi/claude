@@ -85,11 +85,12 @@ export default function NavShell({
 
         <button
           onClick={openSearch}
-          className="flex-1 max-w-sm flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-surface text-muted hover:border-muted-2 transition-colors"
+          aria-label="Search"
+          className="min-w-0 xl:flex-1 max-w-sm flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-surface text-muted hover:border-muted-2 transition-colors"
         >
           <SearchIcon className="w-3.5 h-3.5 shrink-0" />
-          <span className="text-sm">Search or jump to</span>
-          <span className="ml-auto text-[11px] font-mono text-muted-2 shrink-0">⌘K</span>
+          <span className="hidden xl:inline text-sm whitespace-nowrap truncate">Search or jump to</span>
+          <span className="hidden xl:inline ml-auto text-[11px] font-mono text-muted-2 shrink-0">⌘K</span>
         </button>
 
         <div className="relative shrink-0" ref={menuRef}>
