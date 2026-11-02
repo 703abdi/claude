@@ -16,10 +16,13 @@ if (direct !== url) console.log("Running migrations over the direct (non-pooled)
 
 await releaseStaleMigrateLock(direct);
 
+// A lock leaked by an earlier pooled build can outlive the cleanup above, and
+// it blocks every deploy. Only this app's builds migrate this database, so
+// skip Prisma's lock rather than let a leaked one wedge deploys.
 const result = spawnSync("prisma", ["migrate", "deploy"], {
   stdio: "inherit",
   shell: process.platform === "win32",
-  env: { ...process.env, DATABASE_URL: direct },
+  env: { ...process.env, DATABASE_URL: direct, PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1" },
 });
 process.exit(result.status ?? 1);
 
@@ -43,6 +46,13 @@ async function releaseStaleMigrateLock(datasourceUrl) {
       MIGRATE_LOCK_KEY
     );
     for (const row of ended) console.log(`Released a stale migration lock held by backend ${row.pid}`);
+    const holders = await prisma.$queryRawUnsafe(
+      `SELECT l.pid, l.granted, a.state, extract(epoch FROM now() - a.state_change)::int AS idle_seconds, left(a.query, 60) AS query
+         FROM pg_locks l LEFT JOIN pg_stat_activity a ON a.pid = l.pid
+        WHERE l.locktype = 'advisory' AND ((l.classid::bigint << 32) | l.objid::bigint) = $1`,
+      MIGRATE_LOCK_KEY
+    );
+    for (const h of holders) console.log("Migration lock session:", JSON.stringify(h));
   } catch (err) {
     // Cleanup is best effort; migrate deploy reports any real problem itself.
     console.warn("Could not check for a stale migration lock:", err instanceof Error ? err.message : err);
