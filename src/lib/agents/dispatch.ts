@@ -24,6 +24,24 @@ async function finishRun(runId: string, agentId: string, outcome: Outcome) {
   ]);
 }
 
+// A run whose function was cut off never reaches finishRun and would sit in
+// RUNNING forever, leaving its agent stuck at work. Anything running longer
+// than the function could possibly live is marked failed instead.
+const STALE_RUN_MS = 3 * 60_000;
+
+export async function failStaleRuns() {
+  const stale = await prisma.agentRun.findMany({
+    where: { status: "RUNNING", startedAt: { lt: new Date(Date.now() - STALE_RUN_MS) } },
+    select: { id: true, agentId: true },
+  });
+  for (const run of stale) {
+    await finishRun(run.id, run.agentId, {
+      status: "FAILED",
+      error: "The server stopped this run before it finished. Try again, or give it a shorter task.",
+    });
+  }
+}
+
 export async function executeServerRun(runId: string) {
   const run = await prisma.agentRun.findUnique({
     where: { id: runId },

@@ -4,8 +4,10 @@ import { agentCreateSchema } from "@/lib/validation";
 import { zoneFor } from "@/lib/agents/town";
 import { defaultModelFor } from "@/lib/agents/providers";
 import { looksLikeApiKey } from "@/lib/agents/secrets";
+import { failStaleRuns } from "@/lib/agents/dispatch";
 
 export async function GET() {
+  await failStaleRuns();
   const [agents, queuedGroups, recentRuns] = await Promise.all([
     prisma.agent.findMany({
       orderBy: { createdAt: "asc" },

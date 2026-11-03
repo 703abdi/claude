@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { agentDispatchSchema } from "@/lib/validation";
 import { executeServerRun } from "@/lib/agents/dispatch";
 
+// The provider call runs in after(), which shares this function's time limit.
+// Without this, Vercel's default limit can cut a run off mid-answer.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
