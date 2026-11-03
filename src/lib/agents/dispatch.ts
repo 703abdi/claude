@@ -31,7 +31,13 @@ const STALE_RUN_MS = 3 * 60_000;
 
 export async function failStaleRuns() {
   const stale = await prisma.agentRun.findMany({
-    where: { status: "RUNNING", startedAt: { lt: new Date(Date.now() - STALE_RUN_MS) } },
+    // Local agents run on your own machine with no time limit, so only
+    // server-run agents can be stale.
+    where: {
+      status: "RUNNING",
+      startedAt: { lt: new Date(Date.now() - STALE_RUN_MS) },
+      agent: { kind: { not: "LOCAL" } },
+    },
     select: { id: true, agentId: true },
   });
   for (const run of stale) {
