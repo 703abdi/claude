@@ -46,7 +46,7 @@ from the branch `claude/personal-os-dashboard-pv38le`
 ## The template must not be lost
 
 The container is temporary. The template is also packed as a single
-file: `personal-os-template.bundle` in this folder (not committed). To
+file: `personal-os-template.bundle`, committed to this branch. To
 restore it in a new session:
 
 ```bash
