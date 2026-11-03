@@ -27,7 +27,7 @@ function LoginForm() {
         setLoading(false);
         return;
       }
-      const dest = params.get("from") || "/tasks";
+      const dest = params.get("from") || "/hub";
       router.push(dest);
       router.refresh();
     } catch {
