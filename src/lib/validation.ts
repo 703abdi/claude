@@ -185,6 +185,20 @@ export const inboxCreateSchema = z.object({
     .nullable(),
   person: z.string().trim().max(200).optional().nullable(),
   pinToday: z.boolean().optional(),
+  /** Optional scoreboard for the day: totals, not deltas. `conversations` is an alias of `convos`. */
+  counters: z
+    .object({
+      dials: z.number().int().min(0).optional(),
+      convos: z.number().int().min(0).optional(),
+      conversations: z.number().int().min(0).optional(),
+      booked: z.number().int().min(0).optional(),
+    })
+    .optional()
+    .nullable(),
+  /** Cash collected that day, in dollars. */
+  cash: z.number().min(0).max(100_000_000).optional().nullable(),
+  /** The local day the counters belong to, YYYY-MM-DD. Defaults to today. */
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 });
 
 export const inboxResolveSchema = z.object({

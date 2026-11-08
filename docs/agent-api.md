@@ -28,12 +28,23 @@ Drop something into the Hub's agent feed.
 | `due` | ISO date | `2026-11-12` (that day) or a full timestamp. Tasks only. |
 | `person` | string | matched to an existing person by name or first name. Tasks only. |
 | `pinToday` | boolean | default `true`. Tasks only. |
+| `counters` | object | optional scoreboard totals for the day: `dials`, `convos` (or `conversations`), `booked`. Sets, does not add. |
+| `cash` | number | cash collected that day, in dollars. Sets the day's cash. |
+| `day` | `YYYY-MM-DD` | which local day `counters` and `cash` belong to. Default today. |
 
 `kind: "task"` also creates a real task (pinned to Today unless `pinToday: false`,
 `source` = `agent:<agent>`). Other kinds only create the feed item. Abdi can turn any
 item into a task or dismiss it from the Hub.
 
-Returns `201` with `{ item, task, personMatched }`.
+Returns `201` with `{ item, task, personMatched, score }`. `score` is the day's scoreboard
+after the write, or `null` when no counters were sent. Unknown fields (`key`, `externalId`)
+are ignored.
+
+## POST /api/score
+
+The Hub scoreboard on its own, same bearer token. `{ date?, field, delta }` adds to one
+counter (`dials`, `convos`, `booked`, `cashCents`); `{ date?, values: {...} }` sets them.
+`date` is a local `YYYY-MM-DD`, default today. Returns the day's numbers.
 
 ## GET /api/state
 

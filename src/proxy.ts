@@ -20,6 +20,7 @@ const PUBLIC_EXACT = [
   // AGENTS_TOKEN bearer or a session, see verifyAgentOrSession.
   "/api/inbox",
   "/api/state",
+  "/api/score",
 ];
 
 async function isValidSession(token: string | undefined) {

@@ -3,10 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { scoreUpdateSchema } from "@/lib/validation";
 import { resolveTz } from "@/lib/hub-data";
 import { dayKey, utcDateFromKey } from "@/lib/day";
+import { verifyAgentOrSession } from "@/lib/sync-auth";
 
 /** POST { date?, field, delta } adds to one counter; POST { date?, values } sets them.
- * date is a YYYY-MM-DD local day and defaults to today. */
+ * date is a YYYY-MM-DD local day and defaults to today.
+ * Auth: the browser session, or Authorization: Bearer $AGENTS_TOKEN so agents can
+ * keep the scoreboard current (exempt from the proxy session check). */
 export async function POST(req: NextRequest) {
+  if (!(await verifyAgentOrSession(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const parsed = scoreUpdateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
