@@ -4,8 +4,8 @@
 
 **Live site:** https://claude-tau-six.vercel.app. Vercel production deploys
 from the branch `claude/personal-os-dashboard-pv38le`
-([PR #1](https://github.com/703abdi/claude/pull/1)). The latest commit,
-`8cd48fd`, is deployed and Ready.
+([PR #1](https://github.com/703abdi/claude/pull/1)). Everything through
+`07e68da` is deployed and Ready.
 
 **Repo:** `703abdi/claude`. Abdi is switching it to **private** by hand
 (Settings → Danger Zone). No secrets were ever committed.
@@ -23,6 +23,17 @@ from the branch `claude/personal-os-dashboard-pv38le`
   that lock through the pooler, which blocked every deploy (`P1002`).
 - **Friend template.** Built at `/home/user/personal-os-template`, which
   has a fresh git history and is not pushed. Details below.
+
+## Next up: make the dashboard actually usable
+
+Abdi's latest request (2026-11-08): "lets make this dashboard actually
+usable". Not started yet; only screenshots of Hub, Tasks, Calendar and
+People (desktop + phone) were being taken to audit it. The likely
+reading: the Hub is a showpiece (hero, orbit, ticker, 3D town) and the
+daily basics are buried. Aim for a daily driver: quick-add a task from
+the Hub, today's list with one-click complete, what's next on the
+calendar, who's waiting on you, fast on a phone. Audit first, then fix
+the biggest friction, and say which reading was taken.
 
 ## Open items for Abdi
 
