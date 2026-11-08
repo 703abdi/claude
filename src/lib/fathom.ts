@@ -36,8 +36,13 @@ type Meeting = {
   action_items?: ActionItem[];
 };
 
+/** FATHOM_API_KEY, or fathom_key (the name Abdi used in Vercel). */
+function apiKey() {
+  return (process.env.FATHOM_API_KEY ?? process.env.fathom_key ?? process.env.FATHOM_KEY ?? "").trim();
+}
+
 export function fathomConfigured() {
-  return Boolean(process.env.FATHOM_API_KEY?.trim());
+  return apiKey().length > 0;
 }
 
 export async function fathomStatus() {
@@ -51,7 +56,7 @@ export async function fathomStatus() {
 }
 
 async function fetchMeetings(createdAfter: Date): Promise<Meeting[]> {
-  const key = process.env.FATHOM_API_KEY!.trim();
+  const key = apiKey();
   const out: Meeting[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < MAX_PAGES; page++) {

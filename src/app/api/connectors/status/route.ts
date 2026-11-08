@@ -15,7 +15,7 @@ export async function GET() {
   const fathom = await prisma.syncSource.findFirst({ where: { type: "MANUAL", name: "fathom" }, select: { lastSyncAt: true } });
   return NextResponse.json({
     connectors: [
-      { id: "fathom", name: "Fathom calls", group: "Data", configured: set("FATHOM_API_KEY"), lastSyncAt: fathom?.lastSyncAt ?? null },
+      { id: "fathom", name: "Fathom calls", group: "Data", configured: set("FATHOM_API_KEY") || set("fathom_key") || set("FATHOM_KEY"), lastSyncAt: fathom?.lastSyncAt ?? null },
       { id: "calendar", name: "Calendar feeds", group: "Data", configured: !!feeds?.enabled, lastSyncAt: feeds?.lastSyncAt ?? null },
       { id: "grok", name: "Grok", group: "Agents", configured: set("XAI_API_KEY") },
       { id: "nvidia", name: "NVIDIA NIM", group: "Agents", configured: set("NVIDIA_API_KEY") },
