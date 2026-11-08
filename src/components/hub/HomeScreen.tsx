@@ -118,6 +118,8 @@ const PLACEHOLDERS = [
   "Find a task or a person",
 ];
 
+export const FOCUS_COMMAND_EVENT = "pos:focus-command";
+
 export type CommandRun = (cmd: Command, parsed: ParsedQuickAdd | null) => Promise<void> | void;
 
 function CommandBar({ data, onRun }: { data: HubPayload | null; onRun: CommandRun }) {
@@ -135,6 +137,17 @@ function CommandBar({ data, onRun }: { data: HubPayload | null; onRun: CommandRu
   useEffect(() => {
     if (isDesktop) inputRef.current?.focus();
   }, [isDesktop]);
+
+  useEffect(() => {
+    const focus = () => inputRef.current?.focus();
+    // The mobile "+" on other pages lands here with ?add=1.
+    if (window.location.search.includes("add=1")) {
+      focus();
+      window.history.replaceState(null, "", "/hub");
+    }
+    window.addEventListener(FOCUS_COMMAND_EVENT, focus);
+    return () => window.removeEventListener(FOCUS_COMMAND_EVENT, focus);
+  }, []);
 
   const cmd = useMemo(() => parseCommand(value), [value]);
   const parsed = useMemo(

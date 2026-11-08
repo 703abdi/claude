@@ -92,6 +92,8 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Decorative glows and reveal transforms may poke past the right edge; never let them widen the page. */
+  overflow-x: clip;
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

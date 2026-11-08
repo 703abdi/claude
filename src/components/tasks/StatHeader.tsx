@@ -1,5 +1,7 @@
 "use client";
 
+import { motion, useReducedMotion } from "motion/react";
+import CountUp from "@/components/fx/CountUp";
 import type { RailView } from "./railView";
 
 const VIEW_LABEL: Record<RailView, string> = {
@@ -26,45 +28,70 @@ export default function StatHeader({
   focusCount: number;
   focusLimit: number;
 }) {
-  const dateLabel = new Date()
-    .toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })
-    .toUpperCase();
+  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }).toUpperCase();
+  const pct = doneThisWeekTotal > 0 ? doneThisWeek / doneThisWeekTotal : 0;
 
   return (
-    <div className="mb-5">
-      <p className="eyebrow eyebrow-accent mb-1.5">{dateLabel}</p>
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <h1 className="text-[34px]">{VIEW_LABEL[railView]}</h1>
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <StatCard color="stat-green" value={`${doneThisWeek}/${doneThisWeekTotal}`} label="done this week" />
-          <StatCard color="stat-amber" value={String(needDecision)} label="need a decision" />
-          <StatCard color="stat-blue" value={`${focusCount}/${focusLimit}`} label="today's slots" />
-        </div>
+    <div className="glow-accent mb-6 flex flex-wrap items-end justify-between gap-5">
+      <div>
+        <p className="eyebrow eyebrow-accent mb-2">{dateLabel}</p>
+        <h1 className="text-[clamp(2.2rem,5vw,3.25rem)]">
+          {VIEW_LABEL[railView]}
+          <span className="hl">.</span>
+        </h1>
+      </div>
+      <div className="flex min-w-0 max-w-full items-center gap-4 md:gap-5">
+        <Ring pct={pct} />
+        <dl className="flex min-w-0 flex-wrap gap-x-5 gap-y-3">
+          <Stat label="done this week" value={doneThisWeek} suffix={`/${doneThisWeekTotal}`} tone="ok" />
+          <Stat label="need a decision" value={needDecision} tone={needDecision > 0 ? "danger" : "muted"} />
+          <Stat label="today's slots" value={focusCount} suffix={`/${focusLimit}`} tone={focusCount > focusLimit ? "warn" : "accent"} />
+        </dl>
       </div>
     </div>
   );
 }
 
-const STAT_CLASSES = {
-  "stat-green": { card: "border-ok/25 bg-ok/10", text: "text-ok" },
-  "stat-amber": { card: "border-warn/25 bg-warn/10", text: "text-warn" },
-  "stat-blue": { card: "border-info/25 bg-info/10", text: "text-info" },
-} as const;
+const TONE: Record<string, string> = {
+  ok: "text-ok",
+  danger: "text-danger",
+  warn: "text-warn",
+  accent: "text-accent",
+  muted: "text-foreground",
+};
 
-function StatCard({
-  color,
-  value,
-  label,
-}: {
-  color: keyof typeof STAT_CLASSES;
-  value: string;
-  label: string;
-}) {
-  const cls = STAT_CLASSES[color];
+function Stat({ label, value, suffix, tone }: { label: string; value: number; suffix?: string; tone: string }) {
   return (
-    <div className={`rounded-2xl border px-3.5 py-2 ${cls.card}`}>
-      <p className={`font-mono text-lg font-bold leading-none tabular-nums ${cls.text}`}>{value}</p>
-      <p className="text-[11px] text-muted mt-1 whitespace-nowrap">{label}</p>
+    <div className="min-w-0">
+      <dt className="eyebrow">{label}</dt>
+      <dd className={`mt-1 font-mono text-[22px] font-bold leading-none tabular-nums ${TONE[tone]}`}>
+        <CountUp value={value} duration={0.6} />
+        {suffix && <span className="text-[13px] text-muted-2">{suffix}</span>}
+      </dd>
     </div>
+  );
+}
+
+function Ring({ pct }: { pct: number }) {
+  const reduced = useReducedMotion();
+  const r = 22;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg viewBox="0 0 56 56" className="h-14 w-14 shrink-0 -rotate-90" aria-hidden>
+      <circle cx="28" cy="28" r={r} stroke="var(--border-2)" strokeWidth="4" fill="none" />
+      <motion.circle
+        cx="28"
+        cy="28"
+        r={r}
+        stroke="var(--accent)"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        initial={reduced ? false : { strokeDashoffset: c }}
+        animate={{ strokeDashoffset: c * (1 - Math.min(1, pct)) }}
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+      />
+    </svg>
   );
 }

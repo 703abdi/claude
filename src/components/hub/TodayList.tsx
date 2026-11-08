@@ -7,7 +7,7 @@ import CountUp from "@/components/fx/CountUp";
 import type { Task } from "@/lib/types";
 import { formatDue } from "@/lib/task-dates";
 import { formatClock } from "@/lib/quick-add-parse";
-import { Card, CheckMark, Chip, agentColor } from "./hub-ui";
+import { Card, CheckMark } from "./hub-ui";
 
 const CAP = 8;
 const SWIPE_DONE = 90;
@@ -22,13 +22,10 @@ export default function TodayList({ tasks, onComplete }: { tasks: Task[]; onComp
   return (
     <Card className="p-3 md:p-4">
       <div className="mb-2 flex items-baseline justify-between gap-2 px-2 pt-1">
-        <h2 className="text-[22px] font-extrabold tracking-[-0.03em]">
+        <h2 className="text-[18px] font-extrabold tracking-[-0.03em]">
           Today{" "}
-          <span className="font-mono text-[15px] font-bold tracking-normal text-muted">
-            <span className="hl">
-              <CountUp value={tasks.length} duration={0.5} />
-            </span>{" "}
-            open
+          <span className="hl font-mono text-[14px] font-bold tracking-normal">
+            <CountUp value={tasks.length} duration={0.5} />
           </span>
         </h2>
         {overdue > 0 && (
@@ -133,7 +130,7 @@ function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) =
         </div>
       )}
       <div
-        className="group relative flex min-h-14 items-center gap-1 rounded-2xl border border-transparent bg-surface-2 pr-2 transition-colors duration-[120ms] hover:border-border-2"
+        className="group relative flex min-h-12 items-center gap-1 rounded-2xl border border-transparent bg-surface-2 pr-2 transition-colors duration-[120ms] hover:border-border-2"
         style={{
           transform: swipeX ? `translateX(${swipeX}px)` : undefined,
           transition: swiping ? "none" : "transform 0.18s ease-out",
@@ -160,7 +157,7 @@ function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) =
             <CheckMark on={checking} size={13} />
           </motion.span>
         </button>
-        <div className="min-w-0 flex-1 py-2">
+        <div className="min-w-0 flex-1 py-1.5">
           <Link
             href={`/tasks?highlight=${task.id}`}
             className={`flex items-center gap-2 text-[15px] font-semibold transition-colors ${checking ? "text-muted line-through" : "text-foreground hover:text-accent"}`}
@@ -168,24 +165,18 @@ function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) =
             {task.pinnedToday && !task.overdue && <span aria-label="Pinned" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
             <span className="truncate">{task.title}</span>
           </Link>
-          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-            {task.category && <Chip color={task.category.color}>{task.category.name}</Chip>}
-            {due && (
-              <Chip tone={task.overdue ? "danger" : due.dueToday ? "warn" : "neutral"}>
-                {due.dueToday && task.dueTime ? formatClock(task.dueTime) : due.label}
-              </Chip>
-            )}
-            {task.people.map((p) => (
-              <Chip key={p.id}>@{p.name}</Chip>
-            ))}
-            {task.source?.startsWith("agent:") && (
-              <Chip>
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: agentColor(task.source.slice(6)) }} />
-                {task.source.slice(6)}
-              </Chip>
-            )}
-            {temp && <span className="text-[11px] text-muted-2">saving</span>}
-          </div>
+          {(due || task.people[0] || temp) && (
+            <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted-2">
+              {due && (
+                <span className={task.overdue ? "font-semibold text-danger" : due.dueToday && task.dueTime ? "font-semibold text-accent" : ""}>
+                  {due.dueToday && task.dueTime ? formatClock(task.dueTime) : due.label}
+                </span>
+              )}
+              {due && task.people[0] && <span aria-hidden>·</span>}
+              {task.people[0] && <span className="truncate">{task.people[0].name}</span>}
+              {temp && <span>saving</span>}
+            </div>
+          )}
         </div>
       </div>
     </motion.li>

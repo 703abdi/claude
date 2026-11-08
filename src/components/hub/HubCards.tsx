@@ -92,7 +92,17 @@ export function WaitingCard({ groups, onNudge }: { groups: WaitingGroup[]; onNud
 
   return (
     <Card>
-      <CardTitle label="Waiting on" right={<span className="font-mono text-[12px] text-muted-2">{groups.length === 1 ? "1 person" : groups.length ? `${groups.length} people` : ""}</span>} />
+      <CardTitle
+        label="Waiting on"
+        right={
+          <span className="flex items-center gap-2 font-mono text-[12px] text-muted-2">
+            {groups.length === 1 ? "1 person" : groups.length ? `${groups.length} people` : ""}
+            <Link href="/people" className="font-semibold text-accent hover:underline">
+              People
+            </Link>
+          </span>
+        }
+      />
       {groups.length === 0 ? (
         <p className="py-3 text-sm text-muted">Nobody owes you anything.</p>
       ) : (

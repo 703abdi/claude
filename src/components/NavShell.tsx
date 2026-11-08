@@ -2,16 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { Fragment, ReactNode, useEffect, useRef, useState } from "react";
 import Avatar from "@/components/shared/Avatar";
 
+// Calendar, People and the Town are reached from their Hub cards. Metrics is retired from the nav.
 const NAV_ITEMS = [
   { href: "/hub", label: "Hub", icon: HubIcon },
   { href: "/tasks", label: "Tasks", icon: TasksIcon },
-  { href: "/town", label: "Town", icon: TownIcon },
-  { href: "/metrics", label: "Metrics", icon: MetricsIcon },
-  { href: "/people", label: "People", icon: PeopleIcon },
-  { href: "/calendar", label: "Calendar", icon: CalendarIcon },
 ];
 
 function displayNameForEmail(email: string) {
@@ -47,6 +44,15 @@ export default function NavShell({
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
+  }
+
+  function addSomething() {
+    if (pathname.startsWith("/hub")) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => window.dispatchEvent(new Event("pos:focus-command")), 450);
+    } else {
+      router.push("/hub?add=1");
+    }
   }
 
   function openSearch() {
@@ -141,11 +147,11 @@ export default function NavShell({
 
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav: Hub, +, Tasks */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-border bg-background/90 backdrop-blur-xl z-40 flex items-stretch pb-[env(safe-area-inset-bottom)]">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map((item, i) => {
           const active = pathname.startsWith(item.href);
-          return (
+          const link = (
             <Link
               key={item.href}
               href={item.href}
@@ -157,6 +163,19 @@ export default function NavShell({
               <item.icon className="w-5 h-5" />
               {item.label}
             </Link>
+          );
+          if (i !== 0) return link;
+          return (
+            <Fragment key="hub-and-add">
+              {link}
+              <button
+                onClick={addSomething}
+                aria-label="Add something"
+                className="flex flex-1 flex-col items-center justify-center py-2"
+              >
+                <span className="btn-primary h-11 w-11 rounded-full p-0 text-2xl leading-none">+</span>
+              </button>
+            </Fragment>
           );
         })}
       </nav>
@@ -186,19 +205,6 @@ function TasksIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-function PeopleIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <path
-        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 function HubIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
@@ -206,21 +212,6 @@ function HubIcon({ className }: { className?: string }) {
       <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
-}
-function MetricsIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function TownIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M3 21V10l9-6 9 6v11" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M9 21v-6h6v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -248,11 +239,3 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}

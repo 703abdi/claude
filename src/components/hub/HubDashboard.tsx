@@ -15,14 +15,15 @@ import AgentFeed from "./AgentFeed";
 import BriefCard from "./BriefCard";
 import { UpNextCard, WaitingCard } from "./HubCards";
 import { AgentRoster, Connectors, NumbersStrip, type NumberItem } from "./HubExtras";
-import HomeScreen, { type CommandRun } from "./HomeScreen";
-import HubQuickAdd from "./HubQuickAdd";
+import HomeScreen, { FOCUS_COMMAND_EVENT, type CommandRun } from "./HomeScreen";
+import { useEffect } from "react";
 import { ToastHost, type Toast } from "./hub-ui";
 import TodayList from "./TodayList";
 import TownLazy from "./TownLazy";
 import WeekPanel from "./WeekPanel";
 
 const STAGGER = 0.06;
+
 
 async function postJson(url: string, body: unknown, method = "POST") {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -59,7 +60,6 @@ export default function HubDashboard({ name }: { name: string }) {
   const { data, mutate } = hub;
   const router = useRouter();
   const [toast, setToast] = useState<Toast | null>(null);
-  const [spinning, setSpinning] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
 
   const say = useCallback((text: string, onAction?: () => void, actionLabel?: string) => {
@@ -69,9 +69,7 @@ export default function HubDashboard({ name }: { name: string }) {
   const failed = useCallback(() => say("Couldn't save that. Showing the server copy."), [say]);
 
   async function manualRefresh() {
-    setSpinning(true);
     await hub.refresh();
-    setTimeout(() => setSpinning(false), 300);
   }
 
   // ── mutations (all optimistic) ────────────────────────────────
@@ -247,6 +245,17 @@ export default function HubDashboard({ name }: { name: string }) {
     }
   };
 
+  const [pastHome, setPastHome] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setPastHome(window.scrollY > window.innerHeight * 0.6);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  function backToBar() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => window.dispatchEvent(new Event(FOCUS_COMMAND_EVENT)), 450);
+  }
+
   const [briefBusy, setBriefBusy] = useState(false);
   async function generateBrief() {
     if (briefBusy) return;
@@ -318,12 +327,8 @@ export default function HubDashboard({ name }: { name: string }) {
         onGenerateBrief={generateBrief}
       />
       <div id="dashboard" className="mx-auto max-w-[1400px] space-y-5 px-4 py-5 md:px-8 md:py-7">
-
         <section className="grid items-start gap-5 lg:grid-cols-12">
           <div className="min-w-0 space-y-4 lg:col-span-7">
-            <Reveal delay={STAGGER} className="sticky top-[57px] z-30 min-w-0 md:top-[61px]">
-              <HubQuickAdd categories={data?.categories ?? []} people={data?.people ?? []} onSubmit={addTask} />
-            </Reveal>
             <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-20" id="today">
               {data ? <TodayList tasks={data.today} onComplete={completeTask} /> : <SkeletonCard rows={4} />}
             </Reveal>
@@ -373,6 +378,16 @@ export default function HubDashboard({ name }: { name: string }) {
           )}
         </section>
       </div>
+      <button
+        onClick={backToBar}
+        aria-label="Add something"
+        title="Back to the command bar"
+        className={`btn-primary fixed bottom-6 right-6 z-40 hidden h-12 w-12 rounded-full p-0 text-2xl shadow-[0_12px_30px_-10px_rgba(230,180,80,0.6)] transition-all duration-200 md:inline-flex ${
+          pastHome ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
+        }`}
+      >
+        +
+      </button>
       <ToastHost toast={toast} onDone={clearToast} />
     </div>
   );

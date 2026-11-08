@@ -151,8 +151,8 @@ export default function TaskCard({
         rowRef.current = node;
       }}
       style={style}
-      className={`group relative rounded-2xl border overflow-hidden transition-colors duration-[120ms] ${
-        flash || selected ? "border-accent/60 bg-surface-hover" : "border-border bg-surface-2 hover:border-border-2"
+      className={`group relative rounded-2xl border overflow-hidden transition-[border-color,transform] duration-[140ms] ${
+        flash || selected ? "border-accent/60 bg-surface-hover" : "border-border bg-surface-2 hover:-translate-y-px hover:border-accent/50"
       } ${task.isBlocked ? "opacity-60" : ""} ${cursor ? "ring-1 ring-inset ring-accent/40" : ""} ${
         completing ? "animate-complete-fade pointer-events-none" : ""
       }`}

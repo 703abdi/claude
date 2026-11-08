@@ -71,6 +71,14 @@ tiles that scroll to the dashboard sections below (`#today`, `#week`,
 `src/proxy.ts` so the image optimizer can fetch it; `next.config.ts`
 allows quality 80.
 
+**Round 4, concise.** One input only: the home command bar (the dashboard
+quick add is gone; a floating "+" on desktop and the center "+" in the
+phone nav jump back to it). Today rows show title plus one line (due or
+person). Nav is Hub and Tasks; Calendar, People and the Town are reached
+from their Hub cards and the Town tile. Metrics is off the nav (route
+still exists). Tasks page header: big headline, progress ring, three
+inline stats; rows lift gold on hover.
+
 Known follow-ups: swipe to complete and press-and-hold on the counters
 were only exercised with mouse clicks; the backdrop picker is not in the
 phone account menu (it sits bottom-left of the home screen on all sizes);
