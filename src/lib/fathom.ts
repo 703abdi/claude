@@ -75,6 +75,18 @@ async function fetchMeetings(createdAfter: Date): Promise<Meeting[]> {
   return out;
 }
 
+/** "Lavender Smith" -> "Lavender Smith"; drops emails, lone initials and junk. */
+function cleanName(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const n = raw.replace(/\(.*?\)/g, "").replace(/[^\p{L}\p{M}' .-]/gu, " ").replace(/\s+/g, " ").trim();
+  if (!n || n.includes("@") || n.length < 3 || n.length > 60) return null;
+  if (/^(guest|unknown|user|meet|zoom|phone)$/i.test(n)) return null;
+  return n
+    .split(" ")
+    .map((w) => (w === w.toLowerCase() ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
 function isMe(a: ActionItem["assignee"], myEmail: string | null, myName: string | null) {
   if (!a) return true; // unassigned items are yours to triage
   const email = a.email?.toLowerCase() ?? "";
@@ -99,6 +111,18 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
   const user = await prisma.user.findFirst({ select: { email: true, name: true } });
   const people = await prisma.person.findMany({ select: { id: true, name: true } });
 
+  /** Find a tracked person, or create one from a real name (two words, letters only). */
+  async function personFor(rawName: string | null | undefined, note: string) {
+    const name = cleanName(rawName);
+    if (!name) return null;
+    const hit = matchPeople(name.toLowerCase(), people);
+    if (hit) return hit;
+    if (isMe({ name }, user?.email ?? null, user?.name ?? null)) return null;
+    const created = await prisma.person.create({ data: { name, notes: note } }).catch(() => null);
+    if (created) people.push({ id: created.id, name: created.name });
+    return created ? { id: created.id, name: created.name } : null;
+  }
+
   let calls = 0;
   let tasks = 0;
   let waiting = 0;
@@ -112,7 +136,11 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
       const when = new Date(m.recording_start_time || m.scheduled_start_time || m.created_at);
       const link = m.share_url || m.url;
       const external = (m.calendar_invitees ?? []).filter((i) => i.is_external !== false && i.name);
-      const callPerson = external.map((i) => matchPeople(i.name!.toLowerCase(), people)).find(Boolean) ?? null;
+      let callPerson: { id: string; name: string } | null = null;
+      for (const i of external) {
+        const p = await personFor(i.name, `Met on a recorded call, ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`);
+        if (p && !callPerson) callPerson = p;
+      }
       const items = (m.action_items ?? []).filter((a) => a.description?.trim() && !a.completed);
 
       const seen = await prisma.inboxItem.findFirst({ where: { agent: "fathom", link } , select: { id: true } });
@@ -141,8 +169,8 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
         const exists = await prisma.task.findFirst({ where: { source }, select: { id: true } });
         if (exists) continue;
         const mine = isMe(a.assignee, user?.email ?? null, user?.name ?? null);
-        const assigneePerson = !mine && a.assignee?.name ? matchPeople(a.assignee.name.toLowerCase(), people) : null;
-        if (!mine && !assigneePerson) continue; // someone we don't track promised it
+        const assigneePerson = !mine ? await personFor(a.assignee?.name, "Promised something on a recorded call.") : null;
+        if (!mine && !assigneePerson) continue;
         position += 1000;
         const notes = [`From the call "${title}" on ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, a.recording_playback_url || link]
           .filter(Boolean)

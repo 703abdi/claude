@@ -108,6 +108,20 @@ pinned tasks with source `fathom:<recording>:<n>`; items assigned to a
 known Person become WAITING tasks on that person. Not tested against a
 real Fathom key yet.
 
+**Round 7, zero-key batch (see INTEGRATIONS_PLAN.md).** `src/lib/sources.ts`
+is the registry of every source (built or planned, env names, what it
+gives); Settings -> Sources renders it with connected / not set / not
+built, setup steps and Sync now. Zapier: `POST /api/hooks/zapier?key=`
+(key derived from AUTH_SECRET, shown in Settings) makes feed items or
+tasks from loose JSON. Fathom now creates People from external invitees
+and assignees. `src/lib/next-action.ts` flags tasks whose title names a
+past date as stale (Drop button). `src/lib/digests.ts`: morning digest
+(rides the 11:00 UTC daily refresh), evening digest and Sunday scorecard
+(`/api/cron/evening`, 01:00 UTC daily; weekly drafts next week's three
+into WeekPlan). Digests always post to the feed as agent "os"; they email
+only when RESEND_API_KEY and DIGEST_TO are set. Demo seed rows were
+cleared from production via `POST /api/admin/clear-seed`.
+
 Known follow-ups: swipe to complete and press-and-hold on the counters
 were only exercised with mouse clicks; the backdrop picker is not in the
 phone account menu (it sits bottom-left of the home screen on all sizes);

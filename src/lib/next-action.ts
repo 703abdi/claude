@@ -13,7 +13,23 @@ export type NextAction =
   | { kind: "nudge"; personId: string; personName: string; title: string; detail: string }
   | { kind: "dial"; have: number; target: number; title: string; detail: string }
   | { kind: "task"; task: Task; title: string; detail: string }
+  | { kind: "stale"; task: Task; title: string; detail: string }
   | { kind: "outcome"; title: string; detail: string };
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/** A task whose title names a date that has passed ("through Oct 30 2026") is stale: the
+ * moment is gone, so it is a Done-or-Drop, not a to-do. Returns how many days ago. */
+export function staleDays(task: Pick<Task, "title" | "dueDate">, now: Date): number | null {
+  const m = task.title.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/i);
+  if (!m) return null;
+  const month = MONTHS.indexOf(m[1].slice(0, 3).toLowerCase());
+  const day = Number(m[2]);
+  const year = m[3] ? Number(m[3]) : now.getFullYear();
+  const at = new Date(year, month, day, 23, 59, 59);
+  const days = Math.floor((now.getTime() - at.getTime()) / 86_400_000);
+  return days >= 1 ? days : null;
+}
 
 export const DIAL_TARGET = 90;
 const DIAL_START_HOUR = 10; // dials are behind pace only after this local hour
@@ -25,7 +41,9 @@ function clockToMinutes(hhmm: string) {
 }
 
 export function nextAction(d: HubPayload, now: Date): NextAction {
-  const late = d.today.filter((t) => t.overdue).sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))[0];
+  const live = d.today.filter((t) => staleDays(t, now) === null);
+  const stale = d.today.filter((t) => staleDays(t, now) !== null);
+  const late = live.filter((t) => t.overdue).sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))[0];
   if (late) {
     const days = Math.max(1, Math.round((now.getTime() - new Date(late.dueDate!).getTime()) / 86_400_000));
     return { kind: "late", task: late, title: late.title, detail: `${days} day${days === 1 ? "" : "s"} late. Clear it or drop it.` };
@@ -70,8 +88,13 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
     return { kind: "dial", have: dials, target: DIAL_TARGET, title: "Dial.", detail: `${dials} of ${DIAL_TARGET} today. Cash comes from calls.` };
   }
 
-  const top = d.today.find((t) => t.pinnedToday) ?? d.today[0];
+  const top = live.find((t) => t.pinnedToday) ?? live[0];
   if (top) return { kind: "task", task: top, title: top.title, detail: top.people[0] ? `With ${top.people[0].name}.` : "Next up." };
+
+  if (stale[0]) {
+    const days = staleDays(stale[0], now) ?? 0;
+    return { kind: "stale", task: stale[0], title: stale[0].title, detail: `That date passed ${days} day${days === 1 ? "" : "s"} ago. Done or drop it.` };
+  }
 
   const open = d.week.outcomes.find((o) => !o.done);
   return {

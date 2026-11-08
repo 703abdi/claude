@@ -216,12 +216,14 @@ const ACTION_LABEL: Record<NextAction["kind"], string> = {
   nudge: "Owed to you",
   dial: "Behind pace",
   task: "Do this now",
+  stale: "Stale",
   outcome: "This week",
 };
 
 function DoNow({
   action,
   onDone,
+  onDrop,
   onDial,
   onNudge,
   onAnswer,
@@ -229,6 +231,7 @@ function DoNow({
 }: {
   action: NextAction;
   onDone: (task: Task) => void;
+  onDrop: (task: Task) => void;
   onDial: () => void;
   onNudge: () => void;
   onAnswer: () => void;
@@ -238,6 +241,8 @@ function DoNow({
   const primary =
     action.kind === "late" || action.kind === "task"
       ? { label: "Done", run: () => onDone(action.task) }
+      : action.kind === "stale"
+        ? { label: "Drop", run: () => onDrop(action.task) }
       : action.kind === "dial"
         ? { label: "+5 dials", run: onDial }
         : action.kind === "nudge"
@@ -246,6 +251,7 @@ function DoNow({
             ? { label: "Answered", run: onAnswer }
             : { label: "Open", run: onOpen };
   const danger = action.kind === "late";
+  const secondary = action.kind === "stale" ? { label: "Done instead", run: () => onDone(action.task) } : null;
   return (
     <motion.div
       key={action.kind + action.title}
@@ -261,6 +267,11 @@ function DoNow({
         <button onClick={primary.run} className="btn-primary h-11 px-5 text-sm">
           {primary.label}
         </button>
+        {secondary && (
+          <button onClick={secondary.run} className="btn-ghost h-11 px-4 text-sm text-muted">
+            {secondary.label}
+          </button>
+        )}
         {primary.label !== "Open" && (
           <button onClick={onOpen} className="btn-ghost h-11 px-4 text-sm text-muted">
             Open
@@ -294,6 +305,7 @@ export default function HomeScreen({
   onRun,
   onNavigate,
   onComplete,
+  onDrop,
   onScore,
   onNudge,
   onResolveInbox,
@@ -307,6 +319,7 @@ export default function HomeScreen({
   onRun: CommandRun;
   onNavigate: (href: string) => void;
   onComplete: (task: Task) => void;
+  onDrop: (task: Task) => void;
   onScore: (field: ScoreField, delta: number) => void;
   onNudge: (group: WaitingGroup) => void;
   onResolveInbox: (id: string) => void;
@@ -379,6 +392,7 @@ export default function HomeScreen({
             <DoNow
               action={action}
               onDone={(t) => onComplete(t)}
+              onDrop={(t) => onDrop(t)}
               onDial={() => onScore("dials", 5)}
               onNudge={() => {
                 const g = action.kind === "nudge" ? data.waitingOn.find((w) => w.person.id === action.personId) : null;
@@ -388,7 +402,7 @@ export default function HomeScreen({
               onOpen={() => {
                 if (action.kind === "event") scrollTo("calendar");
                 else if (action.kind === "outcome") scrollTo("week");
-                else if (action.kind === "task" || action.kind === "late") onNavigate(`/tasks?highlight=${action.task.id}`);
+                else if (action.kind === "task" || action.kind === "late" || action.kind === "stale") onNavigate(`/tasks?highlight=${action.task.id}`);
                 else if (action.kind === "nudge") onNavigate(`/people/${action.personId}`);
                 else if (action.kind === "question") scrollTo("feed");
               }}

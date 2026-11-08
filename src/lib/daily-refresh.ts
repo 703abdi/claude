@@ -9,6 +9,7 @@ import { generateMorningBriefText } from "./morning-brief/generate";
 import { buildTranscriptSegments, totalDuration } from "./morning-brief/segments";
 import { generateSpeech } from "./morning-brief/tts";
 import { syncFathom } from "./fathom";
+import { morningDigest } from "./digests";
 
 /**
  * Recomputes aiPriorityScore/aiPriorityReason for every active task.
@@ -97,5 +98,6 @@ export async function runDailyRefresh() {
     select: { id: true },
   });
 
-  return { fathom, extraction, synthesis, suggestions, priorities, briefId: brief.id };
+  const digest = await morningDigest().catch(() => null);
+  return { fathom, extraction, synthesis, suggestions, priorities, briefId: brief.id, digest };
 }

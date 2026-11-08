@@ -5,9 +5,8 @@ import ChatGPTUploader from "@/components/settings/ChatGPTUploader";
 import ClaudeUploader from "@/components/settings/ClaudeUploader";
 import ProcessContextButton from "@/components/settings/ProcessContextButton";
 import DailyRefreshButton from "@/components/settings/DailyRefreshButton";
-import CalendarFeeds from "@/components/settings/CalendarFeeds";
-import FathomSettings from "@/components/settings/FathomSettings";
 import AgentsSettings from "@/components/settings/AgentsSettings";
+import SourcesPanel from "@/components/settings/SourcesPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -39,22 +38,14 @@ export default async function SettingsPage() {
       </div>
 
       <section className="border border-border bg-surface rounded-lg p-4">
-        <h2 className="text-sm font-bold uppercase tracking-wide mb-3">Agents and connectors</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Sources</h2>
+        <p className="text-xs text-muted mb-3">Everything that can fill the Hub for you. Green is on. Tap a row for what it gives and how to connect it.</p>
+        <SourcesPanel />
+      </section>
+
+      <section className="border border-border bg-surface rounded-lg p-4">
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-3">Agents</h2>
         <AgentsSettings />
-      </section>
-
-      <section className="border border-border bg-surface rounded-lg p-4">
-        <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Fathom calls</h2>
-        <p className="text-xs text-muted mb-3">Action items from every recorded call become tasks without you typing them.</p>
-        <FathomSettings />
-      </section>
-
-      <section className="border border-border bg-surface rounded-lg p-4">
-        <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Calendar feeds</h2>
-        <p className="text-xs text-muted mb-3">
-          Google Calendar, Calendly or any iCal link. Events pull in on their own every few minutes and show in the Hub, read-only.
-        </p>
-        <CalendarFeeds />
       </section>
 
       <section className="border border-border bg-surface rounded-lg p-4">

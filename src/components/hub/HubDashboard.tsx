@@ -80,6 +80,15 @@ export default function HubDashboard({ name }: { name: string }) {
     say(`Done: ${task.title}`, () => undoComplete(task, index), "Undo");
   }
 
+  function dropTask(task: Task) {
+    if (!data) return;
+    mutate(
+      (d) => ({ ...d, today: d.today.filter((t) => t.id !== task.id), stats: { ...d.stats, open: Math.max(0, d.stats.open - 1) } }),
+      () => api.tasks.delete(task.id)
+    ).catch(failed);
+    say(`Dropped: ${task.title}`);
+  }
+
   function undoComplete(task: Task, index: number) {
     mutate(
       (d) => {
@@ -289,6 +298,7 @@ export default function HubDashboard({ name }: { name: string }) {
         onRun={runCommand}
         onNavigate={(href) => router.push(href)}
         onComplete={completeTask}
+        onDrop={dropTask}
         onScore={score}
         onNudge={nudge}
         onResolveInbox={(id) => {
