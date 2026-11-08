@@ -4,16 +4,14 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 export const AGENT_COLOR: Record<string, string> = {
-  grok: "#8b7cf6",
+  grok: "#1d9bf0",
   codex: "#10a37f",
-  claude: "#e07a52",
-  jarvis: "#22e1ff",
-  nvidia: "#76b900",
-  local: "#2fd27e",
+  claude: "#d97757",
+  jarvis: "var(--accent)",
 };
 
 export function agentColor(name: string) {
-  return AGENT_COLOR[name.toLowerCase()] ?? "#9797a6";
+  return AGENT_COLOR[name.toLowerCase()] ?? "var(--muted-2)";
 }
 
 export function ago(iso: string | number | null, now = Date.now()) {
@@ -66,13 +64,36 @@ export function useMedia(query: string) {
   );
 }
 
-export function Chip({ color, children, title }: { color?: string; children: ReactNode; title?: string }) {
-  const c = color ?? "var(--muted)";
+export type ChipTone = "neutral" | "gold" | "danger" | "warn" | "ok";
+
+const TONE: Record<ChipTone, { bg: string; fg: string }> = {
+  neutral: { bg: "var(--surface-hover)", fg: "var(--muted)" },
+  gold: { bg: "var(--accent-soft)", fg: "var(--accent)" },
+  danger: { bg: "color-mix(in srgb, var(--danger) 14%, transparent)", fg: "var(--danger)" },
+  warn: { bg: "color-mix(in srgb, var(--warn) 14%, transparent)", fg: "var(--warn)" },
+  ok: { bg: "color-mix(in srgb, var(--ok) 14%, transparent)", fg: "var(--ok)" },
+};
+
+/** Small pill. Pass `color` for a category chip (soft tint of the stored color), or a tone. */
+export function Chip({
+  color,
+  tone = "neutral",
+  children,
+  title,
+}: {
+  color?: string;
+  tone?: ChipTone;
+  children: ReactNode;
+  title?: string;
+}) {
+  const style = color
+    ? { backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`, color: `color-mix(in srgb, ${color} 85%, white)` }
+    : { backgroundColor: TONE[tone].bg, color: TONE[tone].fg };
   return (
     <span
       title={title}
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap"
-      style={{ backgroundColor: `color-mix(in srgb, ${c} 16%, transparent)`, color: c }}
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-4 whitespace-nowrap"
+      style={style}
     >
       {children}
     </span>
@@ -80,16 +101,13 @@ export function Chip({ color, children, title }: { color?: string; children: Rea
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`relative min-w-0 rounded-3xl glass p-4 md:p-5 ${className}`}>{children}</div>;
+  return <div className={`card min-w-0 p-4 md:p-5 ${className}`}>{children}</div>;
 }
 
-export function CardTitle({ label, accent, right }: { label: string; accent: string; right?: ReactNode }) {
+export function CardTitle({ label, right }: { label: string; right?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
-      <h2 className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.22em]" style={{ color: accent }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 8px ${accent}` }} />
-        {label}
-      </h2>
+      <h2 className="text-[15px] font-bold tracking-tight text-foreground">{label}</h2>
       {right}
     </div>
   );
@@ -167,7 +185,7 @@ export function ToastHost({ toast, onDone }: { toast: Toast | null; onDone: () =
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            className="pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl border border-white/10 bg-[#15151c]/95 px-4 py-2.5 text-sm shadow-[0_10px_40px_-10px_rgba(0,0,0,0.9)] backdrop-blur"
+            className="pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl border border-border-2 bg-surface-hover px-4 py-2.5 text-sm text-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.9)]"
           >
             <span className="min-w-0 truncate">{toast.text}</span>
             {toast.onAction && (
@@ -176,7 +194,7 @@ export function ToastHost({ toast, onDone }: { toast: Toast | null; onDone: () =
                   toast.onAction?.();
                   onDone();
                 }}
-                className="shrink-0 rounded-lg px-2 py-1 font-semibold text-[#22e1ff] hover:bg-white/5"
+                className="shrink-0 rounded-full px-2.5 py-1 font-bold text-accent hover:bg-accent-soft"
               >
                 {toast.actionLabel ?? "Undo"}
               </button>

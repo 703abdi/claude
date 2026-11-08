@@ -151,15 +151,15 @@ export default function TaskCard({
         rowRef.current = node;
       }}
       style={style}
-      className={`group relative rounded-xl border overflow-hidden transition-colors ${
-        flash || selected ? "border-accent/50 bg-surface-hover" : "border-border bg-surface hover:border-muted-2/40"
+      className={`group relative rounded-2xl border overflow-hidden transition-colors duration-[120ms] ${
+        flash || selected ? "border-accent/60 bg-surface-hover" : "border-border bg-surface-2 hover:border-border-2"
       } ${task.isBlocked ? "opacity-60" : ""} ${cursor ? "ring-1 ring-inset ring-accent/40" : ""} ${
         completing ? "animate-complete-fade pointer-events-none" : ""
       }`}
     >
       {swipeX > 0 && (
         <div
-          className="absolute inset-y-0 left-0 flex items-center pl-4 text-background font-semibold text-xs"
+          className="absolute inset-y-0 left-0 flex items-center pl-4 text-accent-ink font-semibold text-xs"
           style={{ width: swipeX, backgroundColor: "var(--accent)", opacity: swipeX / SWIPE_COMPLETE_THRESHOLD }}
         >
           Done
@@ -187,15 +187,15 @@ export default function TaskCard({
         <button
           onClick={toggleComplete}
           disabled={busy}
-          className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+          className={`shrink-0 w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${
             task.status === "COMPLETED" || completing
               ? "bg-accent border-accent"
-              : "border-muted-2 hover:border-accent"
+              : "border-border-2 hover:border-accent"
           }`}
           title={task.status === "COMPLETED" ? "Mark not done" : "Mark complete"}
         >
           {(task.status === "COMPLETED" || completing) && (
-            <CheckIcon className="w-3 h-3 text-background animate-complete-pop" />
+            <CheckIcon className="w-3 h-3 text-accent-ink animate-complete-pop" />
           )}
         </button>
 
@@ -210,8 +210,11 @@ export default function TaskCard({
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {task.category && (
               <span
-                className="text-[11px] font-medium px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: `${task.category.color}22`, color: task.category.color }}
+                className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${task.category.color} 18%, transparent)`,
+                  color: `color-mix(in srgb, ${task.category.color} 85%, white)`,
+                }}
               >
                 {task.category.name}
               </span>
@@ -246,7 +249,7 @@ export default function TaskCard({
             <button
               onClick={startFocus}
               disabled={busy}
-              className="text-xs font-semibold px-3 py-1.5 rounded-full bg-stat-blue text-white hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="btn-ghost text-xs px-3 py-1.5 whitespace-nowrap"
             >
               Start focus
             </button>

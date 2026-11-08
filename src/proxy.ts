@@ -48,7 +48,8 @@ export async function proxy(req: NextRequest) {
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) || PUBLIC_EXACT.includes(pathname)) {
     return NextResponse.next();
   }
-  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+  // Static backdrop photos must stay public: the image optimizer fetches them server side with no cookie.
+  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.startsWith("/backgrounds/")) {
     return NextResponse.next();
   }
 

@@ -108,7 +108,7 @@ export default function AudioPlayer({
           <button
             onClick={togglePlay}
             aria-label={playing ? "Pause" : "Play"}
-            className="w-12 h-12 flex items-center justify-center rounded-full bg-foreground text-background font-bold"
+            className="w-12 h-12 flex items-center justify-center rounded-full bg-accent text-accent-ink font-bold"
           >
             {playing ? "❚❚" : "▶"}
           </button>

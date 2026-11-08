@@ -49,12 +49,12 @@ export default function TownExplorer({
   );
 
   return (
-    <div className={`relative ${heightClass} rounded-3xl overflow-hidden glass`} style={{ background: "radial-gradient(ellipse at 50% 35%, #1d2440 0%, #0b0d14 72%)" }}>
+    <div className={`relative ${heightClass} rounded-3xl overflow-hidden border border-border bg-surface`}>
       <TownCanvas agents={agents} selected={selected} signals={signals} onPick={setSelected} />
 
       <div className="pointer-events-none absolute left-4 top-4 flex flex-wrap gap-2">
         {(Object.keys(KIND_LABEL) as AgentView["kind"][]).map((k) => (
-          <span key={k} className="rounded-full bg-black/40 px-2.5 py-1 text-[11px] text-muted backdrop-blur">
+          <span key={k} className="rounded-full border border-border bg-surface-2/85 px-2.5 py-1 text-[11px] text-muted">
             {KIND_LABEL[k]} · {agents.filter((a) => a.kind === k).length}
           </span>
         ))}
@@ -69,7 +69,7 @@ export default function TownExplorer({
           animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, x: 40, filter: "blur(6px)" }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute right-3 top-3 bottom-3 z-10 w-[min(360px,calc(100%-24px))] overflow-y-auto rounded-2xl glass hud-corners p-5"
+          className="absolute right-3 top-3 bottom-3 z-10 w-[min(360px,calc(100%-24px))] overflow-y-auto rounded-2xl border border-border-2 bg-surface-2/95 p-5"
         >
           <button onClick={() => setSelected(null)} className="absolute right-3 top-3 text-lg leading-none text-muted-2 hover:text-foreground" aria-label="Close">
             ×
@@ -164,7 +164,7 @@ function AgentPanel({ agent, runs, onSent }: { agent: AgentView | null; runs: Ru
           placeholder={`Give ${agent.name} something to do`}
           className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm placeholder:text-muted-2 focus:outline-none focus:border-accent"
         />
-        <button type="submit" disabled={sending || !prompt.trim()} className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-40">
+        <button type="submit" disabled={sending || !prompt.trim()} className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-ink disabled:opacity-40">
           {sending ? "Sending…" : "Send work"}
         </button>
       </form>

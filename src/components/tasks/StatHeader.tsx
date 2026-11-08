@@ -32,9 +32,9 @@ export default function StatHeader({
 
   return (
     <div className="mb-5">
-      <p className="font-mono text-[11px] tracking-wide text-muted-2 mb-1">{dateLabel}</p>
+      <p className="eyebrow eyebrow-accent mb-1.5">{dateLabel}</p>
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold tracking-tight">{VIEW_LABEL[railView]}</h1>
+        <h1 className="text-[34px]">{VIEW_LABEL[railView]}</h1>
         <div className="flex items-center gap-2.5 flex-wrap">
           <StatCard color="stat-green" value={`${doneThisWeek}/${doneThisWeekTotal}`} label="done this week" />
           <StatCard color="stat-amber" value={String(needDecision)} label="need a decision" />
@@ -46,9 +46,9 @@ export default function StatHeader({
 }
 
 const STAT_CLASSES = {
-  "stat-green": { card: "border-stat-green/25 bg-stat-green/10", text: "text-stat-green" },
-  "stat-amber": { card: "border-stat-amber/25 bg-stat-amber/10", text: "text-stat-amber" },
-  "stat-blue": { card: "border-stat-blue/25 bg-stat-blue/10", text: "text-stat-blue" },
+  "stat-green": { card: "border-ok/25 bg-ok/10", text: "text-ok" },
+  "stat-amber": { card: "border-warn/25 bg-warn/10", text: "text-warn" },
+  "stat-blue": { card: "border-info/25 bg-info/10", text: "text-info" },
 } as const;
 
 function StatCard({
@@ -62,8 +62,8 @@ function StatCard({
 }) {
   const cls = STAT_CLASSES[color];
   return (
-    <div className={`rounded-xl border px-3.5 py-2 ${cls.card}`}>
-      <p className={`text-lg font-bold leading-none ${cls.text}`}>{value}</p>
+    <div className={`rounded-2xl border px-3.5 py-2 ${cls.card}`}>
+      <p className={`font-mono text-lg font-bold leading-none tabular-nums ${cls.text}`}>{value}</p>
       <p className="text-[11px] text-muted mt-1 whitespace-nowrap">{label}</p>
     </div>
   );

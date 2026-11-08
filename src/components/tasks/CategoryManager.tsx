@@ -118,7 +118,7 @@ export default function CategoryManager({
             placeholder="New category name"
             className="flex-1 bg-surface-2 border border-border rounded-md px-2 py-1.5 text-sm outline-none"
           />
-          <button onClick={create} className="text-xs font-semibold bg-foreground text-background rounded-md px-2.5 py-1.5">
+          <button onClick={create} className="text-xs font-semibold bg-accent text-accent-ink rounded-full px-2.5 py-1.5">
             Add
           </button>
         </div>

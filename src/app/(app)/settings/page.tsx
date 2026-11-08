@@ -31,7 +31,7 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 space-y-8">
       <div>
-        <h1 className="text-xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-[28px]">Settings</h1>
         <p className="text-sm text-muted mt-1">Morning brief, context sources, and integrations.</p>
       </div>
 

@@ -7,7 +7,7 @@ import CountUp from "@/components/fx/CountUp";
 import type { Task } from "@/lib/types";
 import { formatDue } from "@/lib/task-dates";
 import { formatClock } from "@/lib/quick-add-parse";
-import { Card, CardTitle, CheckMark, Chip } from "./hub-ui";
+import { Card, CheckMark, Chip, agentColor } from "./hub-ui";
 
 const CAP = 8;
 const SWIPE_DONE = 90;
@@ -21,22 +21,21 @@ export default function TodayList({ tasks, onComplete }: { tasks: Task[]; onComp
 
   return (
     <Card className="p-3 md:p-4">
-      <div className="px-1">
-        <CardTitle
-          label="Today"
-          accent="#9b7bff"
-          right={
-            <span className="font-mono text-[11px] text-muted">
-              <CountUp value={tasks.length} duration={0.5} /> open
-              {overdue > 0 && (
-                <span className="text-overdue">
-                  {" · "}
-                  <CountUp value={overdue} duration={0.5} /> late
-                </span>
-              )}
-            </span>
-          }
-        />
+      <div className="mb-2 flex items-baseline justify-between gap-2 px-2 pt-1">
+        <h2 className="text-[22px] font-extrabold tracking-[-0.03em]">
+          Today{" "}
+          <span className="font-mono text-[15px] font-bold tracking-normal text-muted">
+            <span className="hl">
+              <CountUp value={tasks.length} duration={0.5} />
+            </span>{" "}
+            open
+          </span>
+        </h2>
+        {overdue > 0 && (
+          <span className="font-mono text-[12px] font-bold text-danger">
+            <CountUp value={overdue} duration={0.5} /> late
+          </span>
+        )}
       </div>
       {tasks.length === 0 ? (
         <EmptyToday />
@@ -50,7 +49,7 @@ export default function TodayList({ tasks, onComplete }: { tasks: Task[]; onComp
         </ul>
       )}
       {(hidden > 0 || expanded) && tasks.length > CAP && (
-        <button onClick={() => setExpanded((v) => !v)} className="mt-2 w-full rounded-xl py-2 text-xs text-muted hover:bg-white/5 hover:text-foreground">
+        <button onClick={() => setExpanded((v) => !v)} className="mt-2 w-full rounded-full py-2 text-xs font-semibold text-muted hover:bg-surface-hover hover:text-foreground">
           {expanded ? "Show less" : `Show ${hidden} more`}
         </button>
       )}
@@ -63,7 +62,7 @@ function EmptyToday() {
   return (
     <div className="flex flex-col items-center gap-2 py-8 text-center">
       <motion.span
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-stat-green/15 text-stat-green shadow-[0_0_28px_-4px_rgba(34,197,94,0.6)]"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-accent-ink"
         initial={reduced ? false : { scale: 0.6, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 18 }}
@@ -123,18 +122,18 @@ function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) =
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0, x: 24, transition: { duration: 0.22 } }}
       transition={{ type: "spring", stiffness: 420, damping: 34 }}
-      className="relative overflow-hidden rounded-xl"
+      className="relative overflow-hidden rounded-2xl"
     >
       {swipeX > 0 && (
         <div
           className="absolute inset-y-0 left-0 flex items-center pl-4 text-xs font-semibold text-background"
-          style={{ width: swipeX, background: "linear-gradient(90deg,#22c55e,#22e1ff)", opacity: Math.min(1, swipeX / SWIPE_DONE) }}
+          style={{ width: swipeX, background: "var(--accent)", color: "var(--accent-ink)", opacity: Math.min(1, swipeX / SWIPE_DONE) }}
         >
           Done
         </div>
       )}
       <div
-        className={`relative flex items-center gap-1 rounded-xl pr-2 transition-colors hover:bg-white/[0.04] ${task.overdue ? "bg-overdue/[0.05]" : ""}`}
+        className="group relative flex min-h-14 items-center gap-1 rounded-2xl border border-transparent bg-surface-2 pr-2 transition-colors duration-[120ms] hover:border-border-2"
         style={{
           transform: swipeX ? `translateX(${swipeX}px)` : undefined,
           transition: swiping ? "none" : "transform 0.18s ease-out",
@@ -144,17 +143,18 @@ function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) =
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
+        {task.overdue && <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-danger" />}
         <button
           onClick={complete}
           disabled={temp}
           aria-label={`Complete ${task.title}`}
-          className="flex h-11 w-11 shrink-0 items-center justify-center md:h-10 md:w-10"
+          className="peer flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
         >
           <motion.span
             animate={checking ? { scale: reduced ? 1 : [0.6, 1.15, 1] } : { scale: 1 }}
             transition={{ duration: 0.28 }}
-            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
-              checking ? "border-stat-green bg-stat-green text-background shadow-[0_0_16px_rgba(34,197,94,0.7)]" : "border-muted-2 hover:border-[#22e1ff]"
+            className={`flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] transition-colors duration-[120ms] ${
+              checking ? "border-accent bg-accent text-accent-ink" : "border-border-2 group-hover:border-accent"
             }`}
           >
             <CheckMark on={checking} size={13} />
@@ -163,23 +163,27 @@ function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) =
         <div className="min-w-0 flex-1 py-2">
           <Link
             href={`/tasks?highlight=${task.id}`}
-            className={`block truncate text-[15px] font-medium transition-colors ${checking ? "text-muted line-through" : "hover:text-[#22e1ff]"}`}
+            className={`flex items-center gap-2 text-[15px] font-semibold transition-colors ${checking ? "text-muted line-through" : "text-foreground hover:text-accent"}`}
           >
-            {task.title}
+            {task.pinnedToday && !task.overdue && <span aria-label="Pinned" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+            <span className="truncate">{task.title}</span>
           </Link>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             {task.category && <Chip color={task.category.color}>{task.category.name}</Chip>}
             {due && (
-              <Chip color={task.overdue ? "#ef4444" : due.dueToday ? "#f5a623" : "#9797a6"}>
+              <Chip tone={task.overdue ? "danger" : due.dueToday ? "warn" : "neutral"}>
                 {due.dueToday && task.dueTime ? formatClock(task.dueTime) : due.label}
               </Chip>
             )}
             {task.people.map((p) => (
-              <Chip key={p.id} color="#22e1ff">
-                @{p.name}
-              </Chip>
+              <Chip key={p.id}>@{p.name}</Chip>
             ))}
-            {task.source?.startsWith("agent:") && <Chip color="#ff4fd8">{task.source.slice(6)}</Chip>}
+            {task.source?.startsWith("agent:") && (
+              <Chip>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: agentColor(task.source.slice(6)) }} />
+                {task.source.slice(6)}
+              </Chip>
+            )}
             {temp && <span className="text-[11px] text-muted-2">saving</span>}
           </div>
         </div>

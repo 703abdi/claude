@@ -51,7 +51,7 @@ export default function ChatGPTUploader() {
       <button
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="text-xs font-semibold bg-foreground text-background rounded-md px-3 py-1.5 disabled:opacity-40"
+        className="text-xs font-semibold bg-accent text-accent-ink rounded-full px-3 py-1.5 disabled:opacity-40"
       >
         {busy ? "Uploading..." : "Upload conversations.json"}
       </button>

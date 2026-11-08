@@ -24,11 +24,11 @@ export default function BriefView({ initialBrief }: { initialBrief: MorningBrief
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-xl font-bold tracking-tight">Morning brief</h1>
+        <h1 className="text-[28px]">Morning brief</h1>
         <button
           onClick={generate}
           disabled={generating}
-          className="text-xs font-semibold bg-foreground text-background rounded-md px-3 py-1.5 disabled:opacity-40"
+          className="text-xs font-semibold bg-accent text-accent-ink rounded-full px-3 py-1.5 disabled:opacity-40"
         >
           {generating ? "Generating..." : brief ? "Regenerate" : "Generate"}
         </button>

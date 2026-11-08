@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import CountUp from "@/components/fx/CountUp";
-import Tilt from "@/components/fx/Tilt";
 import { KIND_COLOR } from "@/components/town3d/kinds";
 import { removeAgent } from "@/lib/agents/removeAgent";
 import type { AgentKind, AgentView } from "@/lib/agents/types";
@@ -11,83 +10,71 @@ import { ago } from "./hub-ui";
 
 type Connector = { id: string; name: string; group: string; configured: boolean; lastSyncAt?: string | null };
 
-export function StatTile({
-  label,
-  value,
-  total,
-  suffix,
-  accent,
-  sub,
-  href,
-  hot,
-  spark,
-}: {
-  label: string;
-  value: number | undefined;
-  total?: number;
-  suffix?: string;
-  accent: string;
-  sub?: string;
-  href?: string;
-  hot?: boolean;
-  spark?: number[];
-}) {
-  const body = (
-    <Tilt className="h-full rounded-2xl">
-      <div
-        className="relative h-full overflow-hidden rounded-2xl glass px-4 py-4"
-        style={{ boxShadow: hot ? `0 0 0 1px ${accent}aa, 0 0 32px -6px ${accent}` : `inset 0 1px 0 ${accent}22` }}
-      >
-        <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl" style={{ background: `${accent}55` }} />
-        <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
-        <div className="relative flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.15em] text-muted">
-          {label}
-          {hot && <span className="h-1.5 w-1.5 rounded-full blink-dot" style={{ background: accent, boxShadow: `0 0 8px ${accent}` }} />}
-        </div>
-        <div className="relative mt-1.5 text-3xl font-bold font-mono tabular-nums" style={{ textShadow: `0 0 18px ${accent}66` }}>
-          {value === undefined ? (
-            <span className="text-muted-2">—</span>
-          ) : (
-            <>
-              <CountUp value={value} suffix={suffix} />
-              {total !== undefined && <span className="text-lg text-muted-2">/{total}</span>}
-            </>
-          )}
-        </div>
-        {sub && <div className="relative mt-1 text-[11px] text-muted-2">{sub}</div>}
-        {spark && spark.length > 1 && <Sparkline points={spark} color={accent} />}
-      </div>
-    </Tilt>
-  );
-  return href ? (
-    <Link href={href} className="block h-full">
-      {body}
-    </Link>
-  ) : (
-    body
-  );
-}
+export type NumberItem = { label: string; value: number | undefined; total?: number; href?: string; danger?: boolean };
 
-function Sparkline({ points, color }: { points: number[]; color: string }) {
-  const max = Math.max(1, ...points);
-  const w = 100;
-  const h = 24;
-  const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${(i / (points.length - 1)) * w},${h - (p / max) * h}`).join(" ");
+const LG_COLS: Record<number, string> = {
+  3: "lg:grid-cols-3",
+  4: "lg:grid-cols-4",
+  5: "lg:grid-cols-5",
+  6: "lg:grid-cols-6",
+};
+
+/**
+ * One card, one row of numbers, hairlines between. On phone the column count is picked so no
+ * row ends in an empty grey cell: 4 items go 2x2, and with 5 the last cell spans the gap.
+ */
+export function NumbersStrip({ items }: { items: NumberItem[] }) {
+  const n = items.length;
+  const phoneCols = n === 4 ? 2 : 3;
+  const leftover = n % phoneCols;
+  const lastSpan = leftover === 1 ? "max-lg:col-span-3" : leftover === 2 ? "max-lg:col-span-2" : "";
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="relative mt-2 h-6 w-full" preserveAspectRatio="none" aria-hidden>
-      <path d={d} fill="none" stroke={color} strokeWidth={1.8} vectorEffect="non-scaling-stroke" />
-    </svg>
+    <div
+      className={`grid gap-px overflow-hidden rounded-3xl border border-border bg-border ${phoneCols === 2 ? "grid-cols-2" : "grid-cols-3"} ${LG_COLS[n] ?? "lg:grid-cols-6"}`}
+    >
+      {items.map((it, i) => {
+        const span = i === n - 1 ? lastSpan : "";
+        const hot = it.danger && (it.value ?? 0) > 0;
+        const body = (
+          <div className="flex h-full flex-col justify-between gap-1 bg-surface-2 px-4 py-3.5 transition-colors hover:bg-surface-hover">
+            <span className="eyebrow flex items-center gap-1.5">
+              {it.label}
+              {hot && <span className="blink-dot h-1.5 w-1.5 rounded-full bg-danger" />}
+            </span>
+            <span className={`font-mono text-[26px] font-bold leading-8 tabular-nums ${hot ? "text-danger" : "text-foreground"}`}>
+              {it.value === undefined ? (
+                <span className="text-muted-2">-</span>
+              ) : (
+                <>
+                  <CountUp value={it.value} duration={0.6} />
+                  {it.total !== undefined && <span className="text-[16px] text-muted-2">/{it.total}</span>}
+                </>
+              )}
+            </span>
+          </div>
+        );
+        return it.href ? (
+          <Link key={it.label} href={it.href} className={`block ${span}`}>
+            {body}
+          </Link>
+        ) : (
+          <div key={it.label} className={span}>
+            {body}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent";
+  "w-full rounded-[10px] border border-border-2 bg-surface-hover px-3 py-2 text-sm text-foreground placeholder:text-muted-2";
 
 const STATUS_PILL: Record<AgentView["status"], string> = {
-  IDLE: "text-stat-green bg-stat-green/10",
-  WORKING: "text-accent bg-accent/15",
-  BLOCKED: "text-overdue bg-overdue/10",
-  OFFLINE: "text-muted-2 bg-surface-2",
+  IDLE: "text-ok bg-ok/10",
+  WORKING: "text-accent bg-accent-soft",
+  BLOCKED: "text-danger bg-danger/10",
+  OFFLINE: "text-muted-2 bg-surface-hover",
 };
 
 export function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChanged: () => void }) {
@@ -120,10 +107,10 @@ export function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChan
   }
 
   return (
-    <div className="min-w-0 rounded-3xl glass p-5">
+    <div className="card min-w-0 p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold">Agents</h2>
-        <button onClick={() => setOpen((v) => !v)} className="text-xs text-accent hover:underline">
+        <h2 className="text-[15px] font-bold">Agents</h2>
+        <button onClick={() => setOpen((v) => !v)} className="text-xs font-semibold text-accent hover:underline">
           {open ? "Cancel" : "+ Add agent"}
         </button>
       </div>
@@ -138,8 +125,8 @@ export function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChan
           </select>
           {kind !== "LOCAL" && <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model id, not your API key (blank = default)" className={inputClass} />}
           <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={2} placeholder="Role / instructions (optional)" className={inputClass} />
-          {error && <p className="text-xs text-overdue">{error}</p>}
-          <button type="submit" className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white">
+          {error && <p className="text-xs text-danger">{error}</p>}
+          <button type="submit" className="btn-primary">
             Create agent
           </button>
         </form>
@@ -149,10 +136,10 @@ export function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChan
       ) : (
         <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
           {agents.map((a) => (
-            <li key={a.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-surface/60 px-3 py-2.5">
+            <li key={a.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-surface px-3 py-2.5">
               <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-                style={{ background: KIND_COLOR[a.kind], boxShadow: a.status === "WORKING" ? `0 0 16px ${KIND_COLOR[a.kind]}` : undefined }}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-hover text-sm font-bold"
+                style={{ color: KIND_COLOR[a.kind] }}
               >
                 {a.name.charAt(0).toUpperCase()}
               </span>
@@ -170,7 +157,7 @@ export function AgentRoster({ agents, onChanged }: { agents: AgentView[]; onChan
                 }}
                 aria-label={`Remove ${a.name}`}
                 title={`Remove ${a.name}`}
-                className="shrink-0 rounded-lg px-2 py-1 text-xs text-muted-2 hover:bg-overdue/10 hover:text-overdue"
+                className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-danger hover:bg-danger/10"
               >
                 Remove
               </button>
@@ -192,16 +179,16 @@ export function Connectors() {
   }, []);
 
   return (
-    <div className="min-w-0 rounded-3xl glass p-5">
-      <h2 className="text-sm font-semibold mb-4">Connectors</h2>
+    <div className="card min-w-0 p-5">
+      <h2 className="text-[15px] font-bold mb-4">Connectors</h2>
       {!list ? (
         <p className="text-sm text-muted">Checking…</p>
       ) : (
         <ul className="space-y-1.5">
           {list.map((c) => (
-            <li key={c.id} className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 hover:bg-white/5">
+            <li key={c.id} className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 hover:bg-surface-hover">
               <span className="flex items-center gap-2 text-sm">
-                <span className={`h-2 w-2 rounded-full ${c.configured ? "bg-stat-green shadow-[0_0_8px_#22c55e]" : "bg-muted-2"}`} />
+                <span className={`h-2 w-2 rounded-full ${c.configured ? "bg-ok" : "bg-muted-2"}`} />
                 {c.name}
               </span>
               <span className="text-[11px] text-muted-2 font-mono">

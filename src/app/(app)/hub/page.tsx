@@ -1,14 +1,20 @@
 import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import HubDashboard from "@/components/hub/HubDashboard";
 
-function displayName(email: string) {
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function fromEmail(email: string) {
   const local = email.split("@")[0] ?? email;
-  const letters = local.replace(/[^a-zA-Z]/g, "");
-  const name = letters || local;
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  return local.replace(/[^a-zA-Z]/g, "") || local;
 }
 
 export default async function HubPage() {
   const session = await getSession();
-  return <HubDashboard name={session ? displayName(session.email) : "there"} />;
+  if (!session) return <HubDashboard name="there" />;
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { name: true } }).catch(() => null);
+  const first = user?.name?.trim().split(/\s+/)[0];
+  return <HubDashboard name={capitalize(first || fromEmail(session.email))} />;
 }

@@ -1,22 +1,3 @@
-const AVATAR_COLORS = [
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-  "#14b8a6",
-  "#f43f5e",
-  "#6366f1",
-  "#22c55e",
-  "#06b6d4",
-  "#a855f7",
-];
-
-function colorForName(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
 function initialsForName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -40,11 +21,9 @@ export default function Avatar({
   size?: keyof typeof SIZE_CLASSES;
   className?: string;
 }) {
-  const color = colorForName(name);
   return (
     <span
-      className={`inline-flex items-center justify-center shrink-0 rounded-full font-semibold text-white select-none ${SIZE_CLASSES[size]} ${className ?? ""}`}
-      style={{ backgroundColor: `color-mix(in srgb, ${color} 55%, black)` }}
+      className={`inline-flex items-center justify-center shrink-0 rounded-full border border-border bg-surface-hover font-bold text-foreground select-none ${SIZE_CLASSES[size]} ${className ?? ""}`}
       title={name}
     >
       {initialsForName(name)}

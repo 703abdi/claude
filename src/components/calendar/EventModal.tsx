@@ -176,7 +176,7 @@ export default function EventModal({
           <button
             type="submit"
             disabled={!title.trim() || saving}
-            className="text-xs font-semibold bg-foreground text-background rounded-md px-3 py-1.5 disabled:opacity-40"
+            className="text-xs font-semibold bg-accent text-accent-ink rounded-full px-3 py-1.5 disabled:opacity-40"
           >
             {mode === "create" ? "Create event" : "Save"}
           </button>

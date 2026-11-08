@@ -38,12 +38,12 @@ export default function RightSidebar({
       <BriefCard brief={brief} />
 
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-2 mb-2">Next on calendar</p>
+        <p className="eyebrow mb-2">Next on calendar</p>
         {nextEvent === undefined ? (
-          <div className="h-14 rounded-xl border border-border bg-surface animate-pulse" />
+          <div className="h-14 rounded-2xl border border-border bg-surface-2 animate-pulse" />
         ) : nextEvent ? (
-          <div className="rounded-xl border border-border bg-surface px-3.5 py-3">
-            <p className="text-[11px] font-mono text-muted-2">
+          <div className="rounded-2xl border border-border bg-surface-2 px-3.5 py-3">
+            <p className="text-[11px] font-mono font-bold text-accent">
               {nextEvent.startTime ?? "All day"} · {new Date(nextEvent.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
             </p>
             <p className="text-sm font-semibold mt-0.5 truncate">{nextEvent.title}</p>
@@ -55,12 +55,12 @@ export default function RightSidebar({
 
       {waitingTasks.length > 0 && (
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-2 mb-2">Waiting on</p>
+          <p className="eyebrow mb-2">Waiting on</p>
           <div className="space-y-1.5">
             {waitingTasks.slice(0, 3).map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5"
+                className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-surface-2 px-3.5 py-2.5"
               >
                 <button onClick={() => onSelectTask(t)} className="min-w-0 text-left">
                   <p className="text-sm font-medium truncate">{t.title}</p>
@@ -68,7 +68,7 @@ export default function RightSidebar({
                 </button>
                 <button
                   onClick={() => onSelectTask(t)}
-                  className="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-stat-green/20 text-stat-green hover:bg-stat-green/30 transition-colors"
+                  className="btn-ghost shrink-0 text-[11px] px-2.5 py-1"
                 >
                   Nudge
                 </button>
@@ -81,19 +81,19 @@ export default function RightSidebar({
       {obsidianSuggestions.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">From Obsidian</p>
+            <p className="eyebrow">From Obsidian</p>
             <span className="text-[11px] font-mono text-muted-2">{obsidianSuggestions.length} new</span>
           </div>
           <div className="space-y-1.5">
             {obsidianSuggestions.slice(0, 4).map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5">
+              <div key={s.id} className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-surface-2 px-3.5 py-2.5">
                 <p className="min-w-0 text-sm font-medium truncate">{s.title}</p>
                 <button
                   onClick={async () => {
                     onSuggestionResolved(s.id);
                     await api.suggestions.resolve(s.id, "accept");
                   }}
-                  className="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-pink/20 text-pink hover:bg-pink/30 transition-colors"
+                  className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-accent-soft text-accent hover:bg-accent hover:text-accent-ink transition-colors"
                 >
                   Add
                 </button>
@@ -137,14 +137,14 @@ function BriefCard({ brief }: { brief: MorningBrief | null | undefined }) {
       : null;
 
   return (
-    <div className="rounded-xl border border-accent/25 bg-accent/[0.08] p-4">
+    <div className="card p-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold">Morning brief</p>
-        <span className="text-[10px] font-mono uppercase tracking-wide text-muted-2">Daily 06:00</span>
+        <p className="text-[15px] font-bold">Morning brief</p>
+        <span className="eyebrow">Daily 06:00</span>
       </div>
 
       {brief === undefined ? (
-        <div className="h-8 rounded bg-surface-2 animate-pulse" />
+        <div className="h-8 rounded-full bg-surface-hover animate-pulse" />
       ) : brief && brief.hasAudio ? (
         <>
           <audio
@@ -159,7 +159,7 @@ function BriefCard({ brief }: { brief: MorningBrief | null | undefined }) {
               onClick={toggle}
               className="w-10 h-10 rounded-full bg-accent flex items-center justify-center shrink-0 hover:bg-accent-hover transition-colors"
             >
-              {playing ? <PauseIcon className="w-4 h-4 text-white" /> : <PlayIcon className="w-4 h-4 text-white" />}
+              {playing ? <PauseIcon className="w-4 h-4 text-accent-ink" /> : <PlayIcon className="w-4 h-4 text-accent-ink" />}
             </button>
             <div className="flex-1 h-6 flex items-center gap-[2px]">
               {Array.from({ length: 24 }).map((_, i) => (
@@ -174,19 +174,19 @@ function BriefCard({ brief }: { brief: MorningBrief | null | undefined }) {
           </div>
         </>
       ) : (
-        <p className="text-xs text-muted">{brief ? "Ready — text only." : "Not generated yet today."}</p>
+        <p className="text-xs text-muted">{brief ? "Ready, text only." : "Not generated yet today."}</p>
       )}
 
       <div className="flex items-center gap-2 mt-3">
         <Link
           href="/brief"
-          className="flex-1 text-center text-xs font-medium px-2.5 py-1.5 rounded-lg border border-border text-muted hover:text-foreground transition-colors"
+          className="btn-ghost flex-1 text-xs px-2.5 py-1.5"
         >
           Read transcript
         </Link>
         <button
           onClick={sendToPhone}
-          className="flex-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-border text-muted hover:text-foreground transition-colors"
+          className="btn-ghost flex-1 text-xs px-2.5 py-1.5"
         >
           {copied ? "Link copied" : "Send to phone"}
         </button>

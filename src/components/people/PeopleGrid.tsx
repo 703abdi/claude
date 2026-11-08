@@ -48,13 +48,13 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-8">
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">People</h1>
+          <h1 className="text-[34px]">People</h1>
           <p className="text-sm text-muted mt-1">Everyone tied to a task, a follow-up, or a meeting.</p>
         </div>
         {!adding && (
           <button
             onClick={() => setAdding(true)}
-            className="shrink-0 text-sm font-semibold bg-foreground text-background rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
+            className="shrink-0 text-sm font-semibold bg-accent text-accent-ink rounded-full px-4 py-2 hover:opacity-90 transition-opacity"
           >
             + Add person
           </button>
@@ -71,7 +71,7 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
             placeholder="Their name"
             className="flex-1 bg-surface-2 border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-muted-2"
           />
-          <button type="submit" className="text-sm font-semibold bg-foreground text-background rounded-md px-3.5 py-2">
+          <button type="submit" className="text-sm font-semibold bg-accent text-accent-ink rounded-full px-3.5 py-2">
             Add
           </button>
           <button type="button" onClick={() => setAdding(false)} className="text-sm text-muted px-2">
@@ -94,7 +94,7 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
               aria-selected={filter === key}
               onClick={() => setFilter(key)}
               className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
-                filter === key ? "bg-accent text-white" : "bg-surface-2 text-muted hover:text-foreground"
+                filter === key ? "bg-accent text-accent-ink" : "bg-surface-2 text-muted hover:text-foreground"
               }`}
             >
               {label}
@@ -124,7 +124,7 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
                 {p.waitingCount > 0 && (
                   <span
                     className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background"
-                    style={{ backgroundColor: "var(--status-yellow)" }}
+                    style={{ backgroundColor: "var(--accent)" }}
                     title={`${p.waitingCount} waiting`}
                   />
                 )}
@@ -132,7 +132,7 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate max-w-[7.5rem]">{p.name}</p>
                 {p.waitingCount > 0 ? (
-                  <p className="text-xs font-medium mt-0.5 text-stat-amber">
+                  <p className="text-xs font-semibold mt-0.5 text-accent">
                     waiting · {p.waitingCount}
                   </p>
                 ) : (

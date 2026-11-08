@@ -49,7 +49,7 @@ export type HubPayload = {
     scoreboard: { today: ScoreTotals; week: ScoreTotals };
     goal: GoalView;
   };
-  stats: { open: number; overdue: number; dueToday: number; waiting: number };
+  stats: { open: number; overdue: number; dueToday: number; waiting: number; doneToday: number };
   agents: AgentsResponse;
   inbox: InboxItem[];
   brief: MorningBrief | null;

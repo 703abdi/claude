@@ -68,15 +68,15 @@ export default function LeftRail({
             <button
               key={v}
               onClick={() => onRailViewChange(v)}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[14px] transition-colors ${
-                active ? "text-foreground font-semibold" : "text-muted hover:text-foreground"
+              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-full text-[14px] transition-colors ${
+                active ? "text-accent bg-accent-soft font-semibold" : "text-muted hover:text-foreground hover:bg-surface-hover"
               }`}
             >
               <span>{VIEW_LABEL[v]}</span>
               <span
                 className={`text-[12px] font-mono ${
                   active
-                    ? "min-w-[22px] text-center px-1.5 py-0.5 rounded-full bg-accent text-white font-semibold"
+                    ? "min-w-[22px] text-center px-1.5 py-0.5 rounded-full bg-accent text-accent-ink font-semibold"
                     : "text-muted-2"
                 }`}
               >
@@ -88,7 +88,7 @@ export default function LeftRail({
       </nav>
 
       <div className="flex items-center justify-between px-3 pb-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-2">Areas</span>
+        <span className="eyebrow">Areas</span>
         <button onClick={onManageCategories} className="text-muted-2 hover:text-foreground" title="Manage areas">
           <EditIcon className="w-3 h-3" />
         </button>
@@ -100,11 +100,10 @@ export default function LeftRail({
             <button
               key={c.id}
               onClick={() => onCategoryChange(active ? "" : c.id)}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px] transition-opacity hover:opacity-80"
+              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] transition-colors hover:bg-surface-hover"
               style={{
-                backgroundColor: `${c.color}${active ? "33" : "18"}`,
-                color: active ? c.color : "var(--foreground)",
-                outline: active ? `1px solid ${c.color}66` : undefined,
+                backgroundColor: active ? `color-mix(in srgb, ${c.color} 18%, transparent)` : undefined,
+                color: active ? `color-mix(in srgb, ${c.color} 85%, white)` : "var(--foreground)",
               }}
             >
               <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: c.color }} />

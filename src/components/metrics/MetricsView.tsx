@@ -42,7 +42,7 @@ export default function MetricsView() {
   return (
     <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-bold tracking-tight">Metrics</h1>
+        <h1 className="text-[28px]">Metrics</h1>
         <p className="text-sm text-muted">Live numbers from abdiform: forms, responses and conversion. Refreshes every minute.</p>
       </div>
 
@@ -82,16 +82,15 @@ function Dashboard({ data }: { data: AbdiformMetrics }) {
       </div>
 
       <Reveal delay={0.2}>
-        <section className="relative overflow-hidden rounded-2xl glass hud-corners p-5">
-          <div className="hud-scan" />
-          <h2 className="relative text-sm font-semibold mb-3">Responses per day · last 30 days</h2>
+        <section className="card p-5">
+          <h2 className="text-[15px] font-bold mb-3">Responses per day · last 30 days</h2>
           <Timeline points={data.timeline} />
         </section>
       </Reveal>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-        <section className="rounded-2xl border border-border bg-surface p-5">
-          <h2 className="text-sm font-semibold mb-3">Lead status</h2>
+        <section className="card p-5">
+          <h2 className="text-[15px] font-bold mb-3">Lead status</h2>
           <ul className="space-y-2">
             {Object.entries(o.byStatus).map(([status, count]) => (
               <li key={status} className="flex items-center gap-3 text-sm">
@@ -99,7 +98,7 @@ function Dashboard({ data }: { data: AbdiformMetrics }) {
                 <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: "linear-gradient(90deg, #9b7bff, #22e1ff)", boxShadow: "0 0 12px rgba(34,225,255,0.5)" }}
+                    style={{ background: "var(--accent)" }}
                     initial={{ width: 0 }}
                     whileInView={{ width: `${o.total ? Math.round((count / o.total) * 100) : 0}%` }}
                     viewport={{ once: true }}
@@ -113,8 +112,8 @@ function Dashboard({ data }: { data: AbdiformMetrics }) {
           {o.partials > 0 && <p className="mt-3 text-xs text-muted-2">{o.partials} unfinished responses not counted.</p>}
         </section>
 
-        <section className="rounded-2xl border border-border bg-surface p-5 overflow-x-auto">
-          <h2 className="text-sm font-semibold mb-3">Forms</h2>
+        <section className="card p-5 overflow-x-auto">
+          <h2 className="text-[15px] font-bold mb-3">Forms</h2>
           {data.forms.length === 0 ? (
             <p className="text-sm text-muted">No forms yet.</p>
           ) : (
@@ -162,10 +161,9 @@ function FormRow({ form: f }: { form: AbdiformForm }) {
 function Card({ label, value, suffix, sub, i }: { label: string; value: number | null; suffix?: string; sub?: string; i: number }) {
   return (
     <Reveal delay={i * 0.06}>
-      <div className="relative overflow-hidden rounded-xl glass px-4 py-3">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#22e1ff] to-transparent" />
-        <div className="text-[11px] font-mono uppercase tracking-[0.15em] text-muted-2">{label}</div>
-        <div className="text-2xl font-bold font-mono drop-shadow-[0_0_14px_rgba(34,225,255,0.35)]">
+      <div className="tile px-4 py-3">
+        <div className="eyebrow">{label}</div>
+        <div className="text-2xl font-bold font-mono">
           {value === null ? "—" : <CountUp value={value} suffix={suffix} />}
         </div>
         {sub && <div className="text-[11px] text-muted-2 mt-0.5">{sub}</div>}
@@ -184,8 +182,8 @@ function Timeline({ points }: { points: { day: string; label: string; count: num
     <svg viewBox={`0 0 ${w} ${h}`} className="relative w-full h-32" role="img" aria-label="Responses per day">
       <defs>
         <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#22e1ff" />
-          <stop offset="100%" stopColor="#9b7bff" />
+          <stop offset="0%" stopColor="var(--accent)" />
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.45" />
         </linearGradient>
       </defs>
       {points.map((p, i) => {

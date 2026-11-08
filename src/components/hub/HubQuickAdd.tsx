@@ -6,18 +6,16 @@ import type { Category } from "@/lib/types";
 import { formatClock, parseQuickAdd, type ParsedQuickAdd, type PersonLite } from "@/lib/quick-add-parse";
 import { Chip } from "./hub-ui";
 
-const EFFORT_COLOR = { LOW: "#22c55e", MEDIUM: "#f59e0b", HIGH: "#ef4444" } as const;
-
 export function ParseChips({ parsed, showPin = true }: { parsed: ParsedQuickAdd; showPin?: boolean }) {
   const chips: { key: string; node: React.ReactNode }[] = [];
   if (parsed.category) chips.push({ key: "cat", node: <Chip color={parsed.category.color}>#{parsed.category.name}</Chip> });
-  if (parsed.unknownCategory) chips.push({ key: "cat?", node: <Chip color="#6f6f7e">#{parsed.unknownCategory}?</Chip> });
-  for (const p of parsed.people) chips.push({ key: `p-${p.id}`, node: <Chip color="#22e1ff">@{p.name}</Chip> });
-  for (const u of parsed.unknownPeople) chips.push({ key: `u-${u}`, node: <Chip color="#6f6f7e" title="No one by that name in People">@{u}?</Chip> });
-  if (parsed.dueLabel) chips.push({ key: "due", node: <Chip color="#ffb347">{parsed.dueLabel}</Chip> });
-  if (parsed.dueTime) chips.push({ key: "time", node: <Chip color="#ffb347">{formatClock(parsed.dueTime)}</Chip> });
-  if (parsed.effort) chips.push({ key: "eff", node: <Chip color={EFFORT_COLOR[parsed.effort]}>{parsed.effort.toLowerCase()}</Chip> });
-  if (showPin && parsed.pinToday) chips.push({ key: "pin", node: <Chip color="#9b7bff">pinned today</Chip> });
+  if (parsed.unknownCategory) chips.push({ key: "cat?", node: <Chip title="No category by that name">#{parsed.unknownCategory}?</Chip> });
+  for (const p of parsed.people) chips.push({ key: `p-${p.id}`, node: <Chip>@{p.name}</Chip> });
+  for (const u of parsed.unknownPeople) chips.push({ key: `u-${u}`, node: <Chip title="No one by that name in People">@{u}?</Chip> });
+  if (parsed.dueLabel) chips.push({ key: "due", node: <Chip tone="gold">{parsed.dueLabel}</Chip> });
+  if (parsed.dueTime) chips.push({ key: "time", node: <Chip tone="gold">{formatClock(parsed.dueTime)}</Chip> });
+  if (parsed.effort) chips.push({ key: "eff", node: <Chip>{parsed.effort.toLowerCase()} effort</Chip> });
+  if (showPin && parsed.pinToday) chips.push({ key: "pin", node: <Chip tone="gold">pinned today</Chip> });
 
   return (
     <div className="flex min-h-[22px] flex-wrap items-center gap-1.5">
@@ -74,13 +72,11 @@ export default function HubQuickAdd({
   }
 
   return (
-    <div
-      style={{ background: "linear-gradient(180deg, rgba(26,26,34,0.96), rgba(19,19,25,0.96))" }}
-      className="relative rounded-2xl glass px-4 pb-2.5 pt-3 focus-within:shadow-[0_0_0_1px_rgba(34,225,255,0.45),0_0_28px_-8px_rgba(34,225,255,0.6)] transition-shadow">
-      <div className="flex items-center gap-3">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#22e1ff]/10 text-[#22e1ff]">
+    <div className="-mx-1 bg-background px-1 pb-2 pt-1">
+      <div className="flex h-14 items-center gap-3 rounded-2xl border border-border-2 bg-surface-2 px-4 transition-shadow focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-background">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink">
           <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5">
-            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
           </svg>
         </span>
         <input
@@ -96,18 +92,19 @@ export default function HubQuickAdd({
           enterKeyHint="done"
           aria-label="Quick add a task"
           placeholder="Add to today: call Joaquin 2pm"
-          className="min-w-0 flex-1 bg-transparent py-1 text-[15px] outline-none placeholder:text-muted-2"
+          style={{ outline: "none" }}
+          className="min-w-0 flex-1 bg-transparent text-[16px] text-foreground placeholder:text-muted-2"
         />
-        <span className="hidden shrink-0 font-mono text-[10px] text-muted-2 md:inline">ENTER</span>
+        <span className="hidden shrink-0 rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-2 md:inline">ENTER</span>
       </div>
-      <div className="mt-1.5 pl-9">
+      <div className="mt-2 px-1">
         {parsed ? (
           <ParseChips parsed={{ ...parsed, pinToday: parsed.pinToday || !parsed.dueDate }} />
         ) : (
-          <p className="min-h-[22px] text-[11px] leading-[22px] text-muted-2">#area @person !high tomorrow 3pm &gt;today</p>
+          <p className="min-h-[22px] font-mono text-[11px] leading-[22px] text-muted-2">#area @person !high tomorrow 3pm &gt;today</p>
         )}
       </div>
-      {error && <p className="mt-1 pl-9 text-xs text-overdue">{error}</p>}
+      {error && <p className="mt-1 px-1 text-xs text-danger">{error}</p>}
     </div>
   );
 }

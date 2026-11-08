@@ -128,20 +128,19 @@ export default function CalendarView({
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <h1 className="text-xl font-bold tracking-tight">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="whitespace-nowrap text-[24px] sm:text-[28px]">
           {view === "agenda" ? "Next 14 days" : `${MONTH_NAMES[cursor.month]} ${cursor.year}`}
         </h1>
         <div className="flex items-center gap-2">
-          <div role="tablist" aria-label="Calendar view" className="flex rounded-md border border-border p-0.5">
+          <div role="group" aria-label="Calendar view" className="flex rounded-full border border-border-2 p-0.5">
             {(["agenda", "month"] as View[]).map((v) => (
               <button
                 key={v}
-                role="tab"
-                aria-selected={view === v}
+                aria-pressed={view === v}
                 onClick={() => chooseView(v)}
-                className={`px-2.5 py-1 text-xs rounded capitalize transition-colors ${
-                  view === v ? "bg-accent text-white" : "text-muted hover:text-foreground"
+                className={`px-3 py-1 text-xs font-semibold rounded-full capitalize ${
+                  view === v ? "bg-accent text-accent-ink" : "text-muted hover:text-foreground"
                 }`}
               >
                 {v}
@@ -151,19 +150,20 @@ export default function CalendarView({
           {view === "agenda" ? (
             <button
               onClick={() => setModal({ mode: "create", date: new Date() })}
-              className="px-2.5 py-1 text-xs font-semibold text-white bg-accent rounded-md"
+              aria-label="New event"
+              className="whitespace-nowrap px-3 py-1.5 text-xs font-bold text-accent-ink bg-accent rounded-full hover:bg-accent-hover"
             >
-              + Event
+              +<span className="hidden sm:inline"> Event</span>
             </button>
           ) : (
           <div className="flex items-center gap-1">
-            <button onClick={prevMonth} className="px-2.5 py-1 text-sm text-muted hover:text-foreground border border-border rounded-md">
+            <button onClick={prevMonth} className="px-2.5 py-1 text-sm text-muted hover:text-foreground border border-border-2 rounded-full">
               ←
             </button>
-            <button onClick={goToday} className="px-2.5 py-1 text-xs text-muted hover:text-foreground border border-border rounded-md">
+            <button onClick={goToday} className="px-2.5 py-1 text-xs text-muted hover:text-foreground border border-border-2 rounded-full">
               Today
             </button>
-            <button onClick={nextMonth} className="px-2.5 py-1 text-sm text-muted hover:text-foreground border border-border rounded-md">
+            <button onClick={nextMonth} className="px-2.5 py-1 text-sm text-muted hover:text-foreground border border-border-2 rounded-full">
               →
             </button>
           </div>
@@ -175,9 +175,9 @@ export default function CalendarView({
         <Agenda events={events} tasks={tasksWithDates} onSelectEvent={(ev) => setModal({ mode: "edit", event: ev })} />
       ) : (
         <DndContext id="calendar-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-7 gap-px bg-border border border-border rounded-lg overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-border border border-border rounded-3xl overflow-hidden">
             {WEEKDAY_NAMES.map((w) => (
-              <div key={w} className="bg-surface-2 text-center text-[11px] font-semibold text-muted-2 py-1.5 uppercase tracking-wide">
+              <div key={w} className="bg-surface-2 text-center eyebrow py-2">
                 {w}
               </div>
             ))}
@@ -252,7 +252,7 @@ function DayCell({
     >
       <span
         className={`inline-flex items-center justify-center w-5 h-5 text-[11px] rounded-full ${
-          isToday ? "bg-foreground text-background font-bold" : "text-muted"
+          isToday ? "bg-accent text-accent-ink font-bold" : "text-muted"
         }`}
       >
         {day.getDate()}
@@ -297,12 +297,12 @@ function EventPill({ event, onClick }: { event: CalendarEvent; onClick: (e: Reac
       {...listeners}
       onClick={onClick}
       style={{
-        backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
-        color,
+        backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
+        color: `color-mix(in srgb, ${color} 85%, white)`,
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="w-full text-left text-[10px] px-1.5 py-0.5 rounded truncate font-medium touch-none relative z-10"
+      className="w-full text-left text-[10px] px-1.5 py-0.5 rounded-full truncate font-medium touch-none relative z-10"
     >
       {event.startTime ? `${event.startTime} ` : ""}
       {event.title}
@@ -354,8 +354,8 @@ function Agenda({
         return (
           <section key={key}>
             <h2
-              className={`sticky top-[57px] md:top-[53px] z-10 -mx-4 px-4 py-1.5 bg-background/90 backdrop-blur text-xs font-semibold uppercase tracking-wider ${
-                isToday ? "text-accent" : "text-muted-2"
+              className={`sticky top-[57px] md:top-[53px] z-10 -mx-4 px-4 py-2 bg-background/90 backdrop-blur eyebrow ${
+                isToday ? "eyebrow-accent" : ""
               }`}
             >
               {isToday ? "Today · " : ""}
@@ -369,9 +369,9 @@ function Agenda({
                   <li key={e.id}>
                     <button
                       onClick={() => onSelectEvent(e)}
-                      className="w-full flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5 text-left hover:bg-surface-hover"
+                      className="w-full flex items-center gap-3 rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-left transition-colors hover:border-border-2"
                     >
-                      <span className="w-16 shrink-0 font-mono text-xs tabular-nums" style={{ color }}>
+                      <span className="w-16 shrink-0 font-mono text-xs tabular-nums" style={{ color: `color-mix(in srgb, ${color} 85%, white)` }}>
                         {e.allDay || !e.startTime ? "all day" : formatClock(e.startTime)}
                       </span>
                       <span className="min-w-0">
@@ -388,7 +388,7 @@ function Agenda({
                 <li key={t.id}>
                   <Link
                     href={`/tasks?highlight=${t.id}`}
-                    className="flex items-center gap-3 rounded-lg border border-dashed px-3 py-2.5 hover:bg-surface-hover"
+                    className="flex items-center gap-3 rounded-2xl border border-dashed px-3 py-2.5 hover:bg-surface-hover"
                     style={{ borderColor: t.category?.color ?? "var(--border)" }}
                   >
                     <span className="w-16 shrink-0 font-mono text-xs text-muted-2">{t.dueTime ? formatClock(t.dueTime) : "task"}</span>

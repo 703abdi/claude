@@ -7,10 +7,10 @@ import type { InboxItem } from "@/lib/hub-types";
 import { Card, CardTitle, Chip, agentColor, ago, useNow } from "./hub-ui";
 
 const RUN_DOT: Record<RunStatus, string> = {
-  QUEUED: "#f5a623",
-  RUNNING: "#a78bfa",
-  DONE: "#22c55e",
-  FAILED: "#ef4444",
+  QUEUED: "var(--warn)",
+  RUNNING: "var(--accent)",
+  DONE: "var(--ok)",
+  FAILED: "var(--danger)",
 };
 
 type Entry = { kind: "inbox"; at: string; item: InboxItem } | { kind: "run"; at: string; run: RunView };
@@ -35,10 +35,10 @@ export default function AgentFeed({
 
   return (
     <Card>
-      <CardTitle label="Agent feed" accent="#ff4fd8" right={<span className="font-mono text-[11px] text-muted">{inbox.length ? `${inbox.length} new` : ""}</span>} />
+      <CardTitle label="Agent feed" right={<span className="font-mono text-[12px] text-accent">{inbox.length ? `${inbox.length} new` : ""}</span>} />
       {entries.length === 0 ? (
         <p className="py-4 text-sm text-muted">
-          No agent updates yet. Point your agents at <code className="font-mono text-[#22e1ff]">/api/inbox</code> (see docs/agent-api.md).
+          No agent updates yet. Point your agents at <code className="font-mono text-accent">/api/inbox</code> (see docs/agent-api.md).
         </p>
       ) : (
         <ol className="max-h-[460px] space-y-2 overflow-y-auto pr-1">
@@ -55,13 +55,13 @@ export default function AgentFeed({
                     exit={{ opacity: 0, height: 0 }}
                     className="flex gap-3 rounded-xl px-2 py-1.5"
                   >
-                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: RUN_DOT[r.status], boxShadow: `0 0 10px ${RUN_DOT[r.status]}` }} />
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: RUN_DOT[r.status] }} />
                     <div className="min-w-0">
                       <div className="font-mono text-[11px] text-muted-2">
                         {r.agentName} · run {r.status.toLowerCase()} · {ago(r.createdAt, now)}
                       </div>
                       <p className="line-clamp-2 text-sm">{r.prompt}</p>
-                      {r.error && <p className="mt-0.5 line-clamp-1 text-xs text-overdue">{r.error}</p>}
+                      {r.error && <p className="mt-0.5 line-clamp-1 text-xs text-danger">{r.error}</p>}
                     </div>
                   </motion.li>
                 );
@@ -72,39 +72,42 @@ export default function AgentFeed({
                 <motion.li
                   key={`inbox-${it.id}`}
                   layout={!reduced}
-                  initial={reduced ? false : { opacity: 0, y: -16, boxShadow: `inset 4px 0 0 ${color}, 0 0 28px -6px ${color}` }}
-                  animate={{ opacity: 1, y: 0, boxShadow: `inset 2px 0 0 ${color}, 0 0 0 0 transparent` }}
+                  initial={reduced ? false : { opacity: 0, y: -16, boxShadow: "inset 2px 0 0 rgba(230,180,80,1)" }}
+                  animate={{ opacity: 1, y: 0, boxShadow: "inset 2px 0 0 rgba(230,180,80,0)" }}
                   exit={{ opacity: 0, height: 0, x: 24 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="rounded-xl bg-white/[0.03] py-2 pl-3 pr-2"
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], boxShadow: { duration: 0.8, ease: "easeOut" } }}
+                  className="rounded-2xl border border-border bg-surface py-2.5 pl-3 pr-2"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Chip color={color}>{it.agent}</Chip>
+                    <Chip>
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+                      {it.agent}
+                    </Chip>
                     <span className="font-mono text-[11px] text-muted-2">
                       {it.kind} · {ago(it.createdAt, now)}
                     </span>
                   </div>
                   <p className="mt-1 text-sm font-medium">
                     {it.link ? (
-                      <a href={it.link} target="_blank" rel="noreferrer noopener" className="hover:text-[#22e1ff] hover:underline">
+                      <a href={it.link} target="_blank" rel="noreferrer noopener" className="text-info hover:underline">
                         {it.title}
                       </a>
                     ) : (
                       it.title
                     )}
                   </p>
-                  {it.body && <p className="mt-0.5 line-clamp-2 text-[13px] text-muted">{it.body}</p>}
-                  <div className="mt-1.5 flex items-center gap-2">
+                  {it.body && <p className="mt-0.5 line-clamp-2 text-[14px] text-muted">{it.body}</p>}
+                  <div className="mt-2 flex items-center gap-2">
                     {it.taskId ? (
-                      <Link href={`/tasks?highlight=${it.taskId}`} className="rounded-lg px-2 py-1 text-xs font-semibold text-[#22e1ff] hover:bg-white/5">
+                      <Link href={`/tasks?highlight=${it.taskId}`} className="btn-ghost h-8 px-3 text-xs">
                         Open task
                       </Link>
                     ) : (
-                      <button onClick={() => onResolve(it, "task")} className="rounded-lg px-2 py-1 text-xs font-semibold text-[#22e1ff] hover:bg-white/5">
+                      <button onClick={() => onResolve(it, "task")} className="btn-primary min-h-8 h-8 px-3 text-xs">
                         Make task
                       </button>
                     )}
-                    <button onClick={() => onResolve(it, "dismiss")} className="rounded-lg px-2 py-1 text-xs text-muted hover:bg-white/5 hover:text-foreground">
+                    <button onClick={() => onResolve(it, "dismiss")} className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted hover:bg-surface-hover hover:text-foreground">
                       {it.taskId ? "Clear" : "Dismiss"}
                     </button>
                   </div>

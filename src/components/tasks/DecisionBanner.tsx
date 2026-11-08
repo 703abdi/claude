@@ -39,10 +39,11 @@ export default function DecisionBanner({
   }
 
   return (
-    <div className="mb-5 rounded-xl border border-stat-amber/30 bg-stat-amber/[0.07] p-4">
+    <div className="card mb-5 border-warn/40 p-4 hover:border-warn/60">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-[15px] font-semibold text-stat-amber">{tasks.length} tasks slipped. Decide each one.</p>
+          <p className="eyebrow mb-1 text-warn">Needs a decision</p>
+          <p className="text-[15px] font-bold text-foreground">{tasks.length === 1 ? "1 task slipped. Decide it." : `${tasks.length} tasks slipped. Decide each one.`}</p>
           <p className="text-[13px] text-muted mt-0.5">
             Untouched for {AUTO_CLEAR_AFTER_DAYS} days past due? It auto-clears to the Auto-cleared bin. Restore
             anytime.
@@ -51,13 +52,13 @@ export default function DecisionBanner({
         <button
           onClick={moveAllToTomorrow}
           disabled={busyAll}
-          className="text-xs font-semibold px-3.5 py-2 rounded-full bg-stat-amber text-background hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
+          className="btn-ghost text-xs px-3.5 py-2 whitespace-nowrap disabled:opacity-50"
         >
           Move all to tomorrow
         </button>
       </div>
 
-      <div className="mt-3 divide-y divide-stat-amber/15">
+      <div className="mt-3 divide-y divide-border">
         {visible.map((task) => (
           <DecisionRow key={task.id} task={task} onChange={onChange} onSelect={onSelect} />
         ))}
@@ -127,7 +128,7 @@ function DecisionRow({
       {task.category && (
         <span
           className="shrink-0 text-[11px] font-medium px-1.5 py-0.5 rounded"
-          style={{ backgroundColor: `${task.category.color}22`, color: task.category.color }}
+          style={{ backgroundColor: `color-mix(in srgb, ${task.category.color} 18%, transparent)`, color: `color-mix(in srgb, ${task.category.color} 85%, white)` }}
         >
           {task.category.name}
         </span>
@@ -154,14 +155,14 @@ function DecisionRow({
           <button
             onClick={moveToday}
             disabled={busy}
-            className="text-xs font-semibold px-2.5 py-1 rounded-full bg-stat-amber text-background hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="text-xs font-bold px-3 py-1 rounded-full bg-accent text-accent-ink hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
             Today
           </button>
           <button
             onClick={() => setPicking(true)}
             disabled={busy}
-            className="text-xs font-medium px-2.5 py-1 rounded-full border border-border text-muted hover:text-foreground transition-colors"
+            className="text-xs font-medium px-2.5 py-1 rounded-full border border-border-2 text-muted hover:text-foreground transition-colors"
           >
             Pick date
           </button>

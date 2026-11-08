@@ -36,29 +36,45 @@ calendar, who's waiting on you, fast on a phone. Audit first, then fix
 the biggest friction, and say which reading was taken.
 
 
-## Nov 8 2026: Hub rebuilt as a daily driver
+## Nov 8 2026: Hub rebuilt (three rounds)
 
-Hub order on every screen: header (greeting, clock, live dot), quick add
-(natural language: `#area @person !high tomorrow 3pm >today`), Today list
-(one tap completes, Undo toast), Up next, Waiting on (Nudge), This week
-(3 outcomes, scoreboard, cash ring to $20k by Dec 31), stat tiles, Agent
-feed, lazy Town. Data comes from `GET /api/hub` via `src/lib/useHub.ts`
-(polls 8s while visible, refetches on focus, optimistic mutations).
+**Round 1, daily driver.** Quick add with natural language
+(`#area @person !high tomorrow 3pm >today`, parser in
+`src/lib/quick-add-parse.ts`), Today list (one tap completes, Undo toast),
+Up next, Waiting on (Nudge), This week (3 outcomes, scoreboard, cash ring
+to $20k by Dec 31), numbers strip, Agent feed, lazy Town. Data comes from
+`GET /api/hub` via `src/lib/useHub.ts` (polls 8s while visible, refetches
+on focus, optimistic mutations). Agent API for Grok, Codex, Claude Code and
+Jarvis: `POST /api/inbox`, `GET /api/state`, bearer `AGENTS_TOKEN`
+(`docs/agent-api.md`). Migration `20261108044545_agency_week_inbox`
+(additive): Task.source, WeekPlan, ScoreEntry, Goal, InboxItem. Goal and
+the current WeekPlan are created on first Hub load if missing.
 
-Agent API for Grok, Codex, Claude Code and Jarvis: `POST /api/inbox` and
-`GET /api/state`, bearer `AGENTS_TOKEN`. See `docs/agent-api.md`. Set
-`AGENTS_TOKEN` in Vercel for it to work.
+**Round 2, redesign.** Near-black, one gold accent (`--accent #e6b450`),
+Inter 800 headlines, hairline cards, no glass or neon. Tokens and
+component classes (`.card`, `.tile`, `.eyebrow`, `.btn-primary`,
+`.btn-ghost`, `.glow-accent`) live in `src/app/globals.css`; legacy
+color names map onto the new tokens so every page recolored. Desktop Hub:
+12-col grid, Today left (7), This week / Up next / Waiting / Brief right
+(5, sticky). Calendar has an Agenda view (default on phone). People sorts
+whoever owes you first.
 
-Migration `20261108044545_agency_week_inbox` (additive): Task.source,
-WeekPlan, ScoreEntry, Goal, InboxItem. Goal and the current WeekPlan are
-created on first Hub load if missing.
+**Round 3, launcher.** The Hub opens as a home screen
+(`src/components/hub/HomeScreen.tsx`): full-bleed photo from
+`public/backgrounds/` (Madinah night default, DC dusk, or none; picker
+bottom-left, saved in localStorage `pos.backdrop`), greeting with a
+reactive one-liner, a command bar (`src/lib/command-parse.ts`: plain
+text = task, `5 dials` / `cash 500` = scoreboard, `note for jarvis: ...`
+= agent feed, `/calendar` = navigate, `find x` = Tasks palette), and six
+tiles that scroll to the dashboard sections below (`#today`, `#week`,
+`#upnext`, `#waiting`, `#feed`, `#town`). `/backgrounds/` is public in
+`src/proxy.ts` so the image optimizer can fetch it; `next.config.ts`
+allows quality 80.
 
-Known follow-ups (round 2, not done): `Reveal` uses whileInView, so the
-first fold can paint late; use immediate animate for above-the-fold items.
-On desktop the right column under the brief is empty; move Up next and
-Waiting on there. Greeting uses the email local part; prefer `User.name`.
-Hide the Agents and Leads tiles when nothing is configured. Swipe to
-complete and press-and-hold on counters were not tested on a real phone.
+Known follow-ups: swipe to complete and press-and-hold on the counters
+were only exercised with mouse clicks; the backdrop picker is not in the
+phone account menu (it sits bottom-left of the home screen on all sizes);
+the morning brief still needs ANTHROPIC_API_KEY in Vercel to generate.
 
 ## Open items for Abdi
 

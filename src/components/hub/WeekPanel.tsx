@@ -36,23 +36,23 @@ export default function WeekPanel({
   const sb = week.scoreboard.today;
   return (
     <Card>
-      <CardTitle label="This week" accent="#ff4fd8" right={<span className="font-mono text-[11px] text-muted">{rangeLabel(week.weekStart, week.weekEnd)}</span>} />
+      <CardTitle label="This week" right={<span className="font-mono text-[12px] text-muted-2">{rangeLabel(week.weekStart, week.weekEnd)}</span>} />
       <ul className="space-y-1">
         {slots.map((o, i) => (
           <OutcomeRow key={`${week.weekStart}-${i}-${o.text}`} index={i} outcome={o} onSave={(next) => save(i, next)} />
         ))}
       </ul>
 
-      <div className="mt-4 mb-2 flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.18em] text-muted-2">
-        <span>Scoreboard · today</span>
-        <span className="normal-case tracking-normal">
+      <div className="mb-2 mt-5 flex items-center justify-between">
+        <span className="eyebrow eyebrow-accent">Scoreboard · today</span>
+        <span className="font-mono text-[11px] text-muted-2">
           week {week.scoreboard.week.dials}d · {week.scoreboard.week.convos}c · {week.scoreboard.week.booked}b
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-2">
-        <Counter label="Dials" value={sb.dials} color="#22e1ff" onAdd={(d) => onScore("dials", d)} extra={5} />
-        <Counter label="Convos" value={sb.convos} color="#9b7bff" onAdd={(d) => onScore("convos", d)} />
-        <Counter label="Booked" value={sb.booked} color="#22c55e" onAdd={(d) => onScore("booked", d)} />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Counter label="Dials" value={sb.dials} onAdd={(d) => onScore("dials", d)} extra={5} />
+        <Counter label="Convos" value={sb.convos} onAdd={(d) => onScore("convos", d)} />
+        <Counter label="Booked" value={sb.booked} onAdd={(d) => onScore("booked", d)} />
         <CashCounter cents={sb.cashCents} onAdd={(d) => onScore("cashCents", d)} />
       </div>
 
@@ -77,11 +77,11 @@ function OutcomeRow({ index, outcome, onSave }: { index: number; outcome: Outcom
         onClick={() => !empty && onSave({ ...outcome, done: !outcome.done })}
         disabled={empty}
         aria-label={outcome.done ? "Mark outcome not done" : "Mark outcome done"}
-        className="flex h-9 w-9 shrink-0 items-center justify-center disabled:opacity-30"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg disabled:opacity-30"
       >
         <span
-          className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${
-            outcome.done ? "border-[#ff4fd8] bg-[#ff4fd8] text-background shadow-[0_0_12px_rgba(255,79,216,0.6)]" : "border-muted-2"
+          className={`flex h-5 w-5 items-center justify-center rounded-[6px] border-[1.5px] transition-colors ${
+            outcome.done ? "border-accent bg-accent text-accent-ink" : "border-border-2 hover:border-accent"
           }`}
         >
           <CheckMark on={outcome.done} size={11} />
@@ -105,7 +105,7 @@ function OutcomeRow({ index, outcome, onSave }: { index: number; outcome: Outcom
               setEditing(false);
             }
           }}
-          className="mt-1 min-w-0 flex-1 resize-none rounded-lg border border-[#ff4fd8]/40 bg-black/30 px-2 py-1 text-sm outline-none"
+          className="mt-1 min-w-0 flex-1 resize-none rounded-[10px] border border-border-2 bg-surface-hover px-2 py-1 text-sm outline-none focus-visible:outline-2 focus-visible:outline-accent"
         />
       ) : (
         <button
@@ -114,7 +114,7 @@ function OutcomeRow({ index, outcome, onSave }: { index: number; outcome: Outcom
             setEditing(true);
           }}
           className={`mt-1.5 min-w-0 flex-1 text-left text-sm leading-snug ${
-            empty ? "text-muted-2 italic" : outcome.done ? "text-muted line-through" : ""
+            empty ? "text-muted-2" : outcome.done ? "text-muted line-through" : "font-medium text-foreground"
           }`}
         >
           {empty ? `Outcome ${index + 1}. Tap to set.` : outcome.text}
@@ -183,37 +183,34 @@ function useHoldToAdd(onFlush: (delta: number) => void, step = 1) {
 function Counter({
   label,
   value,
-  color,
   onAdd,
   extra,
 }: {
   label: string;
   value: number;
-  color: string;
   onAdd: (delta: number) => void;
   extra?: number;
 }) {
   const { pending, handlers } = useHoldToAdd(onAdd);
   return (
-    <div className="flex min-w-0 flex-col items-center rounded-2xl border border-white/[0.06] bg-black/20 px-1 pb-1.5 pt-2">
-      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-2">{label}</span>
-      <FlipNumber value={value + pending} className="my-0.5 font-mono text-2xl font-bold" />
+    <div className="tile flex min-w-0 flex-col items-center px-2 pb-2 pt-2.5">
+      <span className="eyebrow">{label}</span>
+      <FlipNumber value={value + pending} className="my-1 font-mono text-[28px] font-bold leading-8" />
       <motion.button
         {...handlers}
-        whileTap={{ scale: 0.82 }}
+        whileTap={{ scale: 0.88 }}
         transition={{ type: "spring", stiffness: 500, damping: 15 }}
         aria-label={`Add one to ${label}`}
-        className="flex h-11 w-full select-none items-center justify-center rounded-xl text-xl font-bold touch-manipulation"
-        style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color, boxShadow: `inset 0 0 0 1px ${color}44` }}
+        className="flex h-11 w-full select-none items-center justify-center rounded-full border border-border bg-surface-hover text-xl font-bold text-accent touch-manipulation active:border-accent"
       >
         +
       </motion.button>
       {extra ? (
-        <button onClick={() => onAdd(extra)} className="mt-1 text-[11px] font-semibold text-muted hover:text-foreground">
+        <button onClick={() => onAdd(extra)} className="btn-ghost mt-1.5 h-6 px-2.5 text-[11px] text-muted">
           +{extra}
         </button>
       ) : (
-        <span className="mt-1 h-[16.5px]" />
+        <span className="mt-1.5 h-6" />
       )}
     </div>
   );
@@ -222,7 +219,6 @@ function Counter({
 function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCents: number) => void }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
-  const color = "#ffb347";
   const add = (dollars: number) => {
     if (!dollars) return;
     onAdd(Math.round(dollars * 100));
@@ -230,21 +226,22 @@ function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCents: numb
     setCustom("");
   };
   return (
-    <div className="relative flex min-w-0 flex-col items-center rounded-2xl border border-white/[0.06] bg-black/20 px-1 pb-1.5 pt-2">
-      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-2">Cash</span>
-      <FlipNumber value={money(cents)} className="my-0.5 max-w-full font-mono text-xl font-bold leading-8" />
+    <div className="tile relative flex min-w-0 flex-col items-center px-2 pb-2 pt-2.5">
+      <span className="eyebrow">Cash</span>
+      <FlipNumber value={money(cents)} className="my-1 max-w-full font-mono text-[24px] font-bold leading-8" />
       <motion.button
         onClick={() => setOpen((v) => !v)}
-        whileTap={{ scale: 0.82 }}
+        whileTap={{ scale: 0.88 }}
         transition={{ type: "spring", stiffness: 500, damping: 15 }}
         aria-label="Add cash collected"
         aria-expanded={open}
-        className="flex h-11 w-full items-center justify-center rounded-xl text-xl font-bold"
-        style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color, boxShadow: `inset 0 0 0 1px ${color}44` }}
+        className={`flex h-11 w-full items-center justify-center rounded-full border bg-surface-hover text-xl font-bold text-accent ${
+          open ? "border-accent" : "border-border"
+        }`}
       >
         +
       </motion.button>
-      <span className="mt-1 h-[16.5px]" />
+      <span className="mt-1.5 h-6" />
       <AnimatePresence>
         {open && (
           <motion.div
@@ -252,11 +249,11 @@ function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCents: numb
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full right-0 z-20 mb-2 w-48 rounded-2xl border border-white/10 bg-[#15151c] p-2 shadow-xl"
+            className="absolute bottom-full right-0 z-20 mb-2 w-52 rounded-2xl border border-border-2 bg-surface-hover p-2 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.9)]"
           >
             <div className="grid grid-cols-3 gap-1">
               {[100, 500, 1000].map((d) => (
-                <button key={d} onClick={() => add(d)} className="rounded-lg bg-white/5 py-2 text-xs font-semibold text-[#ffb347] hover:bg-white/10">
+                <button key={d} onClick={() => add(d)} className="rounded-full bg-accent-soft py-2 text-xs font-bold text-accent hover:bg-accent hover:text-accent-ink">
                   +${d >= 1000 ? `${d / 1000}k` : d}
                 </button>
               ))}
@@ -274,9 +271,9 @@ function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCents: numb
                 inputMode="decimal"
                 placeholder="$ amount"
                 aria-label="Custom cash amount"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs outline-none"
+                className="min-w-0 flex-1 rounded-[10px] border border-border-2 bg-surface-2 px-2 py-1.5 text-xs outline-none"
               />
-              <button className="rounded-lg bg-[#ffb347]/20 px-2 text-xs font-semibold text-[#ffb347]">Add</button>
+              <button className="rounded-full bg-accent px-3 text-xs font-bold text-accent-ink">Add</button>
             </form>
           </motion.div>
         )}
@@ -292,39 +289,30 @@ function CashRing({ goal }: { goal: HubPayload["week"]["goal"] }) {
   const [y, m, d] = goal.deadline.split("-").map(Number);
   const deadline = new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   return (
-    <div className="mt-4 flex items-center gap-4 rounded-2xl border border-white/[0.06] bg-black/20 p-3">
-      <svg viewBox="0 0 100 100" className="h-20 w-20 shrink-0 -rotate-90" aria-hidden>
-        <defs>
-          <linearGradient id="cashRing" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#ffb347" />
-            <stop offset="100%" stopColor="#ff4fd8" />
-          </linearGradient>
-        </defs>
-        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="9" />
+    <div className={`tile mt-4 flex items-center gap-4 p-3 ${full ? "glow-accent" : ""}`}>
+      <svg viewBox="0 0 100 100" className="h-16 w-16 shrink-0 -rotate-90" aria-hidden>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-2)" strokeWidth="10" />
         <motion.circle
           cx="50"
           cy="50"
           r="42"
           fill="none"
-          stroke="url(#cashRing)"
-          strokeWidth="9"
+          stroke="var(--accent)"
+          strokeWidth="10"
           strokeLinecap="round"
           initial={reduced ? false : { pathLength: 0 }}
           animate={{ pathLength: Math.max(pct, 0.001), opacity: pct > 0 ? 1 : 0 }}
           transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-          style={{ filter: `drop-shadow(0 0 ${full ? 10 : 4}px ${full ? "#ff4fd8" : "rgba(255,179,71,0.6)"})` }}
         />
       </svg>
       <div className="min-w-0">
-        <div className="font-mono text-2xl font-bold tabular-nums" style={{ textShadow: "0 0 18px rgba(255,179,71,0.4)" }}>
-          {Math.round(pct * 100)}%
+        <div className="font-mono text-[22px] font-bold leading-7 tabular-nums">
+          <span className="hl">{Math.round(pct * 100)}%</span>
         </div>
-        <p className="text-sm">
-          <span className="font-semibold">{money(goal.collectedCents)}</span> <span className="text-muted">of {money(goal.targetCents)} by {deadline}</span>
+        <p className="text-sm text-muted">
+          <span className="font-semibold text-foreground">{money(goal.collectedCents)}</span> of {money(goal.targetCents)} by {deadline}
         </p>
-        <p className="text-[11px] text-muted-2">
-          {goal.daysLeft} days left · {goal.label.toLowerCase()}
-        </p>
+        <p className="text-[12px] text-muted-2">{goal.daysLeft} days left</p>
       </div>
     </div>
   );

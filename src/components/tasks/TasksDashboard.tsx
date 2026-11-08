@@ -63,7 +63,9 @@ export default function TasksDashboard({
   const [managingCategories, setManagingCategories] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [cursorId, setCursorId] = useState<string | null>(null);
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const searchParams = useSearchParams();
+  // Arriving from the Hub command bar with ?find= opens the palette straight away.
+  const [paletteOpen, setPaletteOpen] = useState(() => searchParams.get("find") !== null);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
   const [railView, setRailView] = useState<RailView>("FOCUS");
   const [categoryId, setCategoryId] = useState("");
@@ -85,7 +87,6 @@ export default function TasksDashboard({
     return () => window.removeEventListener("open-command-palette", open);
   }, []);
 
-  const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
 
   useEffect(() => {
@@ -325,7 +326,7 @@ export default function TasksDashboard({
                 key={v}
                 onClick={() => setRailView(v)}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
-                  railView === v ? "bg-accent text-white" : "bg-surface-2 text-muted"
+                  railView === v ? "bg-accent text-accent-ink" : "bg-surface-2 text-muted"
                 }`}
               >
                 {VIEW_LABEL[v]}
@@ -459,7 +460,7 @@ function AutoClearedList({
             {t.category && (
               <span
                 className="shrink-0 text-[11px] font-medium px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: `${t.category.color}22`, color: t.category.color }}
+                style={{ backgroundColor: `color-mix(in srgb, ${t.category.color} 18%, transparent)`, color: `color-mix(in srgb, ${t.category.color} 85%, white)` }}
               >
                 {t.category.name}
               </span>

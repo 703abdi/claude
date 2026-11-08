@@ -1,19 +1,21 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Reveal from "@/components/fx/Reveal";
 import { api } from "@/lib/api-client";
 import { dayKey } from "@/lib/day";
 import type { HubPayload, InboxItem, Outcome, ScoreField, WaitingGroup } from "@/lib/hub-types";
-import { formatClock, type ParsedQuickAdd } from "@/lib/quick-add-parse";
+import { formatClock, parseQuickAdd, type ParsedQuickAdd } from "@/lib/quick-add-parse";
+import { describeScore } from "@/lib/command-parse";
 import type { TownSummary } from "@/lib/town-summary";
 import type { Task } from "@/lib/types";
 import { useHub } from "@/lib/useHub";
 import AgentFeed from "./AgentFeed";
 import BriefCard from "./BriefCard";
 import { UpNextCard, WaitingCard } from "./HubCards";
-import { AgentRoster, Connectors, StatTile } from "./HubExtras";
-import HubHeader from "./HubHeader";
+import { AgentRoster, Connectors, NumbersStrip, type NumberItem } from "./HubExtras";
+import HomeScreen, { type CommandRun } from "./HomeScreen";
 import HubQuickAdd from "./HubQuickAdd";
 import { ToastHost, type Toast } from "./hub-ui";
 import TodayList from "./TodayList";
@@ -47,12 +49,15 @@ function adjustStats(stats: HubPayload["stats"], task: Task, sign: 1 | -1, d: Hu
     open: stats.open + sign,
     overdue: stats.overdue + (task.overdue ? sign : 0),
     dueToday: stats.dueToday + (dueToday ? sign : 0),
+    // Completing (sign -1) adds one to done; undo takes it back.
+    doneToday: Math.max(0, stats.doneToday - sign),
   };
 }
 
 export default function HubDashboard({ name }: { name: string }) {
   const hub = useHub(8000);
   const { data, mutate } = hub;
+  const router = useRouter();
   const [toast, setToast] = useState<Toast | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
@@ -203,6 +208,62 @@ export default function HubDashboard({ name }: { name: string }) {
       .catch(failed);
   }
 
+  async function postNote(agent: string, text: string) {
+    if (!data) return;
+    await mutate(null, () =>
+      postJson(`/api/inbox${tzQuery(data.tz)}`, { agent, kind: "note", title: text.slice(0, 300), body: text.length > 300 ? text : null })
+    );
+    say(agent === "abdi" ? "Posted to the agent feed" : `Posted a note for ${agent}`);
+  }
+
+  const runCommand: CommandRun = async (cmd, parsed) => {
+    if (!data) return;
+    switch (cmd.kind) {
+      case "task": {
+        const p = parsed ?? parseQuickAdd(cmd.text, { categories: data.categories, people: data.people });
+        if (!p.title) return;
+        await addTask(p);
+        if (p.pinToday || !p.dueDate || p.dueLabel === "today") say(`Added to Today: ${p.title}`);
+        return;
+      }
+      case "score": {
+        score(cmd.field, cmd.delta);
+        const after = (data.week.scoreboard.today[cmd.field] ?? 0) + cmd.delta;
+        say(`Logged ${describeScore(cmd.field, cmd.delta)}. Today: ${describeScore(cmd.field, after)}`);
+        return;
+      }
+      case "note":
+        if (!cmd.text) return;
+        await postNote(cmd.agent, cmd.text);
+        return;
+      case "nav":
+        router.push(cmd.href);
+        return;
+      case "find":
+        router.push(`/tasks?find=${encodeURIComponent(cmd.query)}`);
+        return;
+      case "empty":
+        return;
+    }
+  };
+
+  const [briefBusy, setBriefBusy] = useState(false);
+  async function generateBrief() {
+    if (briefBusy) return;
+    setBriefBusy(true);
+    say("Writing today's brief...");
+    try {
+      const res = await fetch("/api/morning-brief/generate", { method: "POST" });
+      if (!res.ok) throw new Error(String(res.status));
+      await hub.refresh();
+      say("Brief ready", () => router.push("/brief"), "Read");
+    } catch {
+      say("Couldn't generate the brief. Check ANTHROPIC_API_KEY.");
+    } finally {
+      setBriefBusy(false);
+    }
+  }
+
   // ── derived ──────────────────────────────────────────────────
   const townSummary: TownSummary | null = useMemo(
     () =>
@@ -224,93 +285,74 @@ export default function HubDashboard({ name }: { name: string }) {
 
   const agents = data?.agents.agents ?? [];
   const working = agents.filter((a) => a.status === "WORKING").length;
-  const queued = agents.reduce((n, a) => n + a.queued, 0);
   const metrics = data?.metrics && "data" in data.metrics ? data.metrics.data : null;
 
-  const tiles = [
-    { label: "Open", value: data?.stats.open, accent: "#9b7bff", href: "/tasks" },
-    { label: "Overdue", value: data?.stats.overdue, accent: "#ff4d5e", href: "/tasks", hot: (data?.stats.overdue ?? 0) > 0 },
-    { label: "Due today", value: data?.stats.dueToday, accent: "#ffb347", href: "/tasks" },
-    { label: "Waiting", value: data?.stats.waiting, accent: "#f5a623", href: "/people" },
-    { label: "Agents working", value: data ? working : undefined, total: agents.length, accent: "#22e1ff", sub: queued ? `${queued} queued` : "queue clear" },
-    {
-      label: "Leads today",
-      value: metrics ? metrics.overview.today : undefined,
-      accent: "#60a5fa",
-      href: "/metrics",
-      sub: metrics ? `${metrics.overview.last7} this week` : "abdiform not connected",
-      spark: metrics?.timeline.slice(-14).map((d) => d.count),
-    },
-    ...(metrics
-      ? [
-          {
-            label: "Form completion",
-            value: metrics.overview.completion != null ? Math.round(metrics.overview.completion * 100) : undefined,
-            suffix: "%",
-            accent: "#ff4fd8",
-            href: "/metrics",
-            sub: `${Math.round(metrics.overview.winRate * 100)}% win rate`,
-          },
-        ]
-      : []),
+  const numbers: NumberItem[] = [
+    { label: "Open", value: data?.stats.open, href: "/tasks" },
+    { label: "Overdue", value: data?.stats.overdue, href: "/tasks", danger: true },
+    { label: "Due today", value: data?.stats.dueToday, href: "/tasks" },
+    { label: "Waiting", value: data?.stats.waiting, href: "/people" },
+    ...(agents.length > 0 ? [{ label: "Agents working", value: working, total: agents.length }] : []),
+    ...(data?.metrics.configured ? [{ label: "Leads today", value: metrics?.overview.today, href: "/metrics" }] : []),
   ];
 
   const tz = data?.tz ?? "America/New_York";
   const todayKey = data?.todayKey ?? "";
 
+  const week = data ? <WeekPanel week={data.week} onOutcomes={saveOutcomes} onScore={score} /> : <SkeletonCard rows={5} />;
+  const upNext = data ? <UpNextCard events={data.upNext} tz={tz} todayKey={todayKey} /> : <SkeletonCard rows={3} />;
+  const waiting = data ? <WaitingCard groups={data.waitingOn} onNudge={nudge} /> : <SkeletonCard rows={2} />;
+  const brief = <BriefCard brief={data?.brief ?? null} loaded={!!data} tz={tz} todayKey={todayKey} onGenerated={hub.refresh} />;
+
   return (
-    <div className="hub-bg relative min-h-full overflow-x-clip">
-      <div className="hud-grid" />
-      <div className="relative z-10 mx-auto max-w-[1400px] space-y-4 px-4 py-4 md:space-y-5 md:px-8 md:py-6">
-        <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-5">
-          <div className="min-w-0 space-y-3">
-            <Reveal className="min-w-0">
-              <HubHeader
-                name={name}
-                updatedAt={hub.updatedAt}
-                changedAt={hub.changedAt}
-                loading={spinning}
-                error={hub.error}
-                onRefresh={manualRefresh}
-              />
-            </Reveal>
-            <Reveal delay={STAGGER} className="sticky top-[58px] z-30 min-w-0 md:top-[62px]">
+    <div className="relative min-h-full overflow-x-clip">
+      <HomeScreen
+        name={name}
+        data={data}
+        updatedAt={hub.updatedAt}
+        changedAt={hub.changedAt}
+        error={hub.error}
+        onRefresh={manualRefresh}
+        onRun={runCommand}
+        onNavigate={(href) => router.push(href)}
+        onGenerateBrief={generateBrief}
+      />
+      <div id="dashboard" className="mx-auto max-w-[1400px] space-y-5 px-4 py-5 md:px-8 md:py-7">
+
+        <section className="grid items-start gap-5 lg:grid-cols-12">
+          <div className="min-w-0 space-y-4 lg:col-span-7">
+            <Reveal delay={STAGGER} className="sticky top-[57px] z-30 min-w-0 md:top-[61px]">
               <HubQuickAdd categories={data?.categories ?? []} people={data?.people ?? []} onSubmit={addTask} />
             </Reveal>
-            <Reveal delay={STAGGER * 2} className="min-w-0">
+            <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-20" id="today">
               {data ? <TodayList tasks={data.today} onComplete={completeTask} /> : <SkeletonCard rows={4} />}
             </Reveal>
           </div>
-          <Reveal delay={STAGGER * 3} className="min-w-0 lg:sticky lg:top-[70px]">
-            <BriefCard brief={data?.brief ?? null} loaded={!!data} tz={tz} todayKey={todayKey} onGenerated={hub.refresh} />
-          </Reveal>
-        </section>
-
-        <section className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3 md:gap-5">
-          <Reveal delay={STAGGER * 4} className="min-w-0">
-            {data ? <UpNextCard events={data.upNext} tz={tz} todayKey={todayKey} /> : <SkeletonCard rows={3} />}
-          </Reveal>
-          <Reveal delay={STAGGER * 5} className="min-w-0">
-            {data ? <WaitingCard groups={data.waitingOn} onNudge={nudge} /> : <SkeletonCard rows={2} />}
-          </Reveal>
-          <Reveal delay={STAGGER * 6} className="min-w-0 md:col-span-2 xl:col-span-1">
-            {data ? <WeekPanel week={data.week} onOutcomes={saveOutcomes} onScore={score} /> : <SkeletonCard rows={5} />}
-          </Reveal>
-        </section>
-
-        <section className={`grid grid-cols-2 gap-3 md:grid-cols-3 ${tiles.length > 6 ? "xl:grid-cols-7" : "xl:grid-cols-6"}`}>
-          {tiles.map((tile, i) => (
-            <Reveal key={tile.label} delay={STAGGER * (7 + i)} className="min-w-0">
-              <StatTile {...tile} />
+          <div className="min-w-0 space-y-5 lg:sticky lg:top-[77px] lg:col-span-5">
+            <Reveal delay={STAGGER * 3} className="min-w-0 scroll-mt-20" id="week">
+              {week}
             </Reveal>
-          ))}
+            <Reveal delay={STAGGER * 4} className="min-w-0 scroll-mt-20" id="upnext">
+              {upNext}
+            </Reveal>
+            <Reveal delay={STAGGER * 5} className="min-w-0 scroll-mt-20" id="waiting">
+              {waiting}
+            </Reveal>
+            <Reveal delay={STAGGER * 6} className="min-w-0">
+              {brief}
+            </Reveal>
+          </div>
         </section>
 
         <Reveal delay={STAGGER}>
+          <NumbersStrip items={numbers} />
+        </Reveal>
+
+        <Reveal delay={STAGGER} className="scroll-mt-20" id="feed">
           <AgentFeed inbox={data?.inbox ?? []} runs={data?.agents.runs ?? []} onResolve={resolveInbox} />
         </Reveal>
 
-        <Reveal delay={STAGGER}>
+        <Reveal delay={STAGGER} className="scroll-mt-20" id="town">
           <TownLazy agents={agents} runs={data?.agents.runs ?? []} summary={townSummary} onWorkSent={hub.refresh} />
         </Reveal>
 
@@ -318,10 +360,10 @@ export default function HubDashboard({ name }: { name: string }) {
           <button
             onClick={() => setShowExtras((v) => !v)}
             aria-expanded={showExtras}
-            className="flex w-full items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm text-muted hover:text-foreground"
+            className="flex w-full items-center justify-between rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-muted transition-colors hover:border-border-2 hover:text-foreground"
           >
             <span>Agents and connectors</span>
-            <span className="font-mono text-xs">{showExtras ? "hide" : `${agents.length} agents · show`}</span>
+            <span className="font-mono text-xs font-normal text-muted-2">{showExtras ? "hide" : `${agents.length} agents · show`}</span>
           </button>
           {showExtras && (
             <div className="mt-4 grid gap-5 xl:grid-cols-[1.2fr_1fr]">
@@ -338,11 +380,11 @@ export default function HubDashboard({ name }: { name: string }) {
 
 function SkeletonCard({ rows }: { rows: number }) {
   return (
-    <div className="rounded-3xl glass p-5">
-      <div className="mb-4 h-3 w-24 animate-pulse rounded bg-white/10" />
+    <div className="card p-5">
+      <div className="mb-4 h-3 w-24 animate-pulse rounded-full bg-surface-hover" />
       <div className="space-y-3">
         {Array.from({ length: rows }).map((_, i) => (
-          <div key={i} className="h-5 animate-pulse rounded bg-white/[0.06]" style={{ width: `${90 - i * 12}%` }} />
+          <div key={i} className="h-5 animate-pulse rounded-full bg-surface-hover" style={{ width: `${90 - i * 12}%` }} />
         ))}
       </div>
     </div>

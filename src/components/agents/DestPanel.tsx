@@ -119,7 +119,7 @@ function TaskRow({ id, title, agents }: { id: string; title: string; agents: Age
               </option>
             ))}
           </select>
-          <button type="submit" className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white">
+          <button type="submit" className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-ink">
             {sent ? "Sent" : "Run"}
           </button>
         </form>
