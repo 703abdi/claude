@@ -319,7 +319,7 @@ export default function TasksDashboard({
 
         <div className="flex-1 min-w-0 px-4 lg:px-6 py-4">
           {/* mobile rail switcher */}
-          <div className="lg:hidden -mx-4 px-4 mb-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="lg:hidden -mx-4 px-4 mb-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {VIEWS.map((v) => (
               <button
                 key={v}
@@ -348,7 +348,7 @@ export default function TasksDashboard({
             <SecondaryFiltersPopover filters={secondaryFilters} onChange={setSecondaryFilters} people={people} />
           </div>
 
-          <QuickAddBar categories={categories} onCreated={handleCreated} />
+          <QuickAddBar categories={categories} people={people} onCreated={handleCreated} />
 
           {managingCategories && (
             <CategoryManager

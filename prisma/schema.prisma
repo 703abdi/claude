@@ -120,6 +120,9 @@ model Task {
 
   isSeed Boolean @default(false)
 
+  // "agent:grok" etc. null = typed by Abdi
+  source String?
+
   steps       TaskStep[]
   people      TaskPerson[]
   events      TaskEvent[]
@@ -435,4 +438,53 @@ model AgentRun {
 
   @@index([agentId, status])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// AGENCY: weekly outcomes, outbound scoreboard, cash goal
+// ─────────────────────────────────────────────────────────────
+
+model WeekPlan {
+  id        String   @id @default(cuid())
+  weekStart DateTime @unique // Sunday 00:00 local, stored as date at UTC midnight
+  outcomes  Json // [{ text: string, done: boolean }], max 3
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ScoreEntry {
+  id        String   @id @default(cuid())
+  date      DateTime @unique // local day, stored at UTC midnight
+  dials     Int      @default(0)
+  convos    Int      @default(0)
+  booked    Int      @default(0)
+  cashCents Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  label       String
+  targetCents Int
+  startDate   DateTime
+  deadline    DateTime
+  createdAt   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// INBOX (what external agents like Grok, Codex, Jarvis write in)
+// ─────────────────────────────────────────────────────────────
+
+model InboxItem {
+  id         String    @id @default(cuid())
+  agent      String // "grok" | "codex" | "claude" | "jarvis" | free text, lowercased
+  kind       String // "task" | "note" | "update" | "question"
+  title      String
+  body       String?
+  link       String?
+  taskId     String?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([resolvedAt, createdAt])
 }

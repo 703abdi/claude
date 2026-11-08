@@ -16,6 +16,10 @@ const PUBLIC_EXACT = [
   "/api/setup",
   "/api/agents/local/poll",
   "/api/agents/local/complete",
+  // Agent API (Grok, Codex, Claude Code, Jarvis). Handlers accept the
+  // AGENTS_TOKEN bearer or a session, see verifyAgentOrSession.
+  "/api/inbox",
+  "/api/state",
 ];
 
 async function isValidSession(token: string | undefined) {

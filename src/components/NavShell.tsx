@@ -31,11 +31,13 @@ export default function NavShell({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
     function onClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      const t = e.target as Node;
+      if (!menuRef.current?.contains(t) && !mobileMenuRef.current?.contains(t)) setMenuOpen(false);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -52,6 +54,26 @@ export default function NavShell({
   }
 
   const displayName = displayNameForEmail(email);
+
+  const accountMenu = (
+    <div className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-border bg-surface shadow-xl py-1.5 animate-fade-in z-50">
+      <p className="px-3 py-1.5 text-xs text-muted-2 truncate border-b border-border mb-1">{email}</p>
+      <Link
+        href="/settings"
+        onClick={() => setMenuOpen(false)}
+        className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-surface-hover"
+      >
+        <GearIcon className="w-3.5 h-3.5" />
+        Settings
+      </Link>
+      <button
+        onClick={logout}
+        className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-surface-hover"
+      >
+        Sign out
+      </button>
+    </div>
+  );
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -94,28 +116,10 @@ export default function NavShell({
         </button>
 
         <div className="relative shrink-0" ref={menuRef}>
-          <button onClick={() => setMenuOpen((v) => !v)}>
+          <button onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" aria-expanded={menuOpen}>
             <Avatar name={displayName} size="sm" />
           </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-border bg-surface shadow-xl py-1.5 animate-fade-in z-50">
-              <p className="px-3 py-1.5 text-xs text-muted-2 truncate border-b border-border mb-1">{email}</p>
-              <Link
-                href="/settings"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-surface-hover"
-              >
-                <GearIcon className="w-3.5 h-3.5" />
-                Settings
-              </Link>
-              <button
-                onClick={logout}
-                className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-surface-hover"
-              >
-                Sign out
-              </button>
-            </div>
-          )}
+          {menuOpen && accountMenu}
         </div>
       </header>
 
@@ -126,12 +130,12 @@ export default function NavShell({
           <button onClick={openSearch} className="text-muted hover:text-foreground transition-colors" aria-label="Search">
             <SearchIcon className="w-4 h-4" />
           </button>
-          <Link href="/settings" className="text-muted hover:text-foreground transition-colors" aria-label="Settings">
-            <GearIcon className="w-4 h-4" />
-          </Link>
-          <button onClick={logout} className="text-xs text-muted">
-            Sign out
-          </button>
+          <div className="relative" ref={mobileMenuRef}>
+            <button onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" aria-expanded={menuOpen} className="flex">
+              <Avatar name={displayName} size="sm" />
+            </button>
+            {menuOpen && accountMenu}
+          </div>
         </div>
       </header>
 

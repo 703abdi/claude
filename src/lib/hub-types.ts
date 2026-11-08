@@ -1,0 +1,59 @@
+import type { AbdiformResult } from "@/lib/abdiform-types";
+import type { AgentsResponse } from "@/lib/agents/types";
+import type { CalendarEvent, Category, MorningBrief, Task } from "@/lib/types";
+
+export type Outcome = { text: string; done: boolean };
+
+export type ScoreTotals = { dials: number; convos: number; booked: number; cashCents: number };
+export type ScoreField = keyof ScoreTotals;
+
+export type InboxItem = {
+  id: string;
+  agent: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  taskId: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+};
+
+export type WaitingGroup = {
+  person: { id: string; name: string };
+  tasks: { id: string; title: string; waitingAt: string | null; followUpDate: string | null }[];
+};
+
+export type GoalView = {
+  id: string;
+  label: string;
+  targetCents: number;
+  startDate: string;
+  deadline: string;
+  collectedCents: number;
+  daysLeft: number;
+};
+
+export type HubPayload = {
+  now: string;
+  tz: string;
+  todayKey: string;
+  version: string;
+  today: Task[];
+  upNext: CalendarEvent[];
+  waitingOn: WaitingGroup[];
+  week: {
+    weekStart: string; // YYYY-MM-DD (Sunday)
+    weekEnd: string; // YYYY-MM-DD (Saturday)
+    outcomes: Outcome[];
+    scoreboard: { today: ScoreTotals; week: ScoreTotals };
+    goal: GoalView;
+  };
+  stats: { open: number; overdue: number; dueToday: number; waiting: number };
+  agents: AgentsResponse;
+  inbox: InboxItem[];
+  brief: MorningBrief | null;
+  metrics: AbdiformResult;
+  categories: Category[];
+  people: { id: string; name: string }[];
+};

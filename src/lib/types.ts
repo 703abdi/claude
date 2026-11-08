@@ -49,6 +49,7 @@ export type Task = {
   completedAt: string | null;
   updatedAt: string;
   isSeed: boolean;
+  source?: string | null;
   steps: TaskStep[];
   people: Person[];
   blockedBy: { id: string; title: string; status: TaskStatus }[];

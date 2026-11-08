@@ -35,6 +35,31 @@ the Hub, today's list with one-click complete, what's next on the
 calendar, who's waiting on you, fast on a phone. Audit first, then fix
 the biggest friction, and say which reading was taken.
 
+
+## Nov 8 2026: Hub rebuilt as a daily driver
+
+Hub order on every screen: header (greeting, clock, live dot), quick add
+(natural language: `#area @person !high tomorrow 3pm >today`), Today list
+(one tap completes, Undo toast), Up next, Waiting on (Nudge), This week
+(3 outcomes, scoreboard, cash ring to $20k by Dec 31), stat tiles, Agent
+feed, lazy Town. Data comes from `GET /api/hub` via `src/lib/useHub.ts`
+(polls 8s while visible, refetches on focus, optimistic mutations).
+
+Agent API for Grok, Codex, Claude Code and Jarvis: `POST /api/inbox` and
+`GET /api/state`, bearer `AGENTS_TOKEN`. See `docs/agent-api.md`. Set
+`AGENTS_TOKEN` in Vercel for it to work.
+
+Migration `20261108044545_agency_week_inbox` (additive): Task.source,
+WeekPlan, ScoreEntry, Goal, InboxItem. Goal and the current WeekPlan are
+created on first Hub load if missing.
+
+Known follow-ups (round 2, not done): `Reveal` uses whileInView, so the
+first fold can paint late; use immediate animate for above-the-fold items.
+On desktop the right column under the brief is empty; move Up next and
+Waiting on there. Greeting uses the email local part; prefer `User.name`.
+Hide the Agents and Leads tiles when nothing is configured. Swipe to
+complete and press-and-hold on counters were not tested on a real phone.
+
 ## Open items for Abdi
 
 1. **Is a1 working?** `NVIDIA_API_KEY` is set in Vercel (production

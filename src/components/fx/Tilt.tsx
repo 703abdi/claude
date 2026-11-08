@@ -1,10 +1,19 @@
 "use client";
 
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
-import type { PointerEvent, ReactNode } from "react";
+import { useSyncExternalStore, type PointerEvent, type ReactNode } from "react";
+
+const COARSE = "(pointer: coarse)";
+function subscribe(cb: () => void) {
+  const mq = window.matchMedia(COARSE);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
 
 export default function Tilt({ children, className }: { children: ReactNode; className?: string }) {
   const reduced = useReducedMotion();
+  // No tilt on touch screens.
+  const coarse = useSyncExternalStore(subscribe, () => window.matchMedia(COARSE).matches, () => false);
   const x = useMotionValue(0.5);
   const y = useMotionValue(0.5);
   const rotateX = useSpring(useTransform(y, [0, 1], [8, -8]), { stiffness: 200, damping: 18 });
@@ -24,7 +33,7 @@ export default function Tilt({ children, className }: { children: ReactNode; cla
     y.set(0.5);
   }
 
-  if (reduced) return <div className={className}>{children}</div>;
+  if (reduced || coarse) return <div className={className}>{children}</div>;
 
   return (
     <motion.div

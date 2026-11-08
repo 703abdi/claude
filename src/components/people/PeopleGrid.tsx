@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import Avatar from "@/components/shared/Avatar";
@@ -16,8 +16,20 @@ type PersonSummary = {
   upcomingCount: number;
 };
 
+function byWaitingThenActive(a: PersonSummary, b: PersonSummary) {
+  if ((a.waitingCount > 0) !== (b.waitingCount > 0)) return a.waitingCount > 0 ? -1 : 1;
+  if (a.activeCount !== b.activeCount) return b.activeCount - a.activeCount;
+  return a.name.localeCompare(b.name);
+}
+
 export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSummary[] }) {
   const [people, setPeople] = useState(initialPeople);
+  const [filter, setFilter] = useState<"all" | "waiting">("all");
+  const shown = useMemo(
+    () => people.filter((p) => filter === "all" || p.waitingCount > 0).sort(byWaitingThenActive),
+    [people, filter]
+  );
+  const waitingTotal = people.filter((p) => p.waitingCount > 0).length;
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
 
@@ -26,9 +38,7 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
     if (!name.trim()) return;
     const person = await api.people.create({ name: name.trim() });
     setPeople((prev) =>
-      [...prev, { ...person, activeCount: 0, waitingCount: 0, completedCount: 0, upcomingCount: 0 }].sort((a, b) =>
-        a.name.localeCompare(b.name)
-      )
+      [...prev, { ...person, activeCount: 0, waitingCount: 0, completedCount: 0, upcomingCount: 0 }]
     );
     setName("");
     setAdding(false);
@@ -70,11 +80,36 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
         </form>
       )}
 
+      {people.length > 0 && (
+        <div role="tablist" aria-label="Filter people" className="flex gap-2 mb-6">
+          {(
+            [
+              ["all", "All"],
+              ["waiting", `Waiting on${waitingTotal ? ` · ${waitingTotal}` : ""}`],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={filter === key}
+              onClick={() => setFilter(key)}
+              className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
+                filter === key ? "bg-accent text-white" : "bg-surface-2 text-muted hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {people.length === 0 ? (
         <p className="text-sm text-muted-2 py-12 text-center">Nobody yet — add someone tied to a task.</p>
+      ) : shown.length === 0 ? (
+        <p className="text-sm text-muted-2 py-12 text-center">Nobody owes you anything.</p>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-4 gap-y-7">
-          {people.map((p) => (
+          {shown.map((p) => (
             <Link
               key={p.id}
               href={`/people/${p.id}`}
@@ -96,9 +131,15 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate max-w-[7.5rem]">{p.name}</p>
-                <p className="text-xs text-muted-2 mt-0.5">
-                  {p.activeCount > 0 ? `${p.activeCount} active` : "Nothing active"}
-                </p>
+                {p.waitingCount > 0 ? (
+                  <p className="text-xs font-medium mt-0.5 text-stat-amber">
+                    waiting · {p.waitingCount}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-2 mt-0.5">
+                    {p.activeCount > 0 ? `${p.activeCount} active` : "Nothing active"}
+                  </p>
+                )}
               </div>
             </Link>
           ))}
