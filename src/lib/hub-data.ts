@@ -7,6 +7,7 @@ import { getLatestBrief } from "@/lib/morning-brief/latest";
 import { fetchAbdiformMetrics } from "@/lib/abdiform";
 import { getFeedEvents } from "@/lib/calendar-feeds";
 import { syncFathom } from "@/lib/fathom";
+import { syncCalendly } from "@/lib/calendly";
 import type { AbdiformResult } from "@/lib/abdiform-types";
 import { AUTO_CLEAR_AFTER_DAYS } from "@/lib/task-dates";
 import {
@@ -110,7 +111,7 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
   const open = { status: { not: TaskStatus.COMPLETED } };
 
   // Pull Fathom before reading, so new action items are in this payload. Throttled to 30 min inside.
-  if (!opts.lean) await syncFathom().catch(() => null);
+  if (!opts.lean) await Promise.all([syncFathom().catch(() => null), syncCalendly().catch(() => null)]);
   const [plan, goal] = await Promise.all([ensureWeekPlan(weekKey), ensureGoal()]);
 
   const [
@@ -189,7 +190,7 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
 
   // Up next: the next 4 events from now, within a week.
   const clock = clockInTz(now, tz);
-  const ownEvents: CalendarEvent[] = json<CalendarEvent[]>(eventRows).map((e) => ({ ...e, source: null, readOnly: false }));
+  const ownEvents: CalendarEvent[] = json<CalendarEvent[]>(eventRows).map((e) => ({ ...e, source: e.source ?? null, readOnly: Boolean(e.source) }));
   const upNext = [...ownEvents, ...feed.events]
     .map((e) => ({ e, key: dayKey(new Date(e.date), tz) }))
     .filter(({ e, key }) => {

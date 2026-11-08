@@ -9,6 +9,7 @@ export const AGENT_COLOR: Record<string, string> = {
   claude: "#d97757",
   jarvis: "var(--accent)",
   fathom: "#a78bfa",
+  calendly: "#006bff",
   os: "#e6b450",
 };
 

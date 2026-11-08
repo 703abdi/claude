@@ -210,6 +210,11 @@ model CalendarEvent {
   personId String?
   person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
 
+  /** Where the event came from: null = made here, "calendly" = pulled (read-only in the UI). */
+  source     String?
+  /** Stable id at the source, so a pull can update instead of duplicate. */
+  externalId String? @unique
+
   isSeed    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

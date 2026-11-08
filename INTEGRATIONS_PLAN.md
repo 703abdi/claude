@@ -19,12 +19,10 @@ How every source works (same pattern as Fathom, already built):
 |---|---|---|
 | Gmail | Threads waiting on your reply become owed items with age ("Reply to Lavender, 2 days"). Do-this-now can pick them. Reply straight from the Hub. | Google sign-in once (OAuth). Same sign-in covers Calendar below. |
 | Google Calendar (API) | Replaces the iCal paste. Events with attendees, links, and who you meet next. Calendly bookings included since they land on this calendar. | Same Google sign-in. |
-| Close CRM | Leads to call back today, deals quiet 3+ days, payments due, each as a task with the lead attached. Dials and convos logged in Close count on the scoreboard without tapping. Pipeline total and close rate in the week panel. | Close API key (Settings, API Keys). |
-| Calendly | Booked calls increment "booked" on their own and show in Up next with the invitee's name and the Typeform answers if present. | Calendly personal token. |
-| Typeform | Every application lands in the feed with name, answers, and qualified / disqualified. A qualified lead with no booking becomes a task: "Book <name>". | Typeform personal token. |
+| Calendly | Built. Every booking lands on the calendar with the invitee as a person, adds one to booked on the day it was booked, posts to the feed. Cancellations remove the event and post. | `CALENDLY_TOKEN`. |
 
-Build order inside the batch: Google (one sign-in unlocks two), Close, then
-Calendly and Typeform together.
+Build order inside the batch: Calendly (done), then Google (one sign-in unlocks two).
+Close and Typeform dropped: Abdi no longer uses them.
 
 ## Phase 2: money and audience
 
@@ -50,7 +48,7 @@ Calendly and Typeform together.
 
 | Piece | What it does | Needs |
 |---|---|---|
-| Nightly Claude pass | Reads every source, writes the next day's Do-this-now ranking with a one-line why, merges duplicate tasks (Fathom says "text Lavender", Close says "follow up Lavender"), and files new people. | ANTHROPIC_API_KEY (set) plus CRON_SECRET (set). |
+| Nightly Claude pass | Reads every source, writes the next day's Do-this-now ranking with a one-line why, merges duplicate tasks (Fathom says "text Lavender", Calendly booked Lavender), and files new people. | ANTHROPIC_API_KEY (set) plus CRON_SECRET (set). |
 | People auto-create | Any name from a call, email, booking or CRM lead becomes a Person with their last touch and what they owe you. | Nothing. |
 | Grok and Codex loops | Agents post findings into the feed on a schedule, read `/api/state` for context. | AGENTS_TOKEN. |
 | Morning brief with voice | Already built. Needs the TTS provider key to speak. | ELEVENLABS or OPENAI key already set; TTS_PROVIDER set. Test. |
@@ -60,9 +58,7 @@ Calendly and Typeform together.
 In Vercel, project claude, Settings, Environment Variables, tick Production,
 then Redeploy once at the end. Exact names:
 
-- `CLOSE_API_KEY`
 - `CALENDLY_TOKEN`
-- `TYPEFORM_TOKEN`
 - `WHOP_API_KEY`
 - `GHL_API_KEY`
 - `AGENTS_TOKEN` (any long random string, also goes into the agents' configs)
@@ -89,7 +85,7 @@ minutes, one time).
 
 1. Zero-key batch above (one session).
 2. Google sign-in, Gmail, Calendar API (one session, needs the two Google values).
-3. Close, Calendly, Typeform (one session, needs three keys).
+3. Calendly: built, needs CALENDLY_TOKEN.
 4. Whop, GHL, Instagram (one session).
 5. Twilio texts and the nightly Claude pass (one session).
 

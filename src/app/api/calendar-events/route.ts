@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   const fromMs = from ? new Date(from).getTime() : -Infinity;
   const toMs = to ? new Date(to).getTime() : Infinity;
   const merged = [
-    ...events.map((e) => ({ ...e, source: null, readOnly: false })),
+    ...events.map((e) => ({ ...e, source: e.source ?? null, readOnly: Boolean(e.source) })),
     ...feed.filter((e) => {
       const t = new Date(e.date).getTime();
       return t >= fromMs && t <= toMs;

@@ -9,6 +9,7 @@ import { generateMorningBriefText } from "./morning-brief/generate";
 import { buildTranscriptSegments, totalDuration } from "./morning-brief/segments";
 import { generateSpeech } from "./morning-brief/tts";
 import { syncFathom } from "./fathom";
+import { syncCalendly } from "./calendly";
 import { morningDigest } from "./digests";
 
 /**
@@ -49,6 +50,7 @@ export async function recomputePriorities() {
  */
 export async function runDailyRefresh() {
   const fathom = await syncFathom({ force: true }).catch(() => null);
+  const calendly = await syncCalendly({ force: true }).catch(() => null);
   const extraction = await runExtractionPipeline(50);
   // Cross-item pass: runs after extraction so freshly ingested items are
   // already classified, and before the detectors so its output is deduped
@@ -99,5 +101,5 @@ export async function runDailyRefresh() {
   });
 
   const digest = await morningDigest().catch(() => null);
-  return { fathom, extraction, synthesis, suggestions, priorities, briefId: brief.id, digest };
+  return { fathom, calendly, extraction, synthesis, suggestions, priorities, briefId: brief.id, digest };
 }
