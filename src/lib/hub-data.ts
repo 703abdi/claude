@@ -8,6 +8,7 @@ import { fetchAbdiformMetrics } from "@/lib/abdiform";
 import { getFeedEvents } from "@/lib/calendar-feeds";
 import { syncFathom } from "@/lib/fathom";
 import { syncCalendly } from "@/lib/calendly";
+import { getPolicy } from "@/lib/policy";
 import type { AbdiformResult } from "@/lib/abdiform-types";
 import { AUTO_CLEAR_AFTER_DAYS } from "@/lib/task-dates";
 import {
@@ -240,9 +241,12 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
     createdAt: i.createdAt.toISOString(),
   }));
 
+  const { policy, version: policyVersion } = await getPolicy();
   const body = {
     tz,
     todayKey,
+    policy,
+    policyVersion,
     today: json<HubPayload["today"]>(today),
     upNext,
     feeds: { count: feed.count, errors: feed.errors },

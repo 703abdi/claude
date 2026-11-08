@@ -457,6 +457,33 @@ model WeekPlan {
   updatedAt DateTime @updatedAt
 }
 
+// ─────────────────────────────────────────────────────────────
+// SELF-IMPROVEMENT: what the OS showed, what Abdi did, and the knobs the brain tunes
+// ─────────────────────────────────────────────────────────────
+
+/// Append-only. Every card shown, every tap, every sync, every brain run.
+model Signal {
+  id     String   @id @default(cuid())
+  at     DateTime @default(now())
+  kind   String // "donow.shown" | "donow.acted" | "task.done" | "task.drop" | "score.add" | "score.set" | "feed.post" | "feed.task" | "feed.dismiss" | "sync" | "brain.run"
+  source String? // which agent / integration, when it applies
+  ref    String? // task id, inbox id, action key
+  data   Json?
+
+  @@index([at])
+  @@index([kind, at])
+}
+
+/// Versioned knobs for the ranking. The highest version is live. Never edited in place.
+model Policy {
+  id        String   @id @default(cuid())
+  version   Int      @unique
+  data      Json
+  reason    String?
+  author    String // "abdi" | "brain" | "default"
+  createdAt DateTime @default(now())
+}
+
 model ScoreEntry {
   id        String   @id @default(cuid())
   date      DateTime @unique // local day, stored at UTC midnight

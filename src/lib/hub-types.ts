@@ -34,8 +34,13 @@ export type GoalView = {
   daysLeft: number;
 };
 
+import type { Policy } from "@/lib/policy";
+
 export type HubPayload = {
   now: string;
+  /** The live knobs behind the ranking (version is in policyVersion). */
+  policy: Policy;
+  policyVersion: number;
   tz: string;
   todayKey: string;
   version: string;

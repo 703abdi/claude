@@ -9,6 +9,7 @@ import { parseQuickAdd, type ParsedQuickAdd } from "@/lib/quick-add-parse";
 import { dayKey } from "@/lib/day";
 import { ago, useMedia, useNow, CheckMark } from "./hub-ui";
 import { nextAction, type NextAction } from "@/lib/next-action";
+import { track } from "@/lib/signals-client";
 import type { ScoreField, WaitingGroup } from "@/lib/hub-types";
 import type { Task } from "@/lib/types";
 import { Counter, CashCounter } from "./WeekPanel";
@@ -220,6 +221,28 @@ const ACTION_LABEL: Record<NextAction["kind"], string> = {
   outcome: "This week",
 };
 
+let lastShown: { key: string; at: number } = { key: "", at: 0 };
+
+/** Stable id for a card: the thing it points at, not its wording. */
+function actionKey(a: NextAction) {
+  switch (a.kind) {
+    case "late":
+    case "task":
+    case "stale":
+      return `${a.kind}:${a.task.id}`;
+    case "event":
+      return `event:${a.eventId}`;
+    case "question":
+      return `question:${a.inboxId}`;
+    case "nudge":
+      return `nudge:${a.personId}`;
+    case "dial":
+      return "dial";
+    default:
+      return "outcome";
+  }
+}
+
 function DoNow({
   action,
   onDone,
@@ -238,6 +261,17 @@ function DoNow({
   onOpen: () => void;
 }) {
   const reduced = useReducedMotion();
+  const actionRef = actionKey(action);
+  useEffect(() => {
+    // Once per card per sitting: StrictMode, remounts and the poll all re-run this effect.
+    if (lastShown.key === actionRef && Date.now() - lastShown.at < 10 * 60_000) return;
+    lastShown = { key: actionRef, at: Date.now() };
+    track("donow.shown", actionRef, { kind: action.kind, title: action.title.slice(0, 120) });
+  }, [actionRef, action.kind, action.title]);
+  const acted = (label: string, run: () => void) => () => {
+    track("donow.acted", actionRef, { kind: action.kind, label });
+    run();
+  };
   const primary =
     action.kind === "late" || action.kind === "task"
       ? { label: "Done", run: () => onDone(action.task) }
@@ -251,7 +285,8 @@ function DoNow({
             ? { label: "Answered", run: onAnswer }
             : { label: "Open", run: onOpen };
   const danger = action.kind === "late";
-  const secondary = action.kind === "stale" ? { label: "Done instead", run: () => onDone(action.task) } : null;
+  primary.run = acted(primary.label, primary.run);
+  const secondary = action.kind === "stale" ? { label: "Done instead", run: acted("Done instead", () => onDone(action.task)) } : null;
   return (
     <motion.div
       key={action.kind + action.title}

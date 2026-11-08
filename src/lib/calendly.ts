@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { clockInTz, dayKey, utcDateFromKey } from "@/lib/day";
 import { matchPeople } from "@/lib/quick-add-parse";
+import { logSignal } from "@/lib/signals";
 
 /** Calendly -> the OS. Every booked call becomes a calendar event (read-only, linked to the
  * invitee as a person), a new booking adds one to "booked" on the scoreboard for the day it
@@ -198,9 +199,11 @@ export async function syncCalendly(opts: { force?: boolean; tz?: string } = {}) 
       where: { type_name: SOURCE },
       data: { config: { userUri: cfg.userUri, counted: [...counted].slice(-2000) }, lastSyncAt: new Date(), lastSyncStatus: "success", lastSyncError: null },
     });
+    void logSignal("sync", { source: "calendly", data: { booked, canceled, updated } });
     return { booked, canceled, updated };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Calendly sync failed";
+    void logSignal("sync", { source: "calendly", data: { error: message } });
     await prisma.syncSource.update({ where: { type_name: SOURCE }, data: { lastSyncAt: new Date(), lastSyncStatus: "error", lastSyncError: message } });
     return { error: message };
   }

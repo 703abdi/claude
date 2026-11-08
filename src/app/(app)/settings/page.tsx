@@ -7,6 +7,7 @@ import ProcessContextButton from "@/components/settings/ProcessContextButton";
 import DailyRefreshButton from "@/components/settings/DailyRefreshButton";
 import AgentsSettings from "@/components/settings/AgentsSettings";
 import SourcesPanel from "@/components/settings/SourcesPanel";
+import BrainPanel from "@/components/settings/BrainPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,12 @@ export default async function SettingsPage() {
         <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Sources</h2>
         <p className="text-xs text-muted mb-3">Everything that can fill the Hub for you. Green is on. Tap a row for what it gives and how to connect it.</p>
         <SourcesPanel />
+      </section>
+
+      <section className="border border-border bg-surface rounded-lg p-4">
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Brain</h2>
+        <p className="text-xs text-muted mb-3">Every night at 9 it reads what the Hub showed, what you did, and the scoreboard, then orders tomorrow and turns these knobs within limits. It explains every change in the feed.</p>
+        <BrainPanel />
       </section>
 
       <section className="border border-border bg-surface rounded-lg p-4">

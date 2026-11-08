@@ -1,6 +1,8 @@
 import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { matchPeople } from "@/lib/quick-add-parse";
+import { getPolicy } from "@/lib/policy";
+import { logSignal } from "@/lib/signals";
 
 /** Fathom call recorder -> the OS. After every recorded call, the action items become
  * tasks (yours in Today, other people's as Waiting on them) and the call itself shows in
@@ -123,6 +125,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
     return created ? { id: created.id, name: created.name } : null;
   }
 
+  const { policy } = await getPolicy();
   let calls = 0;
   let tasks = 0;
   let waiting = 0;
@@ -163,6 +166,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
         calls++;
       }
 
+      let pinnedThisCall = 0;
       for (let i = 0; i < items.length; i++) {
         const a = items[i];
         const source = `fathom:${m.recording_id}:${i}`;
@@ -172,6 +176,9 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
         const assigneePerson = !mine ? await personFor(a.assignee?.name, "Promised something on a recorded call.") : null;
         if (!mine && !assigneePerson) continue;
         position += 1000;
+        // Only the first few of your own items per call land in Today; the rest wait in Tasks.
+        const pin = mine && pinnedThisCall < policy.fathomPinMax;
+        if (pin) pinnedThisCall++;
         const notes = [`From the call "${title}" on ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, a.recording_playback_url || link]
           .filter(Boolean)
           .join("\n");
@@ -182,7 +189,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
             notes,
             source,
             position,
-            pinnedToday: mine,
+            pinnedToday: pin,
             status: mine ? TaskStatus.NOT_STARTED : TaskStatus.WAITING,
             waitingAt: mine ? null : new Date(),
             followUpRequired: !mine,
@@ -198,9 +205,11 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
       where: { type_name: SOURCE },
       data: { lastSyncAt: new Date(), lastSyncStatus: "success", lastSyncError: null },
     });
+    void logSignal("sync", { source: "fathom", data: { calls, tasks, waiting } });
     return { calls, tasks, waiting };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Fathom sync failed";
+    void logSignal("sync", { source: "fathom", data: { error: message } });
     await prisma.syncSource.update({
       where: { type_name: SOURCE },
       data: { lastSyncAt: new Date(), lastSyncStatus: "error", lastSyncError: message },

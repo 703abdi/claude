@@ -31,9 +31,8 @@ export function staleDays(task: Pick<Task, "title" | "dueDate">, now: Date): num
   return days >= 1 ? days : null;
 }
 
+/** Kept for callers that show the target; the live value is d.policy.dialTarget. */
 export const DIAL_TARGET = 90;
-const DIAL_START_HOUR = 10; // dials are behind pace only after this local hour
-const EVENT_LEAD_MIN = 45;
 
 function clockToMinutes(hhmm: string) {
   const [h, m] = hhmm.split(":").map(Number);
@@ -53,7 +52,7 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
   const soon = d.upNext.find((e) => {
     if (dayKey(new Date(e.date), d.tz) !== d.todayKey || !e.startTime) return false;
     const start = clockToMinutes(e.startTime);
-    return start - nowMin >= -5 && start - nowMin <= EVENT_LEAD_MIN;
+    return start - nowMin >= -5 && start - nowMin <= d.policy.eventLeadMin;
   });
   if (soon?.startTime) {
     const mins = clockToMinutes(soon.startTime) - nowMin;
@@ -69,7 +68,8 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
   if (q) return { kind: "question", inboxId: q.id, title: q.title, detail: `${q.agent} is waiting on your answer.` };
 
   const todayMs = now.getTime();
-  const owed = d.waitingOn.find((g) => g.tasks.some((t) => !t.followUpDate || new Date(t.followUpDate).getTime() <= todayMs - 86_400_000));
+  const owedCutoff = todayMs - d.policy.nudgeAfterDays * 86_400_000;
+  const owed = d.waitingOn.find((g) => g.tasks.some((t) => (t.followUpDate ? new Date(t.followUpDate).getTime() <= todayMs - 86_400_000 : (t.waitingAt ? new Date(t.waitingAt).getTime() : 0) <= owedCutoff)));
   if (owed) {
     const t = owed.tasks[0];
     return {
@@ -84,11 +84,17 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
   const dow = now.getDay();
   const workday = dow >= 1 && dow <= 5;
   const dials = d.week.scoreboard.today.dials;
-  if (workday && now.getHours() >= DIAL_START_HOUR && dials < DIAL_TARGET) {
-    return { kind: "dial", have: dials, target: DIAL_TARGET, title: "Dial.", detail: `${dials} of ${DIAL_TARGET} today. Cash comes from calls.` };
+  if (d.policy.dialNudge && workday && now.getHours() >= d.policy.dialStartHour && dials < d.policy.dialTarget) {
+    return { kind: "dial", have: dials, target: d.policy.dialTarget, title: "Dial.", detail: `${dials} of ${d.policy.dialTarget} today. Cash comes from calls.` };
   }
 
-  const top = live.find((t) => t.pinnedToday) ?? live[0];
+  // The brain's order for today wins when it has one; otherwise pinned, then first.
+  const ranked = d.policy.rankingDay === d.todayKey ? d.policy.ranking.map((r) => live.find((t) => t.id === r.taskId)).find(Boolean) : undefined;
+  const top = ranked ?? live.find((t) => t.pinnedToday) ?? live[0];
+  if (ranked) {
+    const why = d.policy.ranking.find((r) => r.taskId === ranked.id)?.why;
+    return { kind: "task", task: ranked, title: ranked.title, detail: why || (ranked.people[0] ? `With ${ranked.people[0].name}.` : "Next up.") };
+  }
   if (top) return { kind: "task", task: top, title: top.title, detail: top.people[0] ? `With ${top.people[0].name}.` : "Next up." };
 
   if (stale[0]) {

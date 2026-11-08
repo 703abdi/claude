@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { inboxResolveSchema } from "@/lib/validation";
 import { resolveTz } from "@/lib/hub-data";
 import { createAgentTask } from "@/lib/inbox";
+import { logSignal } from "@/lib/signals";
 
 /** Session-auth (from the Hub): { action: "task" } turns the item into a task
  * pinned to Today, { action: "dismiss" } just clears it. */
@@ -31,6 +32,11 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/inbox/[id]/
   const updated = await prisma.inboxItem.update({
     where: { id },
     data: { resolvedAt: new Date(), taskId },
+  });
+  void logSignal(parsed.data.action === "task" ? "feed.task" : "feed.dismiss", {
+    source: item.agent,
+    ref: id,
+    data: { kind: item.kind, title: item.title, ageMin: Math.round((Date.now() - item.createdAt.getTime()) / 60_000) },
   });
   return NextResponse.json({ item: updated, task });
 }

@@ -10,6 +10,7 @@ export const AGENT_COLOR: Record<string, string> = {
   jarvis: "var(--accent)",
   fathom: "#a78bfa",
   calendly: "#006bff",
+  brain: "#34d399",
   os: "#e6b450",
 };
 
