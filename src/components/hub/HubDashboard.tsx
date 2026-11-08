@@ -15,7 +15,9 @@ import AgentFeed from "./AgentFeed";
 import BriefCard from "./BriefCard";
 import { UpNextCard, WaitingCard } from "./HubCards";
 import { AgentRoster, Connectors, NumbersStrip, type NumberItem } from "./HubExtras";
-import HomeScreen, { FOCUS_COMMAND_EVENT, type CommandRun } from "./HomeScreen";
+import HomeScreen, { FOCUS_COMMAND_EVENT, SECTIONS, type CommandRun } from "./HomeScreen";
+import HubCalendar from "./HubCalendar";
+import HubPeople from "./HubPeople";
 import { useEffect } from "react";
 import { ToastHost, type Toast } from "./hub-ui";
 import TodayList from "./TodayList";
@@ -251,6 +253,20 @@ export default function HubDashboard({ name }: { name: string }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  // /hub#calendar from the nav: scroll once the sections exist, and again on hash changes.
+  const hasData = !!data;
+  useEffect(() => {
+    const go = () => {
+      const id = window.location.hash.slice(1);
+      if (!id) return;
+      const el = document.getElementById(id);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    };
+    if (hasData) go();
+    window.addEventListener("hashchange", go);
+    return () => window.removeEventListener("hashchange", go);
+  }, [hasData]);
+
   function backToBar() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => window.dispatchEvent(new Event(FOCUS_COMMAND_EVENT)), 450);
@@ -326,15 +342,31 @@ export default function HubDashboard({ name }: { name: string }) {
         onNavigate={(href) => router.push(href)}
         onGenerateBrief={generateBrief}
       />
+      {/* Sticky section nav once you are past the home screen */}
+      <div
+        className={`sticky top-[57px] z-30 transition-all duration-200 md:top-[61px] ${pastHome ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"}`}
+      >
+        <div className="mx-auto flex max-w-[1400px] gap-1.5 overflow-x-auto px-4 py-2 no-scrollbar md:px-8">
+          {SECTIONS.map((sct) => (
+            <button
+              key={sct.id}
+              onClick={() => (sct.href ? router.push(sct.href) : document.getElementById(sct.id)?.scrollIntoView({ behavior: "smooth", block: "start" }))}
+              className="section-pill shrink-0"
+            >
+              {sct.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div id="dashboard" className="mx-auto max-w-[1400px] space-y-5 px-4 py-5 md:px-8 md:py-7">
         <section className="grid items-start gap-5 lg:grid-cols-12">
           <div className="min-w-0 space-y-4 lg:col-span-7">
-            <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-20" id="today">
+            <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-28" id="today">
               {data ? <TodayList tasks={data.today} onComplete={completeTask} /> : <SkeletonCard rows={4} />}
             </Reveal>
           </div>
           <div className="min-w-0 space-y-5 lg:sticky lg:top-[77px] lg:col-span-5">
-            <Reveal delay={STAGGER * 3} className="min-w-0 scroll-mt-20" id="week">
+            <Reveal delay={STAGGER * 3} className="min-w-0 scroll-mt-28" id="week">
               {week}
             </Reveal>
             <Reveal delay={STAGGER * 4} className="min-w-0 scroll-mt-20" id="upnext">
@@ -349,15 +381,24 @@ export default function HubDashboard({ name }: { name: string }) {
           </div>
         </section>
 
+        <section className="grid items-start gap-5 lg:grid-cols-12">
+          <Reveal delay={STAGGER} className="min-w-0 scroll-mt-28 lg:col-span-7" id="calendar">
+            {data ? <HubCalendar categories={data.categories} people={data.people} version={data.version} /> : <SkeletonCard rows={6} />}
+          </Reveal>
+          <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-28 lg:col-span-5" id="people">
+            {data ? <HubPeople version={data.version} /> : <SkeletonCard rows={3} />}
+          </Reveal>
+        </section>
+
         <Reveal delay={STAGGER}>
           <NumbersStrip items={numbers} />
         </Reveal>
 
-        <Reveal delay={STAGGER} className="scroll-mt-20" id="feed">
+        <Reveal delay={STAGGER} className="scroll-mt-28" id="feed">
           <AgentFeed inbox={data?.inbox ?? []} runs={data?.agents.runs ?? []} onResolve={resolveInbox} />
         </Reveal>
 
-        <Reveal delay={STAGGER} className="scroll-mt-20" id="town">
+        <Reveal delay={STAGGER} className="scroll-mt-28" id="town">
           <TownLazy agents={agents} runs={data?.agents.runs ?? []} summary={townSummary} onWorkSent={hub.refresh} />
         </Reveal>
 

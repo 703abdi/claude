@@ -5,6 +5,7 @@ import ChatGPTUploader from "@/components/settings/ChatGPTUploader";
 import ClaudeUploader from "@/components/settings/ClaudeUploader";
 import ProcessContextButton from "@/components/settings/ProcessContextButton";
 import DailyRefreshButton from "@/components/settings/DailyRefreshButton";
+import CalendarFeeds from "@/components/settings/CalendarFeeds";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,14 @@ export default async function SettingsPage() {
         <h1 className="text-[28px]">Settings</h1>
         <p className="text-sm text-muted mt-1">Morning brief, context sources, and integrations.</p>
       </div>
+
+      <section className="border border-border bg-surface rounded-lg p-4">
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Calendar feeds</h2>
+        <p className="text-xs text-muted mb-3">
+          Google Calendar, Calendly or any iCal link. Events pull in on their own every few minutes and show in the Hub, read-only.
+        </p>
+        <CalendarFeeds />
+      </section>
 
       <section className="border border-border bg-surface rounded-lg p-4">
         <h2 className="text-sm font-bold uppercase tracking-wide mb-3">Morning brief</h2>

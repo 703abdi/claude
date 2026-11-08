@@ -41,6 +41,7 @@ export type HubPayload = {
   version: string;
   today: Task[];
   upNext: CalendarEvent[];
+  feeds: { count: number; errors: string[] };
   waitingOn: WaitingGroup[];
   week: {
     weekStart: string; // YYYY-MM-DD (Sunday)

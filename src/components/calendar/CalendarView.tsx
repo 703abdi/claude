@@ -39,11 +39,14 @@ export default function CalendarView({
   initialTasksWithDates,
   categories,
   people,
+  embedded = false,
 }: {
   initialEvents: CalendarEvent[];
   initialTasksWithDates: TaskWithDate[];
   categories: Category[];
   people: PersonLite[];
+  /** Inside the Hub: tighter padding, smaller title, no page gutters. */
+  embedded?: boolean;
 }) {
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -104,7 +107,7 @@ export default function CalendarView({
     const eventId = String(active.id);
     const dateKey = String(over.id);
     const event = events.find((ev) => ev.id === eventId);
-    if (!event || toDateKey(new Date(event.date)) === dateKey) return;
+    if (!event || event.readOnly || toDateKey(new Date(event.date)) === dateKey) return;
 
     const [y, m, d] = dateKey.split("-").map(Number);
     const newDate = new Date(y, m - 1, d, 9, 0, 0).toISOString();
@@ -126,10 +129,15 @@ export default function CalendarView({
     setModal(null);
   }
 
+  function openEvent(ev: CalendarEvent) {
+    if (ev.readOnly) return; // feed events (Google, Calendly) are edited at their source
+    setModal({ mode: "edit", event: ev });
+  }
+
   return (
-    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h1 className="whitespace-nowrap text-[24px] sm:text-[28px]">
+    <div className={embedded ? "px-4 py-4 md:px-5 md:py-5" : "max-w-5xl mx-auto px-4 md:px-6 py-6"}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${embedded ? "mb-4" : "mb-6"}`}>
+        <h1 className={`whitespace-nowrap ${embedded ? "text-[18px] font-extrabold tracking-[-0.03em]" : "text-[24px] sm:text-[28px]"}`}>
           {view === "agenda" ? "Next 14 days" : `${MONTH_NAMES[cursor.month]} ${cursor.year}`}
         </h1>
         <div className="flex items-center gap-2">
@@ -172,7 +180,7 @@ export default function CalendarView({
       </div>
 
       {view === "agenda" ? (
-        <Agenda events={events} tasks={tasksWithDates} onSelectEvent={(ev) => setModal({ mode: "edit", event: ev })} />
+        <Agenda events={events} tasks={tasksWithDates} onSelectEvent={openEvent} embedded={embedded} />
       ) : (
         <DndContext id="calendar-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-7 gap-px bg-border border border-border rounded-3xl overflow-hidden">
@@ -197,7 +205,7 @@ export default function CalendarView({
                   events={dayEvents}
                   tasks={dayTasks}
                   onCreate={() => setModal({ mode: "create", date: day })}
-                  onSelectEvent={(ev) => setModal({ mode: "edit", event: ev })}
+                  onSelectEvent={openEvent}
                 />
               );
             })}
@@ -287,8 +295,8 @@ function DayCell({
 }
 
 function EventPill({ event, onClick }: { event: CalendarEvent; onClick: (e: React.MouseEvent) => void }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: event.id });
-  const color = event.category?.color ?? "var(--muted-2)";
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: event.id, disabled: !!event.readOnly });
+  const color = event.category?.color ?? (event.readOnly ? "var(--info)" : "var(--muted-2)");
 
   return (
     <button
@@ -314,10 +322,12 @@ function Agenda({
   events,
   tasks,
   onSelectEvent,
+  embedded = false,
 }: {
   events: CalendarEvent[];
   tasks: TaskWithDate[];
   onSelectEvent: (e: CalendarEvent) => void;
+  embedded?: boolean;
 }) {
   const days = useMemo(() => {
     const start = new Date();
@@ -354,7 +364,7 @@ function Agenda({
         return (
           <section key={key}>
             <h2
-              className={`sticky top-[57px] md:top-[53px] z-10 -mx-4 px-4 py-2 bg-background/90 backdrop-blur eyebrow ${
+              className={`${embedded ? "" : "sticky top-[57px] md:top-[53px] z-10 -mx-4 px-4 bg-background/90 backdrop-blur"} py-2 eyebrow ${
                 isToday ? "eyebrow-accent" : ""
               }`}
             >
@@ -364,7 +374,7 @@ function Agenda({
             <ul className={`mt-1.5 space-y-1.5 ${isToday ? "border-l-2 border-accent pl-3" : ""}`}>
               {empty && <li className="text-sm text-muted-2 py-1">Nothing scheduled.</li>}
               {v.events.map((e) => {
-                const color = e.category?.color ?? "var(--accent)";
+                const color = e.category?.color ?? (e.readOnly ? "var(--info)" : "var(--accent)");
                 return (
                   <li key={e.id}>
                     <button
@@ -376,8 +386,10 @@ function Agenda({
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium">{e.title}</span>
-                        {(e.person || e.location) && (
-                          <span className="block truncate text-xs text-muted-2">{[e.person?.name, e.location].filter(Boolean).join(" · ")}</span>
+                        {(e.person || e.location || e.readOnly) && (
+                          <span className="block truncate text-xs text-muted-2">
+                            {[e.person?.name, e.location, e.readOnly ? "from your calendar" : null].filter(Boolean).join(" · ")}
+                          </span>
                         )}
                       </span>
                     </button>

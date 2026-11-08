@@ -267,6 +267,17 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/** The jump buttons at the top of the home screen. Everything lives on the Hub; Tasks is the one deep page. */
+export const SECTIONS: { id: string; label: string; href?: string }[] = [
+  { id: "today", label: "Today" },
+  { id: "calendar", label: "Calendar" },
+  { id: "people", label: "People" },
+  { id: "week", label: "This week" },
+  { id: "feed", label: "Agents" },
+  { id: "town", label: "Town" },
+  { id: "tasks", label: "All tasks", href: "/tasks" },
+];
+
 /* ── Home screen ──────────────────────────────────────────────── */
 
 export default function HomeScreen({
@@ -343,7 +354,7 @@ export default function HomeScreen({
         big: nextEv ? nextEv.title : "Nothing booked",
         sub: nextEv ? nextWhen : "Calendar is clear",
         icon: <Icon d={ICONS.next} />,
-        onClick: () => scrollTo("upnext"),
+        onClick: () => scrollTo("calendar"),
       },
       {
         id: "waiting",
@@ -351,7 +362,7 @@ export default function HomeScreen({
         big: data.waitingOn.length ? `${data.waitingOn.length} ${data.waitingOn.length === 1 ? "person" : "people"}` : "Nobody",
         sub: oldestWait && now ? `oldest ${ago(oldestWait, now).replace(" ago", "")}` : "Nobody owes you anything",
         icon: <Icon d={ICONS.waiting} />,
-        onClick: () => scrollTo("waiting"),
+        onClick: () => scrollTo("people"),
       },
       {
         id: "feed",
@@ -386,27 +397,35 @@ export default function HomeScreen({
       <Backdrop src={backdrop.src} kenBurns={isDesktop && !reduced} />
 
       <div className="relative z-10 mx-auto flex w-full max-w-[880px] flex-1 flex-col items-center justify-center px-4 pb-16 pt-10 md:pb-20">
-        <motion.p {...rise(0)} className="eyebrow eyebrow-accent flex items-center gap-3">
-          <span>{d ? d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }).toUpperCase() : " "}</span>
-          <span className="text-muted-2">·</span>
-          <span className="flex items-center gap-1.5 text-foreground" title={error ? "Can't reach the server" : "Live"}>
-            <span className="relative flex h-1.5 w-1.5">
-              <span key={changedAt} className={`absolute inset-0 rounded-full ${changedAt ? "live-ring" : ""}`} />
-              <span className={`relative h-1.5 w-1.5 rounded-full ${live ? "blink-dot" : ""}`} style={{ background: live ? "var(--accent)" : "var(--danger)" }} />
-            </span>
-            {d ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--:--"}
+        <motion.nav {...rise(0)} aria-label="Jump to" className="flex max-w-full flex-wrap items-center justify-center gap-1.5">
+          {SECTIONS.map((sct) => (
+            <button
+              key={sct.id}
+              onClick={() => (sct.href ? onNavigate(sct.href) : scrollTo(sct.id))}
+              className="section-pill"
+            >
+              {sct.label}
+            </button>
+          ))}
+        </motion.nav>
+
+        <motion.p {...rise(1)} className="eyebrow eyebrow-accent mt-6 flex items-center gap-2">
+          <span className="relative flex h-1.5 w-1.5" title={error ? "Can't reach the server" : "Live"}>
+            <span key={changedAt} className={`absolute inset-0 rounded-full ${changedAt ? "live-ring" : ""}`} />
+            <span className={`relative h-1.5 w-1.5 rounded-full ${live ? "blink-dot" : ""}`} style={{ background: live ? "var(--accent)" : "var(--danger)" }} />
           </span>
+          <span>{d ? d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }).toUpperCase() : " "}</span>
         </motion.p>
 
-        <motion.h1 {...rise(1)} className="mt-4 text-center text-[clamp(2.4rem,6vw,4.5rem)]">
+        <motion.h1 {...rise(2)} className="mt-3 text-center text-[clamp(2.4rem,6vw,4.5rem)]">
           {d ? greeting(d.getHours()) : "Hey"}, <span className="hl">{name}</span>.
         </motion.h1>
 
-        <motion.p {...rise(2)} className="mt-3 min-h-6 text-center text-[15px] text-muted md:text-[17px]">
+        <motion.p {...rise(3)} className="mt-3 min-h-6 text-center text-[15px] text-muted md:text-[17px]">
           {headline(data, now)}
         </motion.p>
 
-        <motion.div {...rise(3)} className="mt-7 w-full max-w-[720px]">
+        <motion.div {...rise(4)} className="mt-7 w-full max-w-[720px]">
           <CommandBar data={data} onRun={onRun} />
         </motion.div>
 

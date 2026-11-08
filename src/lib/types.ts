@@ -127,4 +127,7 @@ export type CalendarEvent = {
   isSeed?: boolean;
   createdAt: string;
   updatedAt: string;
+  /** "feed" for read-only events pulled from a connected calendar (Google, Calendly). */
+  source?: string | null;
+  readOnly?: boolean;
 };

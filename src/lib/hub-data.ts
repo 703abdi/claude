@@ -5,6 +5,7 @@ import { taskInclude, serializeTask } from "@/lib/serialize";
 import { listAgents } from "@/lib/agents/list";
 import { getLatestBrief } from "@/lib/morning-brief/latest";
 import { fetchAbdiformMetrics } from "@/lib/abdiform";
+import { getFeedEvents } from "@/lib/calendar-feeds";
 import type { AbdiformResult } from "@/lib/abdiform-types";
 import { AUTO_CLEAR_AFTER_DAYS } from "@/lib/task-dates";
 import {
@@ -18,6 +19,7 @@ import {
   weekStartKey,
 } from "@/lib/day";
 import type { GoalView, HubPayload, InboxItem, Outcome, ScoreTotals, WaitingGroup } from "@/lib/hub-types";
+import type { CalendarEvent } from "@/lib/types";
 
 const json = <T>(v: unknown) => JSON.parse(JSON.stringify(v)) as T;
 
@@ -125,6 +127,7 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
     agents,
     brief,
     metrics,
+    feed,
   ] = await Promise.all([
     prisma.task.findMany({
       where: {
@@ -166,6 +169,7 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
     opts.lean ? Promise.resolve({ agents: [], runs: [] }) : listAgents(),
     opts.lean ? Promise.resolve(null) : getLatestBrief(),
     opts.lean ? Promise.resolve({ configured: false } as AbdiformResult) : cachedMetrics(),
+    getFeedEvents(tz).catch(() => ({ events: [] as CalendarEvent[], errors: [] as string[], count: 0 })),
   ]);
 
   // Today: overdue first, then pinned by position, then due today.
@@ -182,8 +186,9 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
 
   // Up next: the next 4 events from now, within a week.
   const clock = clockInTz(now, tz);
-  const upNext = eventRows
-    .map((e) => ({ e, key: dayKey(e.date, tz) }))
+  const ownEvents: CalendarEvent[] = json<CalendarEvent[]>(eventRows).map((e) => ({ ...e, source: null, readOnly: false }));
+  const upNext = [...ownEvents, ...feed.events]
+    .map((e) => ({ e, key: dayKey(new Date(e.date), tz) }))
     .filter(({ e, key }) => {
       if (key < todayKey) return false;
       if (key > todayKey) return true;
@@ -235,7 +240,8 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
     tz,
     todayKey,
     today: json<HubPayload["today"]>(today),
-    upNext: json<HubPayload["upNext"]>(upNext),
+    upNext,
+    feeds: { count: feed.count, errors: feed.errors },
     waitingOn,
     week: {
       weekStart: weekKey,

@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { Fragment, ReactNode, useEffect, useRef, useState } from "react";
 import Avatar from "@/components/shared/Avatar";
 
-// Calendar, People and the Town are reached from their Hub cards. Metrics is retired from the nav.
+// Everything lives on the Hub. Calendar and People are Hub sections; Tasks is the one deep page.
 const NAV_ITEMS = [
-  { href: "/hub", label: "Hub", icon: HubIcon },
-  { href: "/tasks", label: "Tasks", icon: TasksIcon },
+  { href: "/hub", label: "Hub", icon: HubIcon, match: "/hub" },
+  { href: "/tasks", label: "Tasks", icon: TasksIcon, match: "/tasks" },
+  { href: "/hub#calendar", label: "Calendar", icon: CalendarIcon, match: "/calendar" },
+  { href: "/hub#people", label: "People", icon: PeopleIcon, match: "/people" },
 ];
 
 function displayNameForEmail(email: string) {
@@ -91,7 +93,7 @@ export default function NavShell({
           </Link>
           <nav className="flex items-center gap-1">
             {NAV_ITEMS.map((item) => {
-              const active = pathname.startsWith(item.href);
+              const active = pathname.startsWith(item.match);
               return (
                 <Link
                   key={item.href}
@@ -150,7 +152,7 @@ export default function NavShell({
       {/* Mobile bottom nav: Hub, +, Tasks */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-border bg-background/90 backdrop-blur-xl z-40 flex items-stretch pb-[env(safe-area-inset-bottom)]">
         {NAV_ITEMS.map((item, i) => {
-          const active = pathname.startsWith(item.href);
+          const active = pathname.startsWith(item.match);
           const link = (
             <Link
               key={item.href}
@@ -239,3 +241,25 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
+function PeopleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}

@@ -506,3 +506,24 @@ select:focus-visible {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--surface-2) 82%, transparent);
 }
+
+.section-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.section-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

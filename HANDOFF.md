@@ -79,6 +79,19 @@ from their Hub cards and the Town tile. Metrics is off the nav (route
 still exists). Tasks page header: big headline, progress ring, three
 inline stats; rows lift gold on hover.
 
+**Round 5, all in one.** Abdi: "just have it all in one". The Hub holds
+every section: Today, Calendar (the full month/agenda, `HubCalendar`),
+People (`HubPeople`), This week, Agents, Town. Jump pills sit at the top
+of the home screen and stick under the top bar once you scroll
+(`SECTIONS` in `HomeScreen.tsx`). The clock is gone; the date stays. Nav
+is Hub, Tasks, Calendar (`/hub#calendar`), People (`/hub#people`).
+Autonomy: calendar feeds. Paste a Google Calendar secret iCal URL (or
+Calendly, any ICS) in Settings; `src/lib/calendar-feeds.ts` fetches it
+server side (node-ical, 5 min cache, recurring events expanded for a 7
+day back / 45 day forward window) and the events appear read-only in Up
+next, the Hub calendar and `/api/calendar-events?feeds=1`. Stored in
+SyncSource type CALENDAR name "ics".
+
 Known follow-ups: swipe to complete and press-and-hold on the counters
 were only exercised with mouse clicks; the backdrop picker is not in the
 phone account menu (it sits bottom-left of the home screen on all sizes);

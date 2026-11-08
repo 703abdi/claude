@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api-client";
 import Avatar from "@/components/shared/Avatar";
 
-type PersonSummary = {
+export type PersonSummary = {
   id: string;
   name: string;
   notes: string | null;
@@ -22,7 +22,7 @@ function byWaitingThenActive(a: PersonSummary, b: PersonSummary) {
   return a.name.localeCompare(b.name);
 }
 
-export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSummary[] }) {
+export default function PeopleGrid({ initialPeople, embedded = false }: { initialPeople: PersonSummary[]; embedded?: boolean }) {
   const [people, setPeople] = useState(initialPeople);
   const [filter, setFilter] = useState<"all" | "waiting">("all");
   const shown = useMemo(
@@ -45,11 +45,11 @@ export default function PeopleGrid({ initialPeople }: { initialPeople: PersonSum
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-8">
-      <div className="flex items-start justify-between gap-4 mb-8">
+    <div className={embedded ? "px-4 py-4 md:px-5 md:py-5" : "max-w-3xl mx-auto px-4 md:px-6 py-8"}>
+      <div className={`flex items-start justify-between gap-4 ${embedded ? "mb-5" : "mb-8"}`}>
         <div>
-          <h1 className="text-[34px]">People</h1>
-          <p className="text-sm text-muted mt-1">Everyone tied to a task, a follow-up, or a meeting.</p>
+          <h1 className={embedded ? "text-[18px] font-extrabold tracking-[-0.03em]" : "text-[34px]"}>People</h1>
+          {!embedded && <p className="text-sm text-muted mt-1">Everyone tied to a task, a follow-up, or a meeting.</p>}
         </div>
         {!adding && (
           <button

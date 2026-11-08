@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calendarEventCreateSchema } from "@/lib/validation";
+import { getFeedEvents } from "@/lib/calendar-feeds";
+import { resolveTz } from "@/lib/hub-data";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,7 +26,21 @@ export async function GET(req: NextRequest) {
     orderBy: { date: "asc" },
   });
 
-  return NextResponse.json(events);
+  if (searchParams.get("feeds") !== "1") return NextResponse.json(events);
+
+  // Read-only events from connected calendar feeds, merged in by date.
+  const tz = await resolveTz(searchParams.get("tz"));
+  const { events: feed } = await getFeedEvents(tz);
+  const fromMs = from ? new Date(from).getTime() : -Infinity;
+  const toMs = to ? new Date(to).getTime() : Infinity;
+  const merged = [
+    ...events.map((e) => ({ ...e, source: null, readOnly: false })),
+    ...feed.filter((e) => {
+      const t = new Date(e.date).getTime();
+      return t >= fromMs && t <= toMs;
+    }),
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return NextResponse.json(merged);
 }
 
 export async function POST(req: NextRequest) {
