@@ -71,7 +71,7 @@ function EmptyToday() {
   );
 }
 
-function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) => void }) {
+export function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) => void }) {
   const [checking, setChecking] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);

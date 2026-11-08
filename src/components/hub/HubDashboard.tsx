@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Reveal from "@/components/fx/Reveal";
 import { api } from "@/lib/api-client";
@@ -8,20 +8,16 @@ import { dayKey } from "@/lib/day";
 import type { HubPayload, InboxItem, Outcome, ScoreField, WaitingGroup } from "@/lib/hub-types";
 import { formatClock, parseQuickAdd, type ParsedQuickAdd } from "@/lib/quick-add-parse";
 import { describeScore } from "@/lib/command-parse";
-import type { TownSummary } from "@/lib/town-summary";
 import type { Task } from "@/lib/types";
 import { useHub } from "@/lib/useHub";
 import AgentFeed from "./AgentFeed";
 import BriefCard from "./BriefCard";
-import { UpNextCard, WaitingCard } from "./HubCards";
-import { AgentRoster, Connectors, NumbersStrip, type NumberItem } from "./HubExtras";
 import HomeScreen, { FOCUS_COMMAND_EVENT, SECTIONS, type CommandRun } from "./HomeScreen";
 import HubCalendar from "./HubCalendar";
 import HubPeople from "./HubPeople";
 import { useEffect } from "react";
 import { ToastHost, type Toast } from "./hub-ui";
 import TodayList from "./TodayList";
-import TownLazy from "./TownLazy";
 import WeekPanel from "./WeekPanel";
 
 const STAGGER = 0.06;
@@ -62,7 +58,6 @@ export default function HubDashboard({ name }: { name: string }) {
   const { data, mutate } = hub;
   const router = useRouter();
   const [toast, setToast] = useState<Toast | null>(null);
-  const [showExtras, setShowExtras] = useState(false);
 
   const say = useCallback((text: string, onAction?: () => void, actionLabel?: string) => {
     setToast({ id: Date.now(), text, onAction, actionLabel });
@@ -272,61 +267,14 @@ export default function HubDashboard({ name }: { name: string }) {
     setTimeout(() => window.dispatchEvent(new Event(FOCUS_COMMAND_EVENT)), 450);
   }
 
-  const [briefBusy, setBriefBusy] = useState(false);
-  async function generateBrief() {
-    if (briefBusy) return;
-    setBriefBusy(true);
-    say("Writing today's brief...");
-    try {
-      const res = await fetch("/api/morning-brief/generate", { method: "POST" });
-      if (!res.ok) throw new Error(String(res.status));
-      await hub.refresh();
-      say("Brief ready", () => router.push("/brief"), "Read");
-    } catch {
-      say("Couldn't generate the brief. Check ANTHROPIC_API_KEY.");
-    } finally {
-      setBriefBusy(false);
-    }
-  }
-
   // ── derived ──────────────────────────────────────────────────
-  const townSummary: TownSummary | null = useMemo(
-    () =>
-      data
-        ? {
-            tasks: {
-              open: data.stats.open,
-              overdue: data.stats.overdue,
-              dueToday: data.stats.dueToday,
-              items: data.today.map((t) => ({ id: t.id, title: t.title, dueDate: t.dueDate })),
-            },
-            calendar: { items: data.upNext.map((e) => ({ id: e.id, title: e.title, date: e.date, startTime: e.startTime })) },
-            people: { count: data.people.length, names: data.people },
-            metrics: data.metrics,
-          }
-        : null,
-    [data]
-  );
 
-  const agents = data?.agents.agents ?? [];
-  const working = agents.filter((a) => a.status === "WORKING").length;
-  const metrics = data?.metrics && "data" in data.metrics ? data.metrics.data : null;
 
-  const numbers: NumberItem[] = [
-    { label: "Open", value: data?.stats.open, href: "/tasks" },
-    { label: "Overdue", value: data?.stats.overdue, href: "/tasks", danger: true },
-    { label: "Due today", value: data?.stats.dueToday, href: "/tasks" },
-    { label: "Waiting", value: data?.stats.waiting, href: "/people" },
-    ...(agents.length > 0 ? [{ label: "Agents working", value: working, total: agents.length }] : []),
-    ...(data?.metrics.configured ? [{ label: "Leads today", value: metrics?.overview.today, href: "/metrics" }] : []),
-  ];
 
   const tz = data?.tz ?? "America/New_York";
   const todayKey = data?.todayKey ?? "";
 
   const week = data ? <WeekPanel week={data.week} onOutcomes={saveOutcomes} onScore={score} /> : <SkeletonCard rows={5} />;
-  const upNext = data ? <UpNextCard events={data.upNext} tz={tz} todayKey={todayKey} /> : <SkeletonCard rows={3} />;
-  const waiting = data ? <WaitingCard groups={data.waitingOn} onNudge={nudge} /> : <SkeletonCard rows={2} />;
   const brief = <BriefCard brief={data?.brief ?? null} loaded={!!data} tz={tz} todayKey={todayKey} onGenerated={hub.refresh} />;
 
   return (
@@ -340,7 +288,13 @@ export default function HubDashboard({ name }: { name: string }) {
         onRefresh={manualRefresh}
         onRun={runCommand}
         onNavigate={(href) => router.push(href)}
-        onGenerateBrief={generateBrief}
+        onComplete={completeTask}
+        onScore={score}
+        onNudge={nudge}
+        onResolveInbox={(id) => {
+          const item = data?.inbox.find((i) => i.id === id);
+          if (item) resolveInbox(item, "dismiss");
+        }}
       />
       {/* Sticky section nav once you are past the home screen */}
       <div
@@ -369,13 +323,7 @@ export default function HubDashboard({ name }: { name: string }) {
             <Reveal delay={STAGGER * 3} className="min-w-0 scroll-mt-28" id="week">
               {week}
             </Reveal>
-            <Reveal delay={STAGGER * 4} className="min-w-0 scroll-mt-20" id="upnext">
-              {upNext}
-            </Reveal>
-            <Reveal delay={STAGGER * 5} className="min-w-0 scroll-mt-20" id="waiting">
-              {waiting}
-            </Reveal>
-            <Reveal delay={STAGGER * 6} className="min-w-0">
+            <Reveal delay={STAGGER * 4} className="min-w-0">
               {brief}
             </Reveal>
           </div>
@@ -390,34 +338,10 @@ export default function HubDashboard({ name }: { name: string }) {
           </Reveal>
         </section>
 
-        <Reveal delay={STAGGER}>
-          <NumbersStrip items={numbers} />
-        </Reveal>
-
         <Reveal delay={STAGGER} className="scroll-mt-28" id="feed">
           <AgentFeed inbox={data?.inbox ?? []} runs={data?.agents.runs ?? []} onResolve={resolveInbox} />
         </Reveal>
 
-        <Reveal delay={STAGGER} className="scroll-mt-28" id="town">
-          <TownLazy agents={agents} runs={data?.agents.runs ?? []} summary={townSummary} onWorkSent={hub.refresh} />
-        </Reveal>
-
-        <section>
-          <button
-            onClick={() => setShowExtras((v) => !v)}
-            aria-expanded={showExtras}
-            className="flex w-full items-center justify-between rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-muted transition-colors hover:border-border-2 hover:text-foreground"
-          >
-            <span>Agents and connectors</span>
-            <span className="font-mono text-xs font-normal text-muted-2">{showExtras ? "hide" : `${agents.length} agents · show`}</span>
-          </button>
-          {showExtras && (
-            <div className="mt-4 grid gap-5 xl:grid-cols-[1.2fr_1fr]">
-              <AgentRoster agents={agents} onChanged={hub.refresh} />
-              <Connectors />
-            </div>
-          )}
-        </section>
       </div>
       <button
         onClick={backToBar}

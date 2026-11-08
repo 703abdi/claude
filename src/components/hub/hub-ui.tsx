@@ -8,6 +8,7 @@ export const AGENT_COLOR: Record<string, string> = {
   codex: "#10a37f",
   claude: "#d97757",
   jarvis: "var(--accent)",
+  fathom: "#a78bfa",
 };
 
 export function agentColor(name: string) {

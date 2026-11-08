@@ -2,12 +2,18 @@
 
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { HubPayload } from "@/lib/hub-types";
-import { commandHint, parseCommand, shortMoney, type Command } from "@/lib/command-parse";
+import { commandHint, parseCommand, type Command } from "@/lib/command-parse";
 import { parseQuickAdd, type ParsedQuickAdd } from "@/lib/quick-add-parse";
 import { dayKey } from "@/lib/day";
-import { ago, useMedia, useNow } from "./hub-ui";
+import { ago, useMedia, useNow, CheckMark } from "./hub-ui";
+import { nextAction, type NextAction } from "@/lib/next-action";
+import type { ScoreField, WaitingGroup } from "@/lib/hub-types";
+import type { Task } from "@/lib/types";
+import { Counter, CashCounter } from "./WeekPanel";
+import { TodayRow } from "./TodayList";
+import { shortMoney as money } from "@/lib/command-parse";
 
 /* ── Backdrop ─────────────────────────────────────────────────── */
 
@@ -191,80 +197,78 @@ function CommandBar({ data, onRun }: { data: HubPayload | null; onRun: CommandRu
   );
 }
 
-/* ── Tiles ────────────────────────────────────────────────────── */
 
-type Tile = { id: string; label: string; big: string; sub?: string; icon: ReactNode; onClick: () => void; ring?: number };
 
-function Icon({ d }: { d: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 tile-icon" aria-hidden>
-      <path d={d} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
-const ICONS = {
-  today: "M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11",
-  week: "M3 12h4l3-8 4 16 3-8h4",
-  next: "M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-  waiting: "M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 11l-3 3-2-2",
-  agents: "M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z",
-  brief: "M11 5L6 9H2v6h4l5 4V5zM19 12a7 7 0 00-3-5.7M15.5 8.5a3.5 3.5 0 010 7",
-};
 
-function TileButton({ tile, index }: { tile: Tile; index: number }) {
-  const reduced = useReducedMotion();
-  return (
-    <motion.button
-      type="button"
-      onClick={tile.onClick}
-      className="tile-home group relative flex flex-col items-start justify-between overflow-hidden rounded-3xl p-4 text-left md:p-5"
-      initial={reduced ? false : { opacity: 0, y: 12, scale: 0.98, filter: "blur(6px)" }}
-      animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-      transition={{ duration: 0.55, delay: 0.28 + index * 0.07, ease: [0.16, 1, 0.3, 1] }}
-      whileHover={reduced ? undefined : { y: -2 }}
-      whileTap={reduced ? undefined : { scale: 0.98 }}
-    >
-      <div className="flex w-full items-center justify-between">
-        <span className="eyebrow eyebrow-accent">{tile.label}</span>
-        <span className="text-muted-2 transition-colors group-hover:text-accent">{tile.icon}</span>
-      </div>
-      <div className="mt-3 flex w-full items-end justify-between gap-2">
-        <div className="min-w-0">
-          <div className="line-clamp-2 text-[15px] font-bold leading-tight tracking-tight text-foreground md:text-[19px]">{tile.big}</div>
-          {tile.sub && <div className="mt-0.5 truncate text-[12px] text-muted">{tile.sub}</div>}
-        </div>
-        {tile.ring !== undefined && <MiniRing pct={tile.ring} />}
-      </div>
-    </motion.button>
-  );
-}
 
-function MiniRing({ pct }: { pct: number }) {
-  const r = 14;
-  const c = 2 * Math.PI * r;
-  return (
-    <svg viewBox="0 0 36 36" className="h-9 w-9 shrink-0 -rotate-90" aria-hidden>
-      <circle cx="18" cy="18" r={r} stroke="var(--border-2)" strokeWidth="3" fill="none" />
-      <motion.circle
-        cx="18"
-        cy="18"
-        r={r}
-        stroke="var(--accent)"
-        strokeWidth="3"
-        fill="none"
-        strokeLinecap="round"
-        strokeDasharray={c}
-        initial={{ strokeDashoffset: c }}
-        animate={{ strokeDashoffset: c * (1 - Math.min(1, Math.max(0, pct))) }}
-        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-      />
-    </svg>
-  );
-}
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ── Do this now ──────────────────────────────────────────────── */
+
+const ACTION_LABEL: Record<NextAction["kind"], string> = {
+  late: "Late",
+  event: "Up next",
+  question: "Question",
+  nudge: "Owed to you",
+  dial: "Behind pace",
+  task: "Do this now",
+  outcome: "This week",
+};
+
+function DoNow({
+  action,
+  onDone,
+  onDial,
+  onNudge,
+  onAnswer,
+  onOpen,
+}: {
+  action: NextAction;
+  onDone: (task: Task) => void;
+  onDial: () => void;
+  onNudge: () => void;
+  onAnswer: () => void;
+  onOpen: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const primary =
+    action.kind === "late" || action.kind === "task"
+      ? { label: "Done", run: () => onDone(action.task) }
+      : action.kind === "dial"
+        ? { label: "+5 dials", run: onDial }
+        : action.kind === "nudge"
+          ? { label: "Nudge", run: onNudge }
+          : action.kind === "question"
+            ? { label: "Answered", run: onAnswer }
+            : { label: "Open", run: onOpen };
+  const danger = action.kind === "late";
+  return (
+    <motion.div
+      key={action.kind + action.title}
+      initial={reduced ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className={`do-now relative overflow-hidden rounded-3xl p-5 md:p-6 ${danger ? "do-now-danger" : ""}`}
+    >
+      <span className={`eyebrow ${danger ? "text-danger" : "eyebrow-accent"}`}>{ACTION_LABEL[action.kind]}</span>
+      <h2 className="mt-2 text-[clamp(1.25rem,3.4vw,1.75rem)] font-extrabold leading-tight tracking-[-0.03em] text-foreground">{action.title}</h2>
+      <p className="mt-1 text-[14px] text-muted">{action.detail}</p>
+      <div className="mt-4 flex items-center gap-2">
+        <button onClick={primary.run} className="btn-primary h-11 px-5 text-sm">
+          {primary.label}
+        </button>
+        {primary.label !== "Open" && (
+          <button onClick={onOpen} className="btn-ghost h-11 px-4 text-sm text-muted">
+            Open
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
 }
 
 /** The jump buttons at the top of the home screen. Everything lives on the Hub; Tasks is the one deep page. */
@@ -274,7 +278,7 @@ export const SECTIONS: { id: string; label: string; href?: string }[] = [
   { id: "people", label: "People" },
   { id: "week", label: "This week" },
   { id: "feed", label: "Agents" },
-  { id: "town", label: "Town" },
+  { id: "town", label: "Town", href: "/town" },
   { id: "tasks", label: "All tasks", href: "/tasks" },
 ];
 
@@ -289,7 +293,10 @@ export default function HomeScreen({
   onRefresh,
   onRun,
   onNavigate,
-  onGenerateBrief,
+  onComplete,
+  onScore,
+  onNudge,
+  onResolveInbox,
 }: {
   name: string;
   data: HubPayload | null;
@@ -299,7 +306,10 @@ export default function HomeScreen({
   onRefresh: () => void;
   onRun: CommandRun;
   onNavigate: (href: string) => void;
-  onGenerateBrief: () => void;
+  onComplete: (task: Task) => void;
+  onScore: (field: ScoreField, delta: number) => void;
+  onNudge: (group: WaitingGroup) => void;
+  onResolveInbox: (id: string) => void;
 }) {
   const now = useNow(1000);
   const reduced = useReducedMotion();
@@ -318,70 +328,8 @@ export default function HomeScreen({
   const d = now ? new Date(now) : null;
   const live = !error && updatedAt !== null;
 
-  const tiles: Tile[] = useMemo(() => {
-    if (!data) return [];
-    const late = data.today.filter((t) => t.overdue).length;
-    const outcomesDone = data.week.outcomes.filter((o) => o.done).length;
-    const goal = data.week.goal;
-    const nextEv = data.upNext[0];
-    const nextDay = nextEv ? dayKey(new Date(nextEv.date), data.tz) : null;
-    const nextWhen = nextEv
-      ? `${nextDay === data.todayKey ? "Today" : nextDay === dayKey(new Date((now ?? 0) + 86_400_000), data.tz) ? "Tomorrow" : new Date(nextEv.date).toLocaleDateString(undefined, { weekday: "short" })}${nextEv.startTime ? ` ${fmtClock(nextEv.startTime)}` : ""}`
-      : "";
-    const oldestWait = data.waitingOn[0]?.tasks[0]?.waitingAt;
-    const briefToday = data.brief && dayKey(new Date(data.brief.date), data.tz) === data.todayKey;
-    return [
-      {
-        id: "today",
-        label: "Today",
-        big: `${data.today.length} open`,
-        sub: late ? `${late} late` : `${data.stats.doneToday} done`,
-        icon: <Icon d={ICONS.today} />,
-        onClick: () => scrollTo("today"),
-      },
-      {
-        id: "week",
-        label: "This week",
-        big: `${outcomesDone}/${data.week.outcomes.length || 3} outcomes`,
-        sub: `${shortMoney(goal.collectedCents)} of ${shortMoney(goal.targetCents)}`,
-        ring: goal.targetCents ? goal.collectedCents / goal.targetCents : 0,
-        icon: <Icon d={ICONS.week} />,
-        onClick: () => scrollTo("week"),
-      },
-      {
-        id: "upnext",
-        label: "Up next",
-        big: nextEv ? nextEv.title : "Nothing booked",
-        sub: nextEv ? nextWhen : "Calendar is clear",
-        icon: <Icon d={ICONS.next} />,
-        onClick: () => scrollTo("calendar"),
-      },
-      {
-        id: "waiting",
-        label: "Waiting on",
-        big: data.waitingOn.length ? `${data.waitingOn.length} ${data.waitingOn.length === 1 ? "person" : "people"}` : "Nobody",
-        sub: oldestWait && now ? `oldest ${ago(oldestWait, now).replace(" ago", "")}` : "Nobody owes you anything",
-        icon: <Icon d={ICONS.waiting} />,
-        onClick: () => scrollTo("people"),
-      },
-      {
-        id: "feed",
-        label: "Agents",
-        big: data.inbox.length ? `${data.inbox.length} new` : "Quiet",
-        sub: data.inbox[0] ? `from ${data.inbox[0].agent}` : "No agent updates",
-        icon: <Icon d={ICONS.agents} />,
-        onClick: () => scrollTo("feed"),
-      },
-      {
-        id: "brief",
-        label: "Brief",
-        big: briefToday ? (data.brief?.hasAudio ? "Listen" : "Read") : "Generate",
-        sub: briefToday && data.brief?.audioDuration ? `${Math.max(1, Math.round(data.brief.audioDuration / 60))} min` : briefToday ? "Today's brief" : "Today's brief, one AI call",
-        icon: <Icon d={ICONS.brief} />,
-        onClick: () => (briefToday ? onNavigate("/brief") : onGenerateBrief()),
-      },
-    ];
-  }, [data, now, onNavigate, onGenerateBrief]);
+  const action = useMemo(() => (data && now ? nextAction(data, new Date(now)) : null), [data, now]);
+  const topThree = useMemo(() => (data ? data.today.slice(0, 3) : []), [data]);
 
   const rise = (i: number) =>
     reduced
@@ -425,15 +373,88 @@ export default function HomeScreen({
           {headline(data, now)}
         </motion.p>
 
+        {/* 1. Do this now */}
         <motion.div {...rise(4)} className="mt-7 w-full max-w-[720px]">
-          <CommandBar data={data} onRun={onRun} />
+          {action && data ? (
+            <DoNow
+              action={action}
+              onDone={(t) => onComplete(t)}
+              onDial={() => onScore("dials", 5)}
+              onNudge={() => {
+                const g = action.kind === "nudge" ? data.waitingOn.find((w) => w.person.id === action.personId) : null;
+                if (g) onNudge(g);
+              }}
+              onAnswer={() => (action.kind === "question" ? onResolveInbox(action.inboxId) : undefined)}
+              onOpen={() => {
+                if (action.kind === "event") scrollTo("calendar");
+                else if (action.kind === "outcome") scrollTo("week");
+                else if (action.kind === "task" || action.kind === "late") onNavigate(`/tasks?highlight=${action.task.id}`);
+                else if (action.kind === "nudge") onNavigate(`/people/${action.personId}`);
+                else if (action.kind === "question") scrollTo("feed");
+              }}
+            />
+          ) : (
+            <div className="do-now h-[132px] animate-pulse rounded-3xl" />
+          )}
         </motion.div>
 
-        <div className="mt-6 grid w-full grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-          {tiles.length
-            ? tiles.map((t, i) => <TileButton key={t.id} tile={t} index={i} />)
-            : Array.from({ length: 6 }).map((_, i) => <div key={i} className="tile-home h-[104px] animate-pulse rounded-3xl md:h-[128px]" />)}
-        </div>
+        {/* 2. Scoreboard */}
+        <motion.div {...rise(5)} className="mt-4 w-full max-w-[720px]">
+          {data ? (
+            <div className="grid grid-cols-4 gap-2 md:gap-3">
+              <Counter label="Dials" value={data.week.scoreboard.today.dials} onAdd={(n) => onScore("dials", n)} extra={5} />
+              <Counter label="Convos" value={data.week.scoreboard.today.convos} onAdd={(n) => onScore("convos", n)} />
+              <Counter label="Booked" value={data.week.scoreboard.today.booked} onAdd={(n) => onScore("booked", n)} />
+              <CashCounter cents={data.week.scoreboard.today.cashCents} onAdd={(c) => onScore("cashCents", c)} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2 md:gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="tile h-[118px] animate-pulse" />
+              ))}
+            </div>
+          )}
+          {data && (
+            <p className="mt-2 text-center font-mono text-[11px] text-muted-2">
+              {money(data.week.goal.collectedCents)} of {money(data.week.goal.targetCents)} · {data.week.goal.daysLeft} days left
+            </p>
+          )}
+        </motion.div>
+
+        {/* 3. Today's three */}
+        <motion.div {...rise(6)} className="mt-4 w-full max-w-[720px]">
+          {data && (
+            <div className="card p-2">
+              <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
+                <span className="eyebrow eyebrow-accent">Today</span>
+                <button onClick={() => scrollTo("today")} className="font-mono text-[11px] text-muted hover:text-accent">
+                  {data.today.length > 3 ? `all ${data.today.length}` : "open list"}
+                </button>
+              </div>
+              {topThree.length === 0 ? (
+                <p className="flex items-center gap-2 px-2 pb-2 text-sm text-muted">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-ink">
+                    <CheckMark on size={11} />
+                  </span>
+                  Clear for today.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  <AnimatePresence initial={false}>
+                    {topThree.map((t) => (
+                      <TodayRow key={t.id} task={t} onComplete={onComplete} />
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              )}
+            </div>
+          )}
+        </motion.div>
+
+        {/* 4. Command bar, for the rare thing it doesn't already know */}
+        <motion.div {...rise(7)} className="mt-5 w-full max-w-[720px]">
+          <CommandBar data={data} onRun={onRun} />
+        </motion.div>
       </div>
 
       {/* bottom row: backdrop picker + refresh + scroll hint */}

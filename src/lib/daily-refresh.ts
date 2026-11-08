@@ -8,6 +8,7 @@ import { gatherMorningBriefContext } from "./morning-brief/gather";
 import { generateMorningBriefText } from "./morning-brief/generate";
 import { buildTranscriptSegments, totalDuration } from "./morning-brief/segments";
 import { generateSpeech } from "./morning-brief/tts";
+import { syncFathom } from "./fathom";
 
 /**
  * Recomputes aiPriorityScore/aiPriorityReason for every active task.
@@ -46,6 +47,7 @@ export async function recomputePriorities() {
  * user's manual priorities.
  */
 export async function runDailyRefresh() {
+  const fathom = await syncFathom({ force: true }).catch(() => null);
   const extraction = await runExtractionPipeline(50);
   // Cross-item pass: runs after extraction so freshly ingested items are
   // already classified, and before the detectors so its output is deduped
@@ -95,5 +97,5 @@ export async function runDailyRefresh() {
     select: { id: true },
   });
 
-  return { extraction, synthesis, suggestions, priorities, briefId: brief.id };
+  return { fathom, extraction, synthesis, suggestions, priorities, briefId: brief.id };
 }

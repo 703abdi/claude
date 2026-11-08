@@ -527,3 +527,15 @@ select:focus-visible {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.do-now {
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 20px 60px -30px color-mix(in srgb, var(--accent) 60%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.do-now-danger {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 30%, transparent), 0 20px 60px -30px color-mix(in srgb, var(--danger) 60%, transparent);
+}

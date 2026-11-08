@@ -92,6 +92,22 @@ day back / 45 day forward window) and the events appear read-only in Up
 next, the Hub calendar and `/api/calendar-events?feeds=1`. Stored in
 SyncSource type CALENDAR name "ics".
 
+**Round 6, usability and Fathom.** Home screen is now four things: a
+"Do this now" card (`src/lib/next-action.ts`: late task, call within 45
+min, agent question, person owed a nudge, dials behind pace on a
+weekday after 10am, top pinned task, else an outcome), the scoreboard
+with + buttons, today's top three, then the command bar. Tiles, the
+numbers strip, the Up next and Waiting cards, the Town section and the
+agents row are gone from the Hub (agents and connectors live in
+Settings; Town is a pill to /town). Fathom: set `FATHOM_API_KEY`
+(Fathom Settings -> API). `src/lib/fathom.ts` pulls recorded calls
+(30 min throttle via SyncSource MANUAL/"fathom", also forced in the daily
+refresh and from Settings -> Sync now). Each call becomes an agent feed
+item with its link; action items assigned to Abdi (or unassigned) become
+pinned tasks with source `fathom:<recording>:<n>`; items assigned to a
+known Person become WAITING tasks on that person. Not tested against a
+real Fathom key yet.
+
 Known follow-ups: swipe to complete and press-and-hold on the counters
 were only exercised with mouse clicks; the backdrop picker is not in the
 phone account menu (it sits bottom-left of the home screen on all sizes);

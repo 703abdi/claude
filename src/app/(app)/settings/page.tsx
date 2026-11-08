@@ -6,6 +6,8 @@ import ClaudeUploader from "@/components/settings/ClaudeUploader";
 import ProcessContextButton from "@/components/settings/ProcessContextButton";
 import DailyRefreshButton from "@/components/settings/DailyRefreshButton";
 import CalendarFeeds from "@/components/settings/CalendarFeeds";
+import FathomSettings from "@/components/settings/FathomSettings";
+import AgentsSettings from "@/components/settings/AgentsSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,17 @@ export default async function SettingsPage() {
         <h1 className="text-[28px]">Settings</h1>
         <p className="text-sm text-muted mt-1">Morning brief, context sources, and integrations.</p>
       </div>
+
+      <section className="border border-border bg-surface rounded-lg p-4">
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-3">Agents and connectors</h2>
+        <AgentsSettings />
+      </section>
+
+      <section className="border border-border bg-surface rounded-lg p-4">
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Fathom calls</h2>
+        <p className="text-xs text-muted mb-3">Action items from every recorded call become tasks without you typing them.</p>
+        <FathomSettings />
+      </section>
 
       <section className="border border-border bg-surface rounded-lg p-4">
         <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Calendar feeds</h2>

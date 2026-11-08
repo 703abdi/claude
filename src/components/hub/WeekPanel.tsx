@@ -180,7 +180,7 @@ function useHoldToAdd(onFlush: (delta: number) => void, step = 1) {
   };
 }
 
-function Counter({
+export function Counter({
   label,
   value,
   onAdd,
@@ -216,7 +216,7 @@ function Counter({
   );
 }
 
-function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCents: number) => void }) {
+export function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCents: number) => void }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const add = (dollars: number) => {
