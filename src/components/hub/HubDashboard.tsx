@@ -305,6 +305,7 @@ export default function HubDashboard({ name }: { name: string }) {
           const item = data?.inbox.find((i) => i.id === id);
           if (item) resolveInbox(item, "dismiss");
         }}
+        brief={brief}
       />
       {/* Sticky section nav once you are past the home screen */}
       <div
@@ -332,9 +333,6 @@ export default function HubDashboard({ name }: { name: string }) {
           <div className="min-w-0 space-y-5 lg:sticky lg:top-[77px] lg:col-span-5">
             <Reveal delay={STAGGER * 3} className="min-w-0 scroll-mt-28" id="week">
               {week}
-            </Reveal>
-            <Reveal delay={STAGGER * 4} className="min-w-0">
-              {brief}
             </Reveal>
           </div>
         </section>

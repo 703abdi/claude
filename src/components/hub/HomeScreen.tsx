@@ -344,8 +344,11 @@ export default function HomeScreen({
   onScore,
   onNudge,
   onResolveInbox,
+  brief,
 }: {
   name: string;
+  /** The morning brief card, shown in the Jarvis drop-down at the top. */
+  brief: React.ReactNode;
   data: HubPayload | null;
   updatedAt: number | null;
   changedAt: number;
@@ -365,6 +368,7 @@ export default function HomeScreen({
   const { id: backdropId, choose, backdrop } = useBackdrop();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [jarvisOpen, setJarvisOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -392,8 +396,43 @@ export default function HomeScreen({
     <section className="home relative flex min-h-[100svh] flex-col md:min-h-[88vh]">
       <Backdrop src={backdrop.src} kenBurns={isDesktop && !reduced} />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[880px] flex-1 flex-col items-center justify-center px-4 pb-16 pt-10 md:pb-20">
-        <motion.nav {...rise(0)} aria-label="Jump to" className="flex max-w-full flex-wrap items-center justify-center gap-1.5">
+      <div className="relative z-10 mx-auto flex w-full max-w-[880px] flex-1 flex-col items-center justify-center px-4 pb-16 pt-8 md:pb-20">
+        {/* 0. Jarvis: the morning brief, one tap, drops down */}
+        <motion.div {...rise(0)} className="flex w-full max-w-[720px] flex-col items-center">
+          <button
+            onClick={() => setJarvisOpen((v) => !v)}
+            aria-expanded={jarvisOpen}
+            aria-controls="jarvis-brief"
+            className={`jarvis ${jarvisOpen ? "jarvis-open" : ""}`}
+          >
+            <span className="jarvis-orb" aria-hidden>
+              <span className="hub-wave flex h-3 items-end gap-[2px]">
+                {[0.1, 0.35, 0.2, 0.5, 0.15].map((dl, i) => (
+                  <span key={i} style={{ height: "100%", animationDelay: `${dl}s` }} />
+                ))}
+              </span>
+            </span>
+            <span className="text-[13px] font-semibold tracking-wide">Jarvis</span>
+            <span className="font-mono text-[11px] text-muted-2">{jarvisOpen ? "close" : "morning brief"}</span>
+          </button>
+          <AnimatePresence initial={false}>
+            {jarvisOpen && (
+              <motion.div
+                id="jarvis-brief"
+                key="jarvis"
+                initial={reduced ? false : { opacity: 0, height: 0, y: -8 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={reduced ? undefined : { opacity: 0, height: 0, y: -8 }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full overflow-hidden"
+              >
+                <div className="pt-3">{brief}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        <motion.nav {...rise(1)} aria-label="Jump to" className="mt-8 flex max-w-full flex-wrap items-center justify-center gap-1.5">
           {SECTIONS.map((sct) => (
             <button
               key={sct.id}
@@ -405,7 +444,7 @@ export default function HomeScreen({
           ))}
         </motion.nav>
 
-        <motion.p {...rise(1)} className="eyebrow eyebrow-accent mt-6 flex items-center gap-2">
+        <motion.p {...rise(2)} className="eyebrow eyebrow-accent mt-8 flex items-center gap-2">
           <span className="relative flex h-1.5 w-1.5" title={error ? "Can't reach the server" : "Live"}>
             <span key={changedAt} className={`absolute inset-0 rounded-full ${changedAt ? "live-ring" : ""}`} />
             <span className={`relative h-1.5 w-1.5 rounded-full ${live ? "blink-dot" : ""}`} style={{ background: live ? "var(--accent)" : "var(--danger)" }} />
@@ -413,16 +452,16 @@ export default function HomeScreen({
           <span>{d ? d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }).toUpperCase() : " "}</span>
         </motion.p>
 
-        <motion.h1 {...rise(2)} className="mt-3 text-center text-[clamp(2.4rem,6vw,4.5rem)]">
+        <motion.h1 {...rise(3)} className="mt-3 text-center text-[clamp(2.4rem,6vw,4.5rem)]">
           {d ? greeting(d.getHours()) : "Hey"}, <span className="hl">{name}</span>.
         </motion.h1>
 
-        <motion.p {...rise(3)} className="mt-3 min-h-6 text-center text-[15px] text-muted md:text-[17px]">
+        <motion.p {...rise(4)} className="mt-3 min-h-6 text-center text-[15px] text-muted md:text-[17px]">
           {headline(data, now)}
         </motion.p>
 
         {/* 1. Do this now */}
-        <motion.div {...rise(4)} className="mt-7 w-full max-w-[720px]">
+        <motion.div {...rise(5)} className="mt-10 w-full max-w-[720px]">
           {action && data ? (
             <DoNow
               action={action}
@@ -447,34 +486,37 @@ export default function HomeScreen({
           )}
         </motion.div>
 
-        {/* 2. Scoreboard */}
-        <motion.div {...rise(5)} className="mt-4 w-full max-w-[720px]">
+        {/* 2. Scoreboard, its own block */}
+        <motion.div {...rise(6)} id="scoreboard" className="mt-10 w-full max-w-[720px] scroll-mt-28">
+          <div className="mb-3 flex items-center justify-between px-1">
+            <span className="eyebrow eyebrow-accent">Scoreboard</span>
+            {data && (
+              <span className="font-mono text-[11px] text-muted-2">
+                {money(data.week.goal.collectedCents)} of {money(data.week.goal.targetCents)} · {data.week.goal.daysLeft} days left
+              </span>
+            )}
+          </div>
           {data ? (
-            <div className="grid grid-cols-4 gap-2 md:gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
               <Counter label="Dials" value={data.week.scoreboard.today.dials} onAdd={(n) => onScore("dials", n)} extra={5} />
               <Counter label="Convos" value={data.week.scoreboard.today.convos} onAdd={(n) => onScore("convos", n)} />
               <Counter label="Booked" value={data.week.scoreboard.today.booked} onAdd={(n) => onScore("booked", n)} />
               <CashCounter cents={data.week.scoreboard.today.cashCents} onAdd={(c) => onScore("cashCents", c)} />
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-2 md:gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="tile h-[118px] animate-pulse" />
               ))}
             </div>
           )}
-          {data && (
-            <p className="mt-2 text-center font-mono text-[11px] text-muted-2">
-              {money(data.week.goal.collectedCents)} of {money(data.week.goal.targetCents)} · {data.week.goal.daysLeft} days left
-            </p>
-          )}
         </motion.div>
 
         {/* 3. Today's three */}
-        <motion.div {...rise(6)} className="mt-4 w-full max-w-[720px]">
+        <motion.div {...rise(7)} className="mt-10 w-full max-w-[720px]">
           {data && (
-            <div className="card p-2">
-              <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
+            <div className="card p-3">
+              <div className="flex items-center justify-between px-2 pt-1 pb-2">
                 <span className="eyebrow eyebrow-accent">Today</span>
                 <button onClick={() => scrollTo("today")} className="font-mono text-[11px] text-muted hover:text-accent">
                   {data.today.length > 3 ? `all ${data.today.length}` : "open list"}
@@ -501,7 +543,7 @@ export default function HomeScreen({
         </motion.div>
 
         {/* 4. Command bar, for the rare thing it doesn't already know */}
-        <motion.div {...rise(7)} className="mt-5 w-full max-w-[720px]">
+        <motion.div {...rise(8)} className="mt-8 w-full max-w-[720px]">
           <CommandBar data={data} onRun={onRun} />
         </motion.div>
       </div>

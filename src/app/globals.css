@@ -528,6 +528,48 @@ select:focus-visible {
   color: var(--accent);
 }
 
+/* Jarvis: the one button at the top of Home that drops the morning brief down. */
+.jarvis {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+  backdrop-filter: blur(10px);
+  color: var(--foreground);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.jarvis:hover,
+.jarvis-open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent), 0 0 32px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+.jarvis:active {
+  transform: scale(0.98);
+}
+.jarvis-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, color-mix(in oklab, var(--accent) 90%, white), var(--accent) 60%, color-mix(in oklab, var(--accent) 60%, black));
+  color: var(--accent-ink);
+  box-shadow: 0 0 18px color-mix(in oklab, var(--accent) 55%, transparent);
+  animation: jarvis-breathe 3.2s ease-in-out infinite;
+}
+@keyframes jarvis-breathe {
+  0%, 100% { box-shadow: 0 0 14px color-mix(in oklab, var(--accent) 45%, transparent); }
+  50% { box-shadow: 0 0 26px color-mix(in oklab, var(--accent) 75%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jarvis-orb { animation: none; }
+}
+
 .do-now {
   background: color-mix(in srgb, var(--surface-2) 82%, transparent);
   border: 1px solid var(--accent);
