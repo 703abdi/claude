@@ -308,7 +308,7 @@ export default function HubDashboard({ name }: { name: string }) {
   const tz = data?.tz ?? "America/New_York";
   const todayKey = data?.todayKey ?? "";
 
-  const week = data ? <WeekPanel week={data.week} onOutcomes={saveOutcomes} onScore={score} /> : <SkeletonCard rows={5} />;
+  const week = data ? <WeekPanel week={data.week} onOutcomes={saveOutcomes} /> : <SkeletonCard rows={5} />;
   const brief = <BriefCard brief={data?.brief ?? null} loaded={!!data} tz={tz} todayKey={todayKey} onGenerated={hub.refresh} />;
 
   return (
@@ -350,13 +350,17 @@ export default function HubDashboard({ name }: { name: string }) {
         </div>
       </div>
       <div id="dashboard" className="mx-auto max-w-[1400px] space-y-5 px-4 py-5 md:px-8 md:py-7">
+        {/* Today sits right on top of This week; the calendar beside them. */}
         <section className="grid items-start gap-5 lg:grid-cols-12">
-          <div className="min-w-0 space-y-4 lg:col-span-7">
-            <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-28" id="today">
-              {data ? <TodayList tasks={data.today} onComplete={completeTask} onNext={pushToNext} /> : <SkeletonCard rows={4} />}
+          <div className="order-2 min-w-0 space-y-5 lg:order-1 lg:col-span-7">
+            <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-28" id="calendar">
+              {data ? <HubCalendar categories={data.categories} people={data.people} version={data.version} /> : <SkeletonCard rows={6} />}
             </Reveal>
           </div>
-          <div className="min-w-0 space-y-5 lg:sticky lg:top-[77px] lg:col-span-5">
+          <div className="order-1 min-w-0 space-y-5 lg:order-2 lg:sticky lg:top-[77px] lg:col-span-5">
+            <Reveal delay={STAGGER} className="min-w-0 scroll-mt-28" id="today">
+              {data ? <TodayList tasks={data.today} onComplete={completeTask} onNext={pushToNext} /> : <SkeletonCard rows={4} />}
+            </Reveal>
             <Reveal delay={STAGGER * 3} className="min-w-0 scroll-mt-28" id="week">
               {week}
             </Reveal>
@@ -364,17 +368,13 @@ export default function HubDashboard({ name }: { name: string }) {
         </section>
 
         <section className="grid items-start gap-5 lg:grid-cols-12">
-          <Reveal delay={STAGGER} className="min-w-0 scroll-mt-28 lg:col-span-7" id="calendar">
-            {data ? <HubCalendar categories={data.categories} people={data.people} version={data.version} /> : <SkeletonCard rows={6} />}
+          <Reveal delay={STAGGER} className="min-w-0 scroll-mt-28 lg:col-span-7" id="feed">
+            <AgentFeed inbox={data?.inbox ?? []} runs={data?.agents.runs ?? []} onResolve={resolveInbox} />
           </Reveal>
           <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-28 lg:col-span-5" id="people">
             {data ? <HubPeople version={data.version} /> : <SkeletonCard rows={3} />}
           </Reveal>
         </section>
-
-        <Reveal delay={STAGGER} className="scroll-mt-28" id="feed">
-          <AgentFeed inbox={data?.inbox ?? []} runs={data?.agents.runs ?? []} onResolve={resolveInbox} />
-        </Reveal>
 
       </div>
       <button

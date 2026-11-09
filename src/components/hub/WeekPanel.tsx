@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import type { HubPayload, Outcome, ScoreField } from "@/lib/hub-types";
+import type { HubPayload, Outcome } from "@/lib/hub-types";
 import { Card, CardTitle, CheckMark, FlipNumber } from "./hub-ui";
 
 function rangeLabel(startKey: string, endKey: string) {
@@ -18,11 +18,9 @@ const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
 export default function WeekPanel({
   week,
   onOutcomes,
-  onScore,
 }: {
   week: HubPayload["week"];
   onOutcomes: (outcomes: Outcome[]) => void;
-  onScore: (field: ScoreField, delta: number) => void;
 }) {
   const slots: Outcome[] = [0, 1, 2].map((i) => week.outcomes[i] ?? { text: "", done: false });
 
@@ -33,7 +31,8 @@ export default function WeekPanel({
     onOutcomes(list);
   }
 
-  const sb = week.scoreboard.today;
+  const wk = week.scoreboard.week;
+  const td = week.scoreboard.today;
   return (
     <Card>
       <CardTitle label="This week" right={<span className="font-mono text-[12px] text-muted-2">{rangeLabel(week.weekStart, week.weekEnd)}</span>} />
@@ -44,20 +43,30 @@ export default function WeekPanel({
       </ul>
 
       <div className="mb-2 mt-5 flex items-center justify-between">
-        <span className="eyebrow eyebrow-accent">Scoreboard · today</span>
-        <span className="font-mono text-[11px] text-muted-2">
-          week {week.scoreboard.week.dials}d · {week.scoreboard.week.convos}c · {week.scoreboard.week.booked}b
-        </span>
+        <span className="eyebrow eyebrow-accent">Scoreboard for the week</span>
+        <span className="font-mono text-[11px] text-muted-2">adds up from each day</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Counter label="Dials" value={sb.dials} onAdd={(d) => onScore("dials", d)} extra={5} />
-        <Counter label="Convos" value={sb.convos} onAdd={(d) => onScore("convos", d)} />
-        <Counter label="Booked" value={sb.booked} onAdd={(d) => onScore("booked", d)} />
-        <CashCounter cents={sb.cashCents} onAdd={(d) => onScore("cashCents", d)} />
+        <WeekStat label="Dials" value={wk.dials} today={td.dials} />
+        <WeekStat label="Convos" value={wk.convos} today={td.convos} />
+        <WeekStat label="Booked" value={wk.booked} today={td.booked} />
+        <WeekStat label="Cash" value={wk.cashCents} today={td.cashCents} cash />
       </div>
 
       <CashRing goal={week.goal} />
     </Card>
+  );
+}
+
+/** A read-only week total. The numbers come from the daily scoreboard on Home. */
+function WeekStat({ label, value, today, cash = false }: { label: string; value: number; today: number; cash?: boolean }) {
+  const fmt = (n: number) => (cash ? `$${Math.round(n / 100).toLocaleString()}` : n.toLocaleString());
+  return (
+    <div className="tile flex flex-col gap-1 p-3">
+      <span className="eyebrow">{label}</span>
+      <span className="font-mono text-[22px] font-bold leading-none tracking-tight">{fmt(value)}</span>
+      <span className="font-mono text-[11px] text-muted-2">{today > 0 ? `+${fmt(today)} today` : "none today"}</span>
+    </div>
   );
 }
 

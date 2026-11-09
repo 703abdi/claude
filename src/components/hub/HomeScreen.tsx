@@ -246,6 +246,7 @@ function actionKey(a: NextAction) {
 function DoNow({
   action,
   onDone,
+  onNext,
   onDrop,
   onDial,
   onNudge,
@@ -254,6 +255,7 @@ function DoNow({
 }: {
   action: NextAction;
   onDone: (task: Task) => void;
+  onNext: (task: Task) => void;
   onDrop: (task: Task) => void;
   onDial: () => void;
   onNudge: () => void;
@@ -286,7 +288,12 @@ function DoNow({
             : { label: "Open", run: onOpen };
   const danger = action.kind === "late";
   primary.run = acted(primary.label, primary.run);
-  const secondary = action.kind === "stale" ? { label: "Done instead", run: acted("Done instead", () => onDone(action.task)) } : null;
+  const secondary =
+    action.kind === "stale"
+      ? { label: "Done instead", run: acted("Done instead", () => onDone(action.task)) }
+      : action.kind === "late" || action.kind === "task"
+        ? { label: "Not now", run: acted("Not now", () => onNext(action.task)) }
+        : null;
   return (
     <motion.div
       key={action.kind + action.title}
@@ -468,6 +475,7 @@ export default function HomeScreen({
             <DoNow
               action={action}
               onDone={(t) => onComplete(t)}
+              onNext={(t) => onNext(t)}
               onDrop={(t) => onDrop(t)}
               onDial={() => onScore("dials", 5)}
               onNudge={() => {
