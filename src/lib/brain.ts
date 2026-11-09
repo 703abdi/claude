@@ -86,7 +86,7 @@ export async function runBrain(opts: { force?: boolean } = {}) {
 Return ONLY JSON:
 {
   "ranking": [{ "taskId": "<id from the open tasks>", "why": "<one line, under 90 chars, plain words, no hype>" }],   // up to ${MAX_RANKED}, best first, only non-WAITING tasks
-  "policy": { "dialTarget"?: number, "dialStartHour"?: number, "fathomPinMax"?: number, "nudgeAfterDays"?: number, "eventLeadMin"?: number, "dialNudge"?: boolean },  // only keys you want to change, within bounds; omit the object if nothing should change
+  "policy": { "dialTarget"?: number, "dialStartHour"?: number, "fathomPinMax"?: number, "nudgeAfterDays"?: number, "eventLeadMin"?: number, "personAfterSeen"?: number, "dialNudge"?: boolean },  // only keys you want to change, within bounds; omit the object if nothing should change
   "summary": "<two or three plain sentences on what you saw and what you changed and why; no bullet points>",
   "observations": ["<optional short facts worth remembering, max 3>"]
 }

@@ -1,7 +1,7 @@
 import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { matchPeople } from "@/lib/quick-add-parse";
 import { getPolicy } from "@/lib/policy";
+import { notePerson } from "@/lib/people-auto";
 import { logSignal } from "@/lib/signals";
 
 /** Fathom call recorder -> the OS. After every recorded call, the action items become
@@ -89,15 +89,6 @@ function cleanName(raw: string | null | undefined): string | null {
     .join(" ");
 }
 
-/** "jane.doe@x.com" -> "Jane Doe". Null for noreply, numbers-only and the like. */
-export function nameFromEmail(email: string | null | undefined): string | null {
-  const local = email?.split("@")[0]?.trim();
-  if (!local || /^(no-?reply|info|hello|support|team|admin|contact|sales|mail)$/i.test(local)) return null;
-  const words = local.split(/[._+-]+/).filter((w) => /^[a-z]{2,}$/i.test(w));
-  if (!words.length) return null;
-  return words.slice(0, 3).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-}
-
 function isMe(a: ActionItem["assignee"], myEmail: string | null, myName: string | null) {
   if (!a) return true; // unassigned items are yours to triage
   const email = a.email?.toLowerCase() ?? "";
@@ -122,17 +113,12 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
   const user = await prisma.user.findFirst({ select: { email: true, name: true } });
   const people = await prisma.person.findMany({ select: { id: true, name: true } });
 
-  /** Find a tracked person, or create one. Falls back to the email's local part
-   * ("jane.doe@x.com" -> "Jane Doe") when the invite had no name, so nobody has to be typed in. */
-  async function personFor(rawName: string | null | undefined, note: string, email?: string | null) {
-    const name = cleanName(rawName) ?? nameFromEmail(email);
-    if (!name) return null;
-    const hit = matchPeople(name.toLowerCase(), people);
-    if (hit) return hit;
+  /** Tracked person by name, or a sighting that becomes a Person after enough calls (see people-auto). */
+  async function personFor(rawName: string | null | undefined, note: string, email: string | null | undefined, ref: string) {
+    const name = cleanName(rawName);
+    if (!name && !email) return null;
     if (isMe({ name, email }, user?.email ?? null, user?.name ?? null)) return null;
-    const created = await prisma.person.create({ data: { name, notes: [email, note].filter(Boolean).join("\n") } }).catch(() => null);
-    if (created) people.push({ id: created.id, name: created.name });
-    return created ? { id: created.id, name: created.name } : null;
+    return notePerson({ name, email: email ?? null, ref, source: "fathom", note }, people);
   }
 
   const { policy } = await getPolicy();
@@ -151,7 +137,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
       const external = (m.calendar_invitees ?? []).filter((i) => i.is_external !== false && (i.name || i.email));
       let callPerson: { id: string; name: string } | null = null;
       for (const i of external) {
-        const p = await personFor(i.name, `Met on a recorded call, ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, i.email);
+        const p = await personFor(i.name, `Met on a recorded call, ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, i.email, `fathom:${m.recording_id}`);
         if (p && !callPerson) callPerson = p;
       }
       const items = (m.action_items ?? []).filter((a) => a.description?.trim() && !a.completed);
@@ -165,7 +151,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
             title: `Call: ${title}`,
             body: [
               when.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
-              external.map((i) => cleanName(i.name) ?? nameFromEmail(i.email)).filter(Boolean).join(", ") || null,
+              external.map((i) => cleanName(i.name) ?? i.email).filter(Boolean).join(", ") || null,
               `${items.length} action item${items.length === 1 ? "" : "s"}`,
             ]
               .filter(Boolean)
@@ -183,13 +169,14 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
         const exists = await prisma.task.findFirst({ where: { source }, select: { id: true } });
         if (exists) continue;
         const mine = isMe(a.assignee, user?.email ?? null, user?.name ?? null);
-        const assigneePerson = !mine ? await personFor(a.assignee?.name, "Promised something on a recorded call.", a.assignee?.email) : null;
-        if (!mine && !assigneePerson) continue;
+        const assigneePerson = !mine ? await personFor(a.assignee?.name, "Promised something on a recorded call.", a.assignee?.email, `fathom:${m.recording_id}`) : null;
+        const owedBy = !mine && !assigneePerson ? cleanName(a.assignee?.name) ?? a.assignee?.email ?? null : null;
+        if (!mine && !assigneePerson && !owedBy) continue;
         position += 1000;
         // Only the first few of your own items per call land in Today; the rest wait in Tasks.
         const pin = mine && pinnedThisCall < policy.fathomPinMax;
         if (pin) pinnedThisCall++;
-        const notes = [`From the call "${title}" on ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, a.recording_playback_url || link]
+        const notes = [owedBy ? `Owed by ${owedBy}.` : null, `From the call "${title}" on ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, a.recording_playback_url || link]
           .filter(Boolean)
           .join("\n");
         const linkPerson = mine ? callPerson : assigneePerson;

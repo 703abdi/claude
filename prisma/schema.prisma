@@ -57,6 +57,20 @@ model Person {
   followUpTasks Task[]          @relation("FollowUpPerson")
 }
 
+/** Someone seen on a call, booking or invite who is not a Person yet. One row per email (or
+ * name when there is no email); `refs` are the distinct events they were seen on. They become
+ * a Person once refs reaches the policy's personAfterSeen. */
+model ContactSighting {
+  key       String   @id
+  name      String?
+  email     String?
+  refs      String[] @default([])
+  sources   String[] @default([])
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  personId  String?
+}
+
 // ─────────────────────────────────────────────────────────────
 // TASKS
 // ─────────────────────────────────────────────────────────────

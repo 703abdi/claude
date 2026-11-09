@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { clockInTz, dayKey, utcDateFromKey } from "@/lib/day";
-import { matchPeople } from "@/lib/quick-add-parse";
+import { notePerson } from "@/lib/people-auto";
 import { logSignal } from "@/lib/signals";
 
 /** Calendly -> the OS. Every booked call becomes a calendar event (read-only, linked to the
@@ -139,16 +139,7 @@ export async function syncCalendly(opts: { force?: boolean; tz?: string } = {}) 
       const invitees: { collection: Invitee[] } = await get(`/scheduled_events/${uuid}/invitees?status=active&count=10`);
       const inv = invitees.collection[0] ?? null;
       const name = cleanName(inv?.name);
-      let person = name ? matchPeople(name.toLowerCase(), people) : null;
-      if (!person && name) {
-        const created = await prisma.person
-          .create({ data: { name, notes: [inv?.email, "Booked a call through Calendly."].filter(Boolean).join("\n") } })
-          .catch(() => null);
-        if (created) {
-          person = { id: created.id, name: created.name };
-          people.push(person);
-        }
-      }
+      const person = inv ? await notePerson({ name, email: inv.email, ref: externalId, source: "calendly", note: "Booked a call through Calendly." }, people) : null;
 
       const start = new Date(ev.start_time);
       const end = new Date(ev.end_time);

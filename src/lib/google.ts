@@ -1,8 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { clockInTz, zonedTime } from "@/lib/day";
-import { matchPeople } from "@/lib/quick-add-parse";
-import { nameFromEmail } from "@/lib/fathom";
+import { notePerson } from "@/lib/people-auto";
 import { logSignal } from "@/lib/signals";
 
 /** Google -> the OS. One OAuth connection (Settings, Sources, Connect Google) gives read access
@@ -243,18 +242,10 @@ async function syncCalendar(cfg: Config, tz: string, people: { id: string; name:
     // Everyone on the invite but you and meeting rooms. Declined people still count: you still know them.
     const others = (ev.attendees ?? []).filter((a) => !a.self && !a.resource && a.email?.toLowerCase() !== myEmail?.toLowerCase());
     let person: { id: string; name: string } | null = null;
-    for (const a of others) {
-      const name = cleanName(a.displayName) ?? nameFromEmail(a.email);
-      if (!name) continue;
-      let hit = matchPeople(name.toLowerCase(), people);
-      if (!hit) {
-        const created = await prisma.person.create({ data: { name, notes: [a.email, "On a calendar invite with you."].filter(Boolean).join("\n") } }).catch(() => null);
-        if (created) {
-          hit = { id: created.id, name: created.name };
-          people.push(hit);
-          newPeople++;
-        }
-      }
+    for (const a of others.slice(0, 8)) {
+      const before = people.length;
+      const hit = await notePerson({ name: cleanName(a.displayName), email: a.email ?? null, ref: externalId, source: "google", note: "On a calendar invite with you." }, people);
+      if (people.length > before) newPeople++;
       if (hit && !person) person = hit;
     }
 

@@ -20,6 +20,8 @@ export type Policy = {
   nudgeAfterDays: number;
   /** Minutes before a call that Do-this-now switches to "prep for it". */
   eventLeadMin: number;
+  /** Distinct calls, bookings or invites someone must appear on before they become a Person. */
+  personAfterSeen: number;
   /** Tomorrow's order for Today, written by the brain, with a one-line why each. */
   ranking: Ranked[];
   /** Local day (YYYY-MM-DD) the ranking is for. Ignored on any other day. */
@@ -33,6 +35,7 @@ export const POLICY_DEFAULTS: Policy = {
   fathomPinMax: 2,
   nudgeAfterDays: 3,
   eventLeadMin: 45,
+  personAfterSeen: 3,
   ranking: [],
   rankingDay: null,
 };
@@ -44,6 +47,7 @@ export const POLICY_BOUNDS = {
   fathomPinMax: { min: 0, max: 5 },
   nudgeAfterDays: { min: 1, max: 7 },
   eventLeadMin: { min: 15, max: 90 },
+  personAfterSeen: { min: 1, max: 10 },
 } as const;
 
 type NumericKnob = keyof typeof POLICY_BOUNDS;
@@ -53,6 +57,7 @@ export const KNOB_LABEL: Record<NumericKnob | "dialNudge", string> = {
   fathomPinMax: "Fathom items pinned per call",
   nudgeAfterDays: "Nudge after (days owed)",
   eventLeadMin: "Call prep lead (min)",
+  personAfterSeen: "Sightings before someone becomes a Person",
   dialNudge: "Show the Dial card",
 };
 
