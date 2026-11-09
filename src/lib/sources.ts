@@ -22,7 +22,7 @@ export type SourceDef = {
   /** POST endpoint that runs a pull now. */
   syncUrl?: string;
   /** Lives in Settings as its own card rather than a key. */
-  custom?: "feeds" | "zapier";
+  custom?: "feeds" | "zapier" | "google";
   /** Built in code and ready to use once the key is there. */
   built: boolean;
 };
@@ -58,9 +58,12 @@ export const SOURCES: SourceDef[] = [
     group: "Calls and calendar",
     phase: 1,
     env: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
-    gives: "Threads waiting on your reply become owed items. Events with attendees replace the iCal feed.",
-    setup: "Google Cloud: OAuth client (web), redirect to /api/google/callback. Then Connect Google here.",
-    built: false,
+    gives: "Your Google Calendar fills the Hub calendar, read-only, with the people on each invite added to People. Unread mail in the primary inbox from the last two days posts to the feed.",
+    setup: "console.cloud.google.com: enable the Google Calendar API and Gmail API, create an OAuth client (Web application) with redirect URI https://claude-tau-six.vercel.app/api/google/callback, add yourself as a test user. Put the client id and secret in Vercel, redeploy, then Connect Google here.",
+    sync: { type: "MANUAL", name: "google" },
+    syncUrl: "/api/google/sync",
+    custom: "google",
+    built: true,
   },
   {
     id: "calendly",
@@ -215,19 +218,28 @@ export function zapierSecret() {
 
 export type SourceStatus = SourceDef & {
   configured: boolean;
+  /** Keys are in Vercel but the OAuth step has not been done (Google). */
+  needsConnect?: boolean;
+  /** Connected account, when the source knows it. */
+  account?: string | null;
   lastSyncAt: string | null;
   lastSyncStatus: string | null;
   lastSyncError: string | null;
 };
 
 export async function sourceStatuses(): Promise<SourceStatus[]> {
-  const rows = await prisma.syncSource.findMany({ select: { type: true, name: true, enabled: true, lastSyncAt: true, lastSyncStatus: true, lastSyncError: true } });
+  const rows = await prisma.syncSource.findMany({ select: { type: true, name: true, enabled: true, config: true, lastSyncAt: true, lastSyncStatus: true, lastSyncError: true } });
   return SOURCES.map((s) => {
     const row = s.sync ? rows.find((r) => r.type === s.sync!.type && r.name === s.sync!.name) : null;
-    const configured = s.custom === "feeds" ? Boolean(row?.enabled) : s.custom === "zapier" ? true : envSet(s.env);
+    const cfg = (row?.config ?? null) as { refreshToken?: string; email?: string } | null;
+    const connected = Boolean(cfg?.refreshToken);
+    const configured =
+      s.custom === "feeds" ? Boolean(row?.enabled) : s.custom === "zapier" ? true : s.custom === "google" ? envSet(s.env) && connected : envSet(s.env);
     return {
       ...s,
       configured,
+      needsConnect: s.custom === "google" ? envSet(s.env) && !connected : undefined,
+      account: s.custom === "google" ? cfg?.email ?? null : undefined,
       lastSyncAt: row?.lastSyncAt?.toISOString() ?? null,
       lastSyncStatus: row?.lastSyncStatus ?? null,
       lastSyncError: row?.lastSyncError ?? null,

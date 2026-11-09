@@ -15,12 +15,40 @@ export default function SourcesPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<Record<string, string>>({});
   const [reload, setReload] = useState(0);
+  const [googleNote, setGoogleNote] = useState<string | null>(null);
+
+  // Back from Google's consent screen: /settings?google=connected|denied:...|error:...
+  function readGoogleReturn() {
+    const g = new URLSearchParams(window.location.search).get("google");
+    if (!g) return;
+    setGoogleNote(
+      g === "connected" ? "Google connected. First pull done." : g === "missing-keys" ? "Put GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Vercel first." : g === "bad-state" ? "That link expired. Try Connect Google again." : g.startsWith("denied") ? "You said no on Google's screen." : g.replace(/^error:/, ""),
+    );
+    setOpen("google");
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+
+  async function disconnectGoogle() {
+    if (!confirm("Disconnect Google? Pulled events stay until the next pull removes them.")) return;
+    setBusy("google");
+    try {
+      await fetch("/api/google/sync", { method: "DELETE" });
+      setGoogleNote("Disconnected.");
+      setReload((k) => k + 1);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
     fetch("/api/sources", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j: Payload | null) => alive && j && setData(j))
+      .then((j: Payload | null) => {
+        if (!alive || !j) return;
+        setData(j);
+        readGoogleReturn();
+      })
       .catch(() => null);
     return () => {
       alive = false;
@@ -83,7 +111,7 @@ export default function SourcesPanel() {
                         {!s.built && <span className="shrink-0 rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-semibold text-muted-2">phase {s.phase}</span>}
                       </span>
                       <span className="shrink-0 font-mono text-[11px] text-muted-2">
-                        {s.configured ? (s.lastSyncAt ? `pulled ${timeAgo(s.lastSyncAt)}` : "connected") : s.built ? "not set" : "not built yet"}
+                        {s.configured ? (s.lastSyncAt ? `pulled ${timeAgo(s.lastSyncAt)}` : "connected") : s.needsConnect ? "connect" : s.built ? "not set" : "not built yet"}
                       </span>
                     </button>
                     {isOpen && (
@@ -102,6 +130,24 @@ export default function SourcesPanel() {
                         <p>{s.setup}</p>
                         {s.lastSyncError && <p className="text-danger">{s.lastSyncError}</p>}
                         {s.custom === "feeds" && <CalendarFeeds />}
+                        {s.custom === "google" && (
+                          <div className="space-y-2 pt-1">
+                            {googleNote && <p className="text-foreground">{googleNote}</p>}
+                            {s.needsConnect && (
+                              <a href="/api/google/auth" className="btn-primary inline-flex h-9 items-center px-4 text-xs">
+                                Connect Google
+                              </a>
+                            )}
+                            {s.configured && (
+                              <p className="flex flex-wrap items-center gap-3">
+                                <span>Connected as {s.account ?? "your Google account"}.</span>
+                                <button onClick={disconnectGoogle} disabled={busy !== null} className="btn-ghost h-8 px-3 text-xs">
+                                  Disconnect
+                                </button>
+                              </p>
+                            )}
+                          </div>
+                        )}
                         {s.custom === "zapier" && (
                           <div className="space-y-1.5">
                             <p>In Zapier: Webhooks by Zapier, POST, this URL, JSON body with title, body, kind (task or update), person, due.</p>

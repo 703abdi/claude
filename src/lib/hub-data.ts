@@ -6,8 +6,7 @@ import { listAgents } from "@/lib/agents/list";
 import { getLatestBrief } from "@/lib/morning-brief/latest";
 import { fetchAbdiformMetrics } from "@/lib/abdiform";
 import { getFeedEvents } from "@/lib/calendar-feeds";
-import { syncFathom } from "@/lib/fathom";
-import { syncCalendly } from "@/lib/calendly";
+import { scheduleBackgroundSyncs } from "@/lib/background-sync";
 import { getPolicy } from "@/lib/policy";
 import type { AbdiformResult } from "@/lib/abdiform-types";
 import { AUTO_CLEAR_AFTER_DAYS } from "@/lib/task-dates";
@@ -111,8 +110,8 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
   const weekEndKey = addDaysKey(weekKey, 6);
   const open = { status: { not: TaskStatus.COMPLETED } };
 
-  // Pull Fathom before reading, so new action items are in this payload. Throttled to 30 min inside.
-  if (!opts.lean) await Promise.all([syncFathom().catch(() => null), syncCalendly().catch(() => null)]);
+  // Sources pull after this response is sent, never in front of it. New items show on the next read.
+  if (!opts.lean) scheduleBackgroundSyncs(tz);
   const [plan, goal] = await Promise.all([ensureWeekPlan(weekKey), ensureGoal()]);
 
   const [
