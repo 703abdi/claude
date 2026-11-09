@@ -100,6 +100,12 @@ Paragraph for an agent's system prompt:
 > and a due date if there is one. Use kind "note" or "update" for information and "question"
 > when you need his answer. One item per thing, no duplicates, never put secrets in the body.
 
+## Notifications
+
+Every POST to `/api/inbox` from an agent other than `os` also pushes a notification to Abdi's
+phone and Mac (the devices that turned notifications on in the Hub bell). Keep titles short:
+the title is the notification body. Questions say "needs your answer", tasks say "added a task".
+
 ## Errors
 
 - `401` token missing or wrong

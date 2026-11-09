@@ -15,8 +15,11 @@ import BriefCard from "./BriefCard";
 import HomeScreen, { FOCUS_COMMAND_EVENT, SECTIONS, type CommandRun } from "./HomeScreen";
 import HubCalendar from "./HubCalendar";
 import HubPeople from "./HubPeople";
-import { useEffect } from "react";
-import { ToastHost, type Toast } from "./hub-ui";
+import { useEffect, useRef } from "react";
+import { ToastHost, useNow, type Toast } from "./hub-ui";
+import Notifications from "./Notifications";
+import { describeChanges, dueReminders, whatsNew } from "@/lib/notify-logic";
+import { localNotify } from "@/lib/push-client";
 import TodayList from "./TodayList";
 import TaskSheet from "./TaskSheet";
 import ScoreDetail from "./ScoreDetail";
@@ -57,7 +60,17 @@ function adjustStats(stats: HubPayload["stats"], task: Task, sign: 1 | -1, d: Hu
 
 export default function HubDashboard({ name }: { name: string }) {
   const hub = useHub(8000);
-  const { data, mutate } = hub;
+  const { data } = hub;
+  // Remember when Abdi last changed something here, so a poll that only echoes his own
+  // action is not announced as news.
+  const localActionAt = useRef(0);
+  const mutate: typeof hub.mutate = useCallback(
+    (patch, action, reconcile) => {
+      localActionAt.current = Date.now();
+      return hub.mutate(patch, action, reconcile);
+    },
+    [hub.mutate] // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const router = useRouter();
   const [toast, setToast] = useState<Toast | null>(null);
   const [sheetTask, setSheetTask] = useState<Task | null>(null);
@@ -289,6 +302,33 @@ export default function HubDashboard({ name }: { name: string }) {
     }
   };
 
+  // ── alive: announce what a poll brought in, remind before calls ──
+  const prevData = useRef<HubPayload | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    const prev = prevData.current;
+    prevData.current = data;
+    if (!prev || Date.now() - localActionAt.current < 15_000) return;
+    const changes = whatsNew(prev, data);
+    const line = describeChanges(changes);
+    if (!line) return;
+    const first = changes[0];
+    say(line, () => router.push(first.href), changes.length === 1 ? "Open" : "See");
+  }, [data, say, router]);
+
+  const minuteNow = useNow(30_000);
+  const announced = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!data || !minuteNow) return;
+    const due = dueReminders(data.upNext, data.todayKey, new Date(minuteNow), announced.current, (dt) => dayKey(dt, data.tz));
+    for (const r of due) {
+      announced.current.add(r.id);
+      const text = r.minutes <= 0 ? `${r.title} is starting now.` : `${r.title} in ${r.minutes} min.`;
+      say(text, () => document.getElementById("calendar")?.scrollIntoView({ behavior: "smooth" }), "Calendar");
+      void localNotify(r.minutes <= 0 ? "Starting now" : `In ${r.minutes} min`, r.title, `event-${r.id}`, "/hub#calendar");
+    }
+  }, [data, minuteNow, say]);
+
   const [pastHome, setPastHome] = useState(false);
   useEffect(() => {
     const onScroll = () => setPastHome(window.scrollY > window.innerHeight * 0.6);
@@ -347,6 +387,7 @@ export default function HubDashboard({ name }: { name: string }) {
           if (item) resolveInbox(item, "dismiss");
         }}
         brief={brief}
+        bell={<Notifications inbox={data?.inbox ?? []} onResolve={resolveInbox} />}
       />
       {/* Sticky section nav once you are past the home screen */}
       <div

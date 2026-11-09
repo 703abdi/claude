@@ -6,6 +6,7 @@ import { resolveTz } from "@/lib/hub-data";
 import { createAgentTask, findPersonByName, parseAgentDue } from "@/lib/inbox";
 import { dayKey, utcDateFromKey } from "@/lib/day";
 import { logSignal } from "@/lib/signals";
+import { pushLater } from "@/lib/push";
 
 /** Agents (Grok, Codex, Claude Code, Jarvis) write into the OS here.
  * Auth: Authorization: Bearer $AGENTS_TOKEN. See docs/agent-api.md. */
@@ -65,6 +66,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (d.agent !== "os") {
+    const what = d.kind === "question" ? "needs your answer" : d.kind === "task" ? "added a task" : "posted an update";
+    pushLater({ title: `${d.agent} ${what}`, body: d.title, url: d.kind === "task" && task ? `/tasks?highlight=${task.id}` : "/hub#feed", tag: `inbox-${item.id}` });
+  }
   void logSignal("feed.post", { source: d.agent, ref: item.id, data: { kind: d.kind, title: d.title, taskId: task?.id ?? null, score: Boolean(score) } });
   if (score) void logSignal("score.set", { source: d.agent, data: { ...score } });
 

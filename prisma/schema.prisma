@@ -548,3 +548,27 @@ model InboxItem {
 
   @@index([resolvedAt, createdAt])
 }
+
+// ─────────────────────────────────────────────────────────────
+// PUSH (notifications to Abdi's phone and Mac)
+// ─────────────────────────────────────────────────────────────
+
+/** One browser or home-screen app that asked for notifications. */
+model PushSubscription {
+  id         String    @id @default(cuid())
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime?
+  failures   Int       @default(0)
+}
+
+/** The VAPID key pair, made once on first use so nothing needs configuring. */
+model PushConfig {
+  id         String   @id @default("vapid")
+  publicKey  String
+  privateKey String
+  createdAt  DateTime @default(now())
+}

@@ -1,3 +1,4 @@
+import { pushLater } from "@/lib/push";
 import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getPolicy } from "@/lib/policy";
@@ -127,6 +128,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
 
   const { policy } = await getPolicy();
   let calls = 0;
+  let newCallTitle = "";
   let tasks = 0;
   let waiting = 0;
   try {
@@ -164,6 +166,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
           },
         });
         calls++;
+        newCallTitle = title;
       }
 
       let pinnedThisCall = 0;
@@ -210,6 +213,15 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
       where: { type_name: SOURCE },
       data: { lastSyncAt: new Date(), lastSyncStatus: "success", lastSyncError: null },
     });
+    if (calls > 0) {
+      const parts = [tasks ? `${tasks} task${tasks === 1 ? "" : "s"} for you` : null, waiting ? `${waiting} waiting on others` : null].filter(Boolean);
+      pushLater({
+        title: calls === 1 ? `Call done: ${newCallTitle}` : `${calls} calls synced`,
+        body: parts.join(", ") || "No action items.",
+        url: tasks ? "/hub#today" : "/hub#feed",
+        tag: "fathom",
+      });
+    }
     void logSignal("sync", { source: "fathom", data: { calls, tasks, waiting } });
     return { calls, tasks, waiting };
   } catch (err) {

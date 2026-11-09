@@ -4,6 +4,7 @@ import { getHubData, ensureWeekPlan, normalizeOutcomes } from "@/lib/hub-data";
 import { addDaysKey, dayKey, utcDateFromKey, weekStartKey } from "@/lib/day";
 import { nextAction } from "@/lib/next-action";
 import { describeScore, formatMoney } from "@/lib/command-parse";
+import { pushLater } from "@/lib/push";
 
 /** Messages the OS sends to Abdi. Each one is posted to the agent feed (agent "os") and,
  * when RESEND_API_KEY and DIGEST_TO are set, emailed. Twilio can hang off the same text later. */
@@ -14,6 +15,7 @@ export async function deliver(subject: string, text: string, link?: string) {
   const item = await prisma.inboxItem.create({
     data: { agent: "os", kind: "update", title: subject, body: text, link: link ?? null },
   });
+  pushLater({ title: subject, body: text.split("\n").filter((l) => l.trim() && !l.startsWith("http")).slice(0, 2).join(" "), url: link ?? "/hub", tag: `digest-${subject.split(":")[0].toLowerCase()}` });
   let emailed = false;
   const key = process.env.RESEND_API_KEY?.trim();
   const to = process.env.DIGEST_TO?.trim();

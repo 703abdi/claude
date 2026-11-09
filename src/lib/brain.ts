@@ -1,3 +1,4 @@
+import { pushLater } from "@/lib/push";
 import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { extractJson } from "@/lib/ai";
@@ -133,6 +134,7 @@ Today is ${todayKey} in ${tz}. Local hour ${localHour}.`;
         body: [summary, lines.join("\n")].filter(Boolean).join("\n\n"),
       },
     });
+    pushLater({ title: "Tomorrow is planned", body: `${ranking.length} picked. ${summary.slice(0, 120)}`, url: "/hub#feed", tag: "brain" });
     await prisma.syncSource.update({ where: { type_name: SOURCE }, data: { lastSyncAt: new Date(), lastSyncStatus: "success", lastSyncError: null } });
     await logSignal("brain.run", { source: "brain", ref: String(saved.version), data: { targetKey, ranked: ranking.length, knobs: limited, observations: out.observations ?? [] } });
     return { targetKey, ranked: ranking.length, knobs: limited, version: saved.version, summary };

@@ -15,7 +15,10 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "abdi's os",
-  description: "Personal operating system — tasks, people, calendar, and morning brief.",
+  description: "Personal operating system: tasks, people, calendar, and morning brief.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "OS" },
+  icons: { apple: "/icons/icon-180.png" },
 };
 
 export const viewport: Viewport = {

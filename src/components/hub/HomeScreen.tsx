@@ -349,8 +349,11 @@ export default function HomeScreen({
   onNudge,
   onResolveInbox,
   brief,
+  bell,
 }: {
   name: string;
+  /** The notifications bell, top right of the home screen. */
+  bell?: React.ReactNode;
   /** The morning brief card, shown in the Jarvis drop-down at the top. */
   brief: React.ReactNode;
   data: HubPayload | null;
@@ -408,6 +411,7 @@ export default function HomeScreen({
       <div className="relative z-10 mx-auto flex w-full max-w-[880px] flex-1 flex-col items-start justify-center px-4 pb-16 pt-8 md:pb-20">
         {/* 0. Jarvis: the morning brief, one tap, drops down */}
         <motion.div {...rise(0)} className="flex w-full max-w-[720px] flex-col items-start">
+          <div className="flex w-full items-center justify-between gap-3">
           <button
             onClick={() => setJarvisOpen((v) => !v)}
             aria-expanded={jarvisOpen}
@@ -424,6 +428,8 @@ export default function HomeScreen({
             <span className="text-[13px] font-semibold tracking-wide">Jarvis</span>
             <span className="font-mono text-[11px] text-muted-2">{jarvisOpen ? "close" : "morning brief"}</span>
           </button>
+          {bell}
+          </div>
           <AnimatePresence initial={false}>
             {jarvisOpen && (
               <motion.div
@@ -459,6 +465,9 @@ export default function HomeScreen({
             <span className={`relative h-1.5 w-1.5 rounded-full ${live ? "blink-dot" : ""}`} style={{ background: live ? "var(--accent)" : "var(--danger)" }} />
           </span>
           <span>{d ? d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }).toUpperCase() : " "}</span>
+          {d && updatedAt !== null && (
+            <span className="font-mono text-[10px] normal-case tracking-normal text-muted-2">{error ? "offline, showing the last copy" : `updated ${ago(updatedAt, now ?? undefined)}`}</span>
+          )}
         </motion.p>
 
         <motion.h1 {...rise(3)} className="mt-3 text-left text-[clamp(2.4rem,6vw,4.5rem)]">

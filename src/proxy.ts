@@ -51,7 +51,15 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
   // Static backdrop photos must stay public: the image optimizer fetches them server side with no cookie.
-  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.startsWith("/backgrounds/")) {
+  // The service worker, manifest and icons are fetched by the browser itself, sometimes without the cookie.
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/backgrounds/") ||
+    pathname.startsWith("/icons/") ||
+    pathname === "/sw.js" ||
+    pathname === "/manifest.webmanifest"
+  ) {
     return NextResponse.next();
   }
 
