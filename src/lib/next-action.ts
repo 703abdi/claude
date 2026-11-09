@@ -4,14 +4,14 @@ import { dayKey } from "@/lib/day";
 
 /** The one thing to do right now. Pure: same payload and clock, same answer.
  * Order: a late task, a call about to start, a question from an agent, someone you
- * owe a nudge, dials behind pace on a work day, your top pinned task, else pick an outcome. */
+ * owe a nudge, your top pinned task, else pick an outcome. Dialing lives in the agency
+ * dialer, not here. */
 
 export type NextAction =
   | { kind: "late"; task: Task; title: string; detail: string }
   | { kind: "event"; eventId: string; title: string; detail: string }
   | { kind: "question"; inboxId: string; title: string; detail: string }
   | { kind: "nudge"; personId: string; personName: string; title: string; detail: string }
-  | { kind: "dial"; have: number; target: number; title: string; detail: string }
   | { kind: "task"; task: Task; title: string; detail: string }
   | { kind: "stale"; task: Task; title: string; detail: string }
   | { kind: "outcome"; title: string; detail: string };
@@ -45,7 +45,7 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
   const late = live.filter((t) => t.overdue).sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))[0];
   if (late) {
     const days = Math.max(1, Math.round((now.getTime() - new Date(late.dueDate!).getTime()) / 86_400_000));
-    return { kind: "late", task: late, title: late.title, detail: `${days} day${days === 1 ? "" : "s"} late. Clear it or drop it.` };
+    return { kind: "late", task: late, title: late.title, detail: `${days} day${days === 1 ? "" : "s"} late. Finish it or drop it.` };
   }
 
   const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -60,7 +60,7 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
       kind: "event",
       eventId: soon.id,
       title: soon.title,
-      detail: mins <= 0 ? "Starting now." : `In ${mins} min${soon.person ? ` with ${soon.person.name}` : ""}. Prep for it.`,
+      detail: mins <= 0 ? "Starting now." : `In ${mins} min${soon.person ? ` with ${soon.person.name}` : ""}. Get ready.`,
     };
   }
 
@@ -77,15 +77,8 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
       personId: owed.person.id,
       personName: owed.person.name,
       title: `Nudge ${owed.person.name}`,
-      detail: `Still waiting on "${t.title}".`,
+      detail: `You are still waiting on "${t.title}". Send a nudge.`,
     };
-  }
-
-  const dow = now.getDay();
-  const workday = dow >= 1 && dow <= 5;
-  const dials = d.week.scoreboard.today.dials;
-  if (d.policy.dialNudge && workday && now.getHours() >= d.policy.dialStartHour && dials < d.policy.dialTarget) {
-    return { kind: "dial", have: dials, target: d.policy.dialTarget, title: "Dial.", detail: `${dials} of ${d.policy.dialTarget} today. Cash comes from calls.` };
   }
 
   // The brain's order for today wins when it has one; otherwise pinned, then first.
@@ -99,13 +92,13 @@ export function nextAction(d: HubPayload, now: Date): NextAction {
 
   if (stale[0]) {
     const days = staleDays(stale[0], now) ?? 0;
-    return { kind: "stale", task: stale[0], title: stale[0].title, detail: `That date passed ${days} day${days === 1 ? "" : "s"} ago. Done or drop it.` };
+    return { kind: "stale", task: stale[0], title: stale[0].title, detail: `That date was ${days} day${days === 1 ? "" : "s"} ago. Mark it done or drop it.` };
   }
 
   const open = d.week.outcomes.find((o) => !o.done);
   return {
     kind: "outcome",
-    title: open ? open.text : "Clear day.",
-    detail: open ? "Nothing scheduled. Move this outcome." : "Pick one outcome and start.",
+    title: open ? open.text : "Nothing due.",
+    detail: open ? "Nothing on the calendar. Work on this goal." : "Pick one goal for the week and start.",
   };
 }

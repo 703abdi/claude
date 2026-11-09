@@ -508,6 +508,20 @@ model ScoreEntry {
   updatedAt DateTime @updatedAt
 }
 
+/** A note pushed from the Obsidian vault (SOPs first). Read-only in the app; edited in Obsidian. */
+model LibraryDoc {
+  slug       String   @id
+  title      String
+  folder     String   @default("SOPs")
+  order      Int      @default(0)
+  content    String
+  sourcePath String
+  mtime      DateTime
+  updatedAt  DateTime @updatedAt
+
+  @@index([folder, order])
+}
+
 model Goal {
   id          String   @id @default(cuid())
   label       String

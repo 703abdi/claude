@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/tasks", label: "Tasks", icon: TasksIcon, match: "/tasks" },
   { href: "/hub#calendar", label: "Calendar", icon: CalendarIcon, match: "/calendar" },
   { href: "/hub#people", label: "People", icon: PeopleIcon, match: "/people" },
+  { href: "/library", label: "Library", icon: LibraryIcon, match: "/library" },
 ];
 
 function displayNameForEmail(email: string) {
@@ -260,6 +261,20 @@ function CalendarIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="none" className={className}>
       <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
       <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LibraryIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V2H6.5A2.5 2.5 0 004 4.5v15zM9 7h7M9 11h5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

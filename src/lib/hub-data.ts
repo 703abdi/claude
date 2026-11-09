@@ -259,6 +259,7 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
           ? { dials: todayScore.dials, convos: todayScore.convos, booked: todayScore.booked, cashCents: todayScore.cashCents }
           : { ...ZERO },
         week: sumScores(weekScores),
+        days: weekScores.map((s) => ({ date: keyFromUtcDate(s.date), dials: s.dials, convos: s.convos, booked: s.booked, cashCents: s.cashCents })),
       },
       goal: goalView,
     },

@@ -52,7 +52,7 @@ export type HubPayload = {
     weekStart: string; // YYYY-MM-DD (Sunday)
     weekEnd: string; // YYYY-MM-DD (Saturday)
     outcomes: Outcome[];
-    scoreboard: { today: ScoreTotals; week: ScoreTotals };
+    scoreboard: { today: ScoreTotals; week: ScoreTotals; days: (ScoreTotals & { date: string })[] };
     goal: GoalView;
   };
   stats: { open: number; overdue: number; dueToday: number; waiting: number; doneToday: number };

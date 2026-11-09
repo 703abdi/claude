@@ -13,7 +13,7 @@ const CAP = 8;
 const SWIPE_DONE = 90;
 const SWIPE_MAX = 140;
 
-export default function TodayList({ tasks, onComplete, onNext }: { tasks: Task[]; onComplete: (task: Task) => void; onNext?: (task: Task) => void }) {
+export default function TodayList({ tasks, onComplete, onNext, onOpen }: { tasks: Task[]; onComplete: (task: Task) => void; onNext?: (task: Task) => void; onOpen?: (task: Task) => void }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? tasks : tasks.slice(0, CAP);
   const hidden = tasks.length - visible.length;
@@ -40,7 +40,7 @@ export default function TodayList({ tasks, onComplete, onNext }: { tasks: Task[]
         <ul className="space-y-1">
           <AnimatePresence initial={false}>
             {visible.map((t) => (
-              <TodayRow key={t.id} task={t} onComplete={onComplete} onNext={onNext} />
+              <TodayRow key={t.id} task={t} onComplete={onComplete} onNext={onNext} onOpen={onOpen} />
             ))}
           </AnimatePresence>
         </ul>
@@ -66,12 +66,12 @@ function EmptyToday() {
       >
         <CheckMark on size={22} />
       </motion.span>
-      <p className="text-sm font-medium">Clear for today.</p>
+      <p className="text-sm font-medium">Nothing left for today.</p>
     </div>
   );
 }
 
-export function TodayRow({ task, onComplete, onNext }: { task: Task; onComplete: (task: Task) => void; onNext?: (task: Task) => void }) {
+export function TodayRow({ task, onComplete, onNext, onOpen }: { task: Task; onComplete: (task: Task) => void; onNext?: (task: Task) => void; onOpen?: (task: Task) => void }) {
   const [checking, setChecking] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
@@ -158,13 +158,23 @@ export function TodayRow({ task, onComplete, onNext }: { task: Task; onComplete:
           </motion.span>
         </button>
         <div className="min-w-0 flex-1 py-1.5">
-          <Link
-            href={`/tasks?highlight=${task.id}`}
-            className={`flex items-center gap-2 text-[15px] font-semibold transition-colors ${checking ? "text-muted line-through" : "text-foreground hover:text-accent"}`}
-          >
-            {task.pinnedToday && !task.overdue && <span aria-label="Pinned" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
-            <span className="truncate">{task.title}</span>
-          </Link>
+          {onOpen ? (
+            <button
+              onClick={() => onOpen(task)}
+              className={`flex w-full min-w-0 items-center gap-2 text-left text-[15px] font-semibold transition-colors ${checking ? "text-muted line-through" : "text-foreground hover:text-accent"}`}
+            >
+              {task.pinnedToday && !task.overdue && <span aria-label="Pinned" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+              <span className="truncate">{task.title}</span>
+            </button>
+          ) : (
+            <Link
+              href={`/tasks?highlight=${task.id}`}
+              className={`flex items-center gap-2 text-[15px] font-semibold transition-colors ${checking ? "text-muted line-through" : "text-foreground hover:text-accent"}`}
+            >
+              {task.pinnedToday && !task.overdue && <span aria-label="Pinned" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+              <span className="truncate">{task.title}</span>
+            </Link>
+          )}
           {(due || task.people[0] || temp) && (
             <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted-2">
               {due && (

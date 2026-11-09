@@ -140,7 +140,7 @@ export function landsInToday(p: Pick<ParsedQuickAdd, "pinToday" | "dueDate" | "d
 export function commandHint(cmd: Command, task?: ParsedQuickAdd | null): string {
   switch (cmd.kind) {
     case "empty":
-      return "Type a task, a log like 5 dials, a note, or /calendar";
+      return "Type a task, a log like 2 convos, a note, or /calendar";
     case "nav":
       return `Will open ${cmd.label}`;
     case "find":

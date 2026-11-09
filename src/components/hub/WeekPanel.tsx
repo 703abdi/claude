@@ -46,8 +46,7 @@ export default function WeekPanel({
         <span className="eyebrow eyebrow-accent">Scoreboard for the week</span>
         <span className="font-mono text-[11px] text-muted-2">adds up from each day</span>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <WeekStat label="Dials" value={wk.dials} today={td.dials} />
+      <div className="grid grid-cols-3 gap-2">
         <WeekStat label="Convos" value={wk.convos} today={td.convos} />
         <WeekStat label="Booked" value={wk.booked} today={td.booked} />
         <WeekStat label="Cash" value={wk.cashCents} today={td.cashCents} cash />
@@ -194,16 +193,18 @@ export function Counter({
   value,
   onAdd,
   extra,
+  onDetail,
 }: {
   label: string;
   value: number;
   onAdd: (delta: number) => void;
   extra?: number;
+  onDetail?: () => void;
 }) {
   const { pending, handlers } = useHoldToAdd(onAdd);
   return (
     <div className="tile flex min-w-0 flex-col items-center px-2 pb-2 pt-2.5">
-      <span className="eyebrow">{label}</span>
+      <TileLabel label={label} onDetail={onDetail} />
       <FlipNumber value={value + pending} className="my-1 font-mono text-[28px] font-bold leading-8" />
       <motion.button
         {...handlers}
@@ -225,7 +226,20 @@ export function Counter({
   );
 }
 
-export function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCents: number) => void }) {
+/** The tile's label. With onDetail it is a button that opens the week pop-up. */
+function TileLabel({ label, onDetail }: { label: string; onDetail?: () => void }) {
+  if (!onDetail) return <span className="eyebrow">{label}</span>;
+  return (
+    <button onClick={onDetail} className="eyebrow flex items-center gap-1 hover:text-accent" title={`${label} this week`} aria-label={`${label}: see this week`}>
+      {label}
+      <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden>
+        <path d="M4 19V5M9 19v-7M14 19V9M19 19v-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+    </button>
+  );
+}
+
+export function CashCounter({ cents, onAdd, onDetail }: { cents: number; onAdd: (deltaCents: number) => void; onDetail?: () => void }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const add = (dollars: number) => {
@@ -236,7 +250,7 @@ export function CashCounter({ cents, onAdd }: { cents: number; onAdd: (deltaCent
   };
   return (
     <div className="tile relative flex min-w-0 flex-col items-center px-2 pb-2 pt-2.5">
-      <span className="eyebrow">Cash</span>
+      <TileLabel label="Cash" onDetail={onDetail} />
       <FlipNumber value={money(cents)} className="my-1 max-w-full font-mono text-[24px] font-bold leading-8" />
       <motion.button
         onClick={() => setOpen((v) => !v)}

@@ -21,6 +21,7 @@ const PUBLIC_EXACT = [
   "/api/inbox",
   "/api/state",
   "/api/score",
+  "/api/library",
 ];
 
 async function isValidSession(token: string | undefined) {

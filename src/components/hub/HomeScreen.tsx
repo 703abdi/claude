@@ -94,7 +94,7 @@ function greeting(hour: number) {
 function headline(d: HubPayload | null, now: number | null): string {
   if (!d || !now) return " ";
   const late = d.today.filter((t) => t.overdue).length;
-  if (late > 0) return late === 1 ? "1 task is late. Start there." : `${late} tasks are late. Start there.`;
+  if (late > 0) return late === 1 ? "1 task is late. Do it first." : `${late} tasks are late. Do those first.`;
   const next = d.upNext.find((e) => dayKey(new Date(e.date), d.tz) === d.todayKey && e.startTime);
   if (next?.startTime) {
     const [h, m] = next.startTime.split(":").map(Number);
@@ -104,8 +104,8 @@ function headline(d: HubPayload | null, now: number | null): string {
     if (mins >= 0 && mins <= 120) return `${next.title} at ${fmtClock(next.startTime)}.`;
   }
   const open = d.today.length;
-  if (open > 0) return `${open} thing${open === 1 ? "" : "s"} for today, ${d.stats.doneToday} done.`;
-  return "Clear day. Pick one outcome.";
+  if (open > 0) return `${open} task${open === 1 ? "" : "s"} for today. ${d.stats.doneToday} done so far.`;
+  return "Nothing due today. Pick one goal and start.";
 }
 
 function fmtClock(hhmm: string) {
@@ -119,7 +119,7 @@ function fmtClock(hhmm: string) {
 
 const PLACEHOLDERS = [
   "Add a task: call Joaquin 2pm",
-  "Log: 5 dials",
+  "Log: 2 convos",
   "Cash 500",
   "Note for jarvis: ...",
   "Find a task or a person",
@@ -193,7 +193,7 @@ function CommandBar({ data, onRun }: { data: HubPayload | null; onRun: CommandRu
         />
         <span className="hidden font-mono text-[11px] text-muted-2 sm:inline">ENTER</span>
       </div>
-      <p className="mt-2 min-h-5 px-1 text-center font-mono text-[11px] text-muted-2 transition-opacity">{hint}</p>
+      <p className="mt-2 min-h-5 px-1 text-left font-mono text-[11px] text-muted-2 transition-opacity">{hint}</p>
     </div>
   );
 }
@@ -211,14 +211,13 @@ function scrollTo(id: string) {
 /* ── Do this now ──────────────────────────────────────────────── */
 
 const ACTION_LABEL: Record<NextAction["kind"], string> = {
-  late: "Late",
-  event: "Up next",
-  question: "Question",
-  nudge: "Owed to you",
-  dial: "Behind pace",
+  late: "Late. Do this first",
+  event: "Coming up",
+  question: "Needs your answer",
+  nudge: "They owe you",
   task: "Do this now",
-  stale: "Stale",
-  outcome: "This week",
+  stale: "Old. Done or drop it",
+  outcome: "This week's goal",
 };
 
 let lastShown: { key: string; at: number } = { key: "", at: 0 };
@@ -236,8 +235,6 @@ function actionKey(a: NextAction) {
       return `question:${a.inboxId}`;
     case "nudge":
       return `nudge:${a.personId}`;
-    case "dial":
-      return "dial";
     default:
       return "outcome";
   }
@@ -248,7 +245,6 @@ function DoNow({
   onDone,
   onNext,
   onDrop,
-  onDial,
   onNudge,
   onAnswer,
   onOpen,
@@ -257,7 +253,6 @@ function DoNow({
   onDone: (task: Task) => void;
   onNext: (task: Task) => void;
   onDrop: (task: Task) => void;
-  onDial: () => void;
   onNudge: () => void;
   onAnswer: () => void;
   onOpen: () => void;
@@ -279,9 +274,7 @@ function DoNow({
       ? { label: "Done", run: () => onDone(action.task) }
       : action.kind === "stale"
         ? { label: "Drop", run: () => onDrop(action.task) }
-      : action.kind === "dial"
-        ? { label: "+5 dials", run: onDial }
-        : action.kind === "nudge"
+      : action.kind === "nudge"
           ? { label: "Nudge", run: onNudge }
           : action.kind === "question"
             ? { label: "Answered", run: onAnswer }
@@ -333,6 +326,7 @@ export const SECTIONS: { id: string; label: string; href?: string }[] = [
   { id: "feed", label: "Agents" },
   { id: "town", label: "Town", href: "/town" },
   { id: "tasks", label: "All tasks", href: "/tasks" },
+  { id: "library", label: "Library", href: "/library" },
 ];
 
 /* ── Home screen ──────────────────────────────────────────────── */
@@ -349,6 +343,8 @@ export default function HomeScreen({
   onComplete,
   onNext,
   onDrop,
+  onOpenTask,
+  onScoreDetail,
   onScore,
   onNudge,
   onResolveInbox,
@@ -367,6 +363,10 @@ export default function HomeScreen({
   onComplete: (task: Task) => void;
   onNext: (task: Task) => void;
   onDrop: (task: Task) => void;
+  /** Opens the task pop-up. */
+  onOpenTask: (task: Task) => void;
+  /** Opens the week pop-up for one scoreboard tile. */
+  onScoreDetail: (field: ScoreField) => void;
   onScore: (field: ScoreField, delta: number) => void;
   onNudge: (group: WaitingGroup) => void;
   onResolveInbox: (id: string) => void;
@@ -405,9 +405,9 @@ export default function HomeScreen({
     <section className="home relative flex min-h-[100svh] flex-col md:min-h-[88vh]">
       <Backdrop src={backdrop.src} kenBurns={isDesktop && !reduced} />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[880px] flex-1 flex-col items-center justify-center px-4 pb-16 pt-8 md:pb-20">
+      <div className="relative z-10 mx-auto flex w-full max-w-[880px] flex-1 flex-col items-start justify-center px-4 pb-16 pt-8 md:pb-20">
         {/* 0. Jarvis: the morning brief, one tap, drops down */}
-        <motion.div {...rise(0)} className="flex w-full max-w-[720px] flex-col items-center">
+        <motion.div {...rise(0)} className="flex w-full max-w-[720px] flex-col items-start">
           <button
             onClick={() => setJarvisOpen((v) => !v)}
             aria-expanded={jarvisOpen}
@@ -441,7 +441,7 @@ export default function HomeScreen({
           </AnimatePresence>
         </motion.div>
 
-        <motion.nav {...rise(1)} aria-label="Jump to" className="mt-8 flex max-w-full flex-wrap items-center justify-center gap-1.5">
+        <motion.nav {...rise(1)} aria-label="Jump to" className="mt-8 flex max-w-full flex-wrap items-center justify-start gap-1.5">
           {SECTIONS.map((sct) => (
             <button
               key={sct.id}
@@ -461,11 +461,11 @@ export default function HomeScreen({
           <span>{d ? d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }).toUpperCase() : " "}</span>
         </motion.p>
 
-        <motion.h1 {...rise(3)} className="mt-3 text-center text-[clamp(2.4rem,6vw,4.5rem)]">
+        <motion.h1 {...rise(3)} className="mt-3 text-left text-[clamp(2.4rem,6vw,4.5rem)]">
           {d ? greeting(d.getHours()) : "Hey"}, <span className="hl">{name}</span>.
         </motion.h1>
 
-        <motion.p {...rise(4)} className="mt-3 min-h-6 text-center text-[15px] text-muted md:text-[17px]">
+        <motion.p {...rise(4)} className="mt-3 min-h-6 text-left text-[15px] text-muted md:text-[17px]">
           {headline(data, now)}
         </motion.p>
 
@@ -477,7 +477,6 @@ export default function HomeScreen({
               onDone={(t) => onComplete(t)}
               onNext={(t) => onNext(t)}
               onDrop={(t) => onDrop(t)}
-              onDial={() => onScore("dials", 5)}
               onNudge={() => {
                 const g = action.kind === "nudge" ? data.waitingOn.find((w) => w.person.id === action.personId) : null;
                 if (g) onNudge(g);
@@ -486,7 +485,7 @@ export default function HomeScreen({
               onOpen={() => {
                 if (action.kind === "event") scrollTo("calendar");
                 else if (action.kind === "outcome") scrollTo("week");
-                else if (action.kind === "task" || action.kind === "late" || action.kind === "stale") onNavigate(`/tasks?highlight=${action.task.id}`);
+                else if (action.kind === "task" || action.kind === "late" || action.kind === "stale") onOpenTask(action.task);
                 else if (action.kind === "nudge") onNavigate(`/people/${action.personId}`);
                 else if (action.kind === "question") scrollTo("feed");
               }}
@@ -499,7 +498,7 @@ export default function HomeScreen({
         {/* 2. Scoreboard, its own block */}
         <motion.div {...rise(6)} id="scoreboard" className="mt-10 w-full max-w-[720px] scroll-mt-28">
           <div className="mb-3 flex items-center justify-between px-1">
-            <span className="eyebrow eyebrow-accent">Scoreboard</span>
+            <span className="eyebrow eyebrow-accent">Today&apos;s numbers</span>
             {data && (
               <span className="font-mono text-[11px] text-muted-2">
                 {money(data.week.goal.collectedCents)} of {money(data.week.goal.targetCents)} · {data.week.goal.daysLeft} days left
@@ -507,15 +506,14 @@ export default function HomeScreen({
             )}
           </div>
           {data ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
-              <Counter label="Dials" value={data.week.scoreboard.today.dials} onAdd={(n) => onScore("dials", n)} extra={5} />
-              <Counter label="Convos" value={data.week.scoreboard.today.convos} onAdd={(n) => onScore("convos", n)} />
-              <Counter label="Booked" value={data.week.scoreboard.today.booked} onAdd={(n) => onScore("booked", n)} />
-              <CashCounter cents={data.week.scoreboard.today.cashCents} onAdd={(c) => onScore("cashCents", c)} />
+            <div className="grid grid-cols-3 gap-3 md:gap-4">
+              <Counter label="Convos" value={data.week.scoreboard.today.convos} onAdd={(n) => onScore("convos", n)} onDetail={() => onScoreDetail("convos")} />
+              <Counter label="Booked" value={data.week.scoreboard.today.booked} onAdd={(n) => onScore("booked", n)} onDetail={() => onScoreDetail("booked")} />
+              <CashCounter cents={data.week.scoreboard.today.cashCents} onAdd={(c) => onScore("cashCents", c)} onDetail={() => onScoreDetail("cashCents")} />
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
+            <div className="grid grid-cols-3 gap-3 md:gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="tile h-[118px] animate-pulse" />
               ))}
             </div>
@@ -529,7 +527,7 @@ export default function HomeScreen({
               <div className="flex items-center justify-between px-2 pt-1 pb-2">
                 <span className="eyebrow eyebrow-accent">Today</span>
                 <button onClick={() => scrollTo("today")} className="font-mono text-[11px] text-muted hover:text-accent">
-                  {data.today.length > 3 ? `all ${data.today.length}` : "open list"}
+                  {data.today.length > 3 ? `see all ${data.today.length}` : "see list"}
                 </button>
               </div>
               {topThree.length === 0 ? (
@@ -537,13 +535,13 @@ export default function HomeScreen({
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-ink">
                     <CheckMark on size={11} />
                   </span>
-                  Clear for today.
+                  Nothing left for today.
                 </p>
               ) : (
                 <ul className="space-y-1">
                   <AnimatePresence initial={false}>
                     {topThree.map((t) => (
-                      <TodayRow key={t.id} task={t} onComplete={onComplete} onNext={onNext} />
+                      <TodayRow key={t.id} task={t} onComplete={onComplete} onNext={onNext} onOpen={onOpenTask} />
                     ))}
                   </AnimatePresence>
                 </ul>

@@ -18,6 +18,8 @@ import HubPeople from "./HubPeople";
 import { useEffect } from "react";
 import { ToastHost, type Toast } from "./hub-ui";
 import TodayList from "./TodayList";
+import TaskSheet from "./TaskSheet";
+import ScoreDetail from "./ScoreDetail";
 import WeekPanel from "./WeekPanel";
 
 const STAGGER = 0.06;
@@ -58,6 +60,11 @@ export default function HubDashboard({ name }: { name: string }) {
   const { data, mutate } = hub;
   const router = useRouter();
   const [toast, setToast] = useState<Toast | null>(null);
+  const [sheetTask, setSheetTask] = useState<Task | null>(null);
+  const [scoreField, setScoreField] = useState<ScoreField | null>(null);
+  const openTask = useCallback((t: Task) => setSheetTask(t), []);
+  const closeSheet = useCallback(() => setSheetTask(null), []);
+  const closeScore = useCallback(() => setScoreField(null), []);
 
   const say = useCallback((text: string, onAction?: () => void, actionLabel?: string) => {
     setToast({ id: Date.now(), text, onAction, actionLabel });
@@ -210,7 +217,13 @@ export default function HubDashboard({ name }: { name: string }) {
         ...d,
         week: {
           ...d.week,
-          scoreboard: { today: bump(d.week.scoreboard.today), week: bump(d.week.scoreboard.week) },
+          scoreboard: {
+            today: bump(d.week.scoreboard.today),
+            week: bump(d.week.scoreboard.week),
+            days: d.week.scoreboard.days.some((x) => x.date === d.todayKey)
+              ? d.week.scoreboard.days.map((x) => (x.date === d.todayKey ? { ...x, [field]: Math.max(0, x[field] + delta) } : x))
+              : [...d.week.scoreboard.days, { date: d.todayKey, dials: 0, convos: 0, booked: 0, cashCents: 0, [field]: Math.max(0, delta) }],
+          },
           goal:
             field === "cashCents" ? { ...d.week.goal, collectedCents: Math.max(0, d.week.goal.collectedCents + delta) } : d.week.goal,
         },
@@ -325,6 +338,8 @@ export default function HubDashboard({ name }: { name: string }) {
         onComplete={completeTask}
         onNext={pushToNext}
         onDrop={dropTask}
+        onOpenTask={openTask}
+        onScoreDetail={setScoreField}
         onScore={score}
         onNudge={nudge}
         onResolveInbox={(id) => {
@@ -359,7 +374,7 @@ export default function HubDashboard({ name }: { name: string }) {
           </div>
           <div className="order-1 min-w-0 space-y-5 lg:order-2 lg:sticky lg:top-[77px] lg:col-span-5">
             <Reveal delay={STAGGER} className="min-w-0 scroll-mt-28" id="today">
-              {data ? <TodayList tasks={data.today} onComplete={completeTask} onNext={pushToNext} /> : <SkeletonCard rows={4} />}
+              {data ? <TodayList tasks={data.today} onComplete={completeTask} onNext={pushToNext} onOpen={openTask} /> : <SkeletonCard rows={4} />}
             </Reveal>
             <Reveal delay={STAGGER * 3} className="min-w-0 scroll-mt-28" id="week">
               {week}
@@ -387,6 +402,15 @@ export default function HubDashboard({ name }: { name: string }) {
       >
         +
       </button>
+      <TaskSheet
+        task={sheetTask}
+        onClose={closeSheet}
+        onDone={(t) => { closeSheet(); completeTask(t); }}
+        onNext={(t) => { closeSheet(); pushToNext(t); }}
+        onDrop={(t) => { closeSheet(); dropTask(t); }}
+        onOpenFull={(t) => { closeSheet(); router.push(`/tasks?highlight=${t.id}`); }}
+      />
+      {data && <ScoreDetail field={scoreField} week={data.week} todayKey={data.todayKey} onClose={closeScore} />}
       <ToastHost toast={toast} onDone={clearToast} />
     </div>
   );
