@@ -132,11 +132,11 @@ export default function NavShell({
 
       {/* Mobile top bar */}
       <header className="md:hidden flex items-center justify-between border-b border-border px-4 py-3 sticky top-0 bg-background/80 backdrop-blur-xl z-40">
-        <Link href="/hub" className="flex items-center gap-2">
+        <Link href="/hub" className="flex items-center gap-2 -my-2 py-2">
           <Wordmark />
         </Link>
         <div className="flex items-center gap-3">
-          <button onClick={openSearch} className="text-muted hover:text-foreground transition-colors" aria-label="Search">
+          <button onClick={openSearch} className="-m-3 p-3 text-muted hover:text-foreground transition-colors" aria-label="Search">
             <SearchIcon className="w-4 h-4" />
           </button>
           <div className="relative" ref={mobileMenuRef}>

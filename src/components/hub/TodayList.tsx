@@ -193,7 +193,7 @@ export function TodayRow({ task, onComplete, onNext, onOpen }: { task: Task; onC
             onClick={() => onNext(task)}
             aria-label={`Move ${task.title} to Next`}
             title="Not today. Due in 3 days."
-            className="shrink-0 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold text-muted-2 opacity-70 transition-all hover:bg-surface-hover hover:text-foreground hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+            className="shrink-0 rounded-full px-2.5 py-1 max-md:-my-2 max-md:py-3 font-mono text-[11px] font-semibold text-muted-2 opacity-70 transition-all hover:bg-surface-hover hover:text-foreground hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
           >
             next
           </button>

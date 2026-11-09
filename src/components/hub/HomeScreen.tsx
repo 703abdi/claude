@@ -526,7 +526,7 @@ export default function HomeScreen({
             <div className="card p-3">
               <div className="flex items-center justify-between px-2 pt-1 pb-2">
                 <span className="eyebrow eyebrow-accent">Today</span>
-                <button onClick={() => scrollTo("today")} className="font-mono text-[11px] text-muted hover:text-accent">
+                <button onClick={() => scrollTo("today")} className="font-mono text-[11px] text-muted hover:text-accent max-md:-my-3 max-md:py-3">
                   {data.today.length > 3 ? `see all ${data.today.length}` : "see list"}
                 </button>
               </div>

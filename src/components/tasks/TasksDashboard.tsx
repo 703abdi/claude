@@ -318,7 +318,7 @@ export default function TasksDashboard({
           onManageCategories={() => setManagingCategories(true)}
         />
 
-        <div className="flex-1 min-w-0 px-4 lg:px-6 py-4">
+        <div className="flex-1 min-w-0 px-4 lg:px-6 py-4 max-lg:overflow-x-clip">
           {/* mobile rail switcher */}
           <div className="lg:hidden -mx-4 px-4 mb-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {VIEWS.map((v) => (

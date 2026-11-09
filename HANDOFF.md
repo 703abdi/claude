@@ -175,6 +175,10 @@ new Postgres database: setup, first sign-in, branding, a local agent run,
 and every page loading with no personal strings. The Deploy button and
 Supabase itself are untested.
 
+## Nov 9 2026: phone fixes and unit tests
+
+- /tasks no longer scrolls sideways at 390px. The cause was the StatHeader glow (`.glow-accent::before`, inset -10%), not the view chip row, which already scrolls on its own; the content column gets `max-lg:overflow-x-clip`. Hub phone tap targets (logo, search, `next`, `see list`, scoreboard labels) reach 40px through padding plus a matching negative margin, so layout and desktop are unchanged. `npm test` runs node:test over quick-add-parse, command-parse and next-action (22 tests, under 1s); `npm run typecheck` runs tsc.
+
 ## Gotchas
 
 - A parallel session pushes `tawakkul-site/` to the same branch. Always

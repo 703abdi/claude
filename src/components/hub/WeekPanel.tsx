@@ -230,7 +230,7 @@ export function Counter({
 function TileLabel({ label, onDetail }: { label: string; onDetail?: () => void }) {
   if (!onDetail) return <span className="eyebrow">{label}</span>;
   return (
-    <button onClick={onDetail} className="eyebrow flex items-center gap-1 hover:text-accent" title={`${label} this week`} aria-label={`${label}: see this week`}>
+    <button onClick={onDetail} className="eyebrow flex items-center gap-1 hover:text-accent max-md:-my-3 max-md:py-3" title={`${label} this week`} aria-label={`${label}: see this week`}>
       {label}
       <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden>
         <path d="M4 19V5M9 19v-7M14 19V9M19 19v-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
