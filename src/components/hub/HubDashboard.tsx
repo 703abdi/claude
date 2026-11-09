@@ -80,6 +80,31 @@ export default function HubDashboard({ name }: { name: string }) {
     say(`Done: ${task.title}`, () => undoComplete(task, index), "Undo");
   }
 
+  /** Not today: unpin it and give it a due date 3 days out, so it lands in Next on the Tasks page. */
+  function pushToNext(task: Task) {
+    if (!data) return;
+    const index = data.today.findIndex((t) => t.id === task.id);
+    const due = new Date();
+    due.setDate(due.getDate() + 3);
+    due.setHours(12, 0, 0, 0);
+    mutate(
+      (d) => ({ ...d, today: d.today.filter((t) => t.id !== task.id) }),
+      () => api.tasks.update(task.id, { pinnedToday: false, dueDate: due.toISOString() })
+    ).catch(failed);
+    say(`Next: ${task.title}`, () => undoNext(task, index), "Undo");
+  }
+
+  function undoNext(task: Task, index: number) {
+    mutate(
+      (d) => {
+        const today = d.today.filter((t) => t.id !== task.id);
+        today.splice(Math.max(0, Math.min(index, today.length)), 0, task);
+        return { ...d, today };
+      },
+      () => api.tasks.update(task.id, { pinnedToday: task.pinnedToday, dueDate: task.dueDate })
+    ).catch(failed);
+  }
+
   function dropTask(task: Task) {
     if (!data) return;
     mutate(
@@ -298,6 +323,7 @@ export default function HubDashboard({ name }: { name: string }) {
         onRun={runCommand}
         onNavigate={(href) => router.push(href)}
         onComplete={completeTask}
+        onNext={pushToNext}
         onDrop={dropTask}
         onScore={score}
         onNudge={nudge}
@@ -327,7 +353,7 @@ export default function HubDashboard({ name }: { name: string }) {
         <section className="grid items-start gap-5 lg:grid-cols-12">
           <div className="min-w-0 space-y-4 lg:col-span-7">
             <Reveal delay={STAGGER * 2} className="min-w-0 scroll-mt-28" id="today">
-              {data ? <TodayList tasks={data.today} onComplete={completeTask} /> : <SkeletonCard rows={4} />}
+              {data ? <TodayList tasks={data.today} onComplete={completeTask} onNext={pushToNext} /> : <SkeletonCard rows={4} />}
             </Reveal>
           </div>
           <div className="min-w-0 space-y-5 lg:sticky lg:top-[77px] lg:col-span-5">

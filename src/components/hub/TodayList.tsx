@@ -13,7 +13,7 @@ const CAP = 8;
 const SWIPE_DONE = 90;
 const SWIPE_MAX = 140;
 
-export default function TodayList({ tasks, onComplete }: { tasks: Task[]; onComplete: (task: Task) => void }) {
+export default function TodayList({ tasks, onComplete, onNext }: { tasks: Task[]; onComplete: (task: Task) => void; onNext?: (task: Task) => void }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? tasks : tasks.slice(0, CAP);
   const hidden = tasks.length - visible.length;
@@ -40,7 +40,7 @@ export default function TodayList({ tasks, onComplete }: { tasks: Task[]; onComp
         <ul className="space-y-1">
           <AnimatePresence initial={false}>
             {visible.map((t) => (
-              <TodayRow key={t.id} task={t} onComplete={onComplete} />
+              <TodayRow key={t.id} task={t} onComplete={onComplete} onNext={onNext} />
             ))}
           </AnimatePresence>
         </ul>
@@ -71,7 +71,7 @@ function EmptyToday() {
   );
 }
 
-export function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: Task) => void }) {
+export function TodayRow({ task, onComplete, onNext }: { task: Task; onComplete: (task: Task) => void; onNext?: (task: Task) => void }) {
   const [checking, setChecking] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
@@ -178,6 +178,16 @@ export function TodayRow({ task, onComplete }: { task: Task; onComplete: (task: 
             </div>
           )}
         </div>
+        {onNext && !temp && !checking && (
+          <button
+            onClick={() => onNext(task)}
+            aria-label={`Move ${task.title} to Next`}
+            title="Not today. Due in 3 days."
+            className="shrink-0 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold text-muted-2 opacity-70 transition-all hover:bg-surface-hover hover:text-foreground hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+          >
+            next
+          </button>
+        )}
       </div>
     </motion.li>
   );

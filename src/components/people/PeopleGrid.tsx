@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import Avatar from "@/components/shared/Avatar";
+import { parseContacts } from "@/lib/contacts-import";
 
 export type PersonSummary = {
   id: string;
@@ -33,6 +34,35 @@ export default function PeopleGrid({ initialPeople, embedded = false }: { initia
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState<string | null>(null);
+
+  async function importFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const contacts = parseContacts(await file.text(), file.name);
+    if (contacts.length === 0) {
+      setImporting("No names found in that file.");
+      return;
+    }
+    const have = new Set(people.map((p) => p.name.toLowerCase()));
+    const fresh = contacts.filter((c) => !have.has(c.name.toLowerCase()));
+    setImporting(`Adding ${fresh.length} of ${contacts.length}...`);
+    let added = 0;
+    for (const c of fresh) {
+      try {
+        const person = await api.people.create({ name: c.name, notes: c.email });
+        setPeople((prev) => (prev.some((p) => p.id === person.id) ? prev : [...prev, { ...person, activeCount: 0, waitingCount: 0, completedCount: 0, upcomingCount: 0 }]));
+        added++;
+      } catch {
+        /* skip the row, keep going */
+      }
+    }
+    setImporting(`Added ${added}. ${contacts.length - fresh.length} already here.`);
+    setTimeout(() => setImporting(null), 4000);
+  }
+
   async function addPerson(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
@@ -52,14 +82,25 @@ export default function PeopleGrid({ initialPeople, embedded = false }: { initia
           {!embedded && <p className="text-sm text-muted mt-1">Everyone tied to a task, a follow-up, or a meeting.</p>}
         </div>
         {!adding && (
-          <button
-            onClick={() => setAdding(true)}
-            className="shrink-0 text-sm font-semibold bg-accent text-accent-ink rounded-full px-4 py-2 hover:opacity-90 transition-opacity"
-          >
-            + Add person
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <input ref={fileRef} type="file" accept=".csv,.vcf,text/csv,text/vcard" className="hidden" onChange={importFile} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              title="Upload a CSV or vCard export"
+              className="text-sm font-semibold text-muted rounded-full px-3 py-2 hover:bg-surface-hover hover:text-foreground transition-colors"
+            >
+              Upload
+            </button>
+            <button
+              onClick={() => setAdding(true)}
+              className="text-sm font-semibold bg-accent text-accent-ink rounded-full px-4 py-2 hover:opacity-90 transition-opacity"
+            >
+              + Add person
+            </button>
+          </div>
         )}
       </div>
+      {importing && <p className="mb-4 text-sm text-muted animate-fade-in">{importing}</p>}
 
       {adding && (
         <form onSubmit={addPerson} className="flex items-center gap-2 mb-8 border border-border bg-surface rounded-lg p-3 animate-fade-in">

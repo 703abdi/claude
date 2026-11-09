@@ -340,6 +340,7 @@ export default function HomeScreen({
   onRun,
   onNavigate,
   onComplete,
+  onNext,
   onDrop,
   onScore,
   onNudge,
@@ -357,6 +358,7 @@ export default function HomeScreen({
   onRun: CommandRun;
   onNavigate: (href: string) => void;
   onComplete: (task: Task) => void;
+  onNext: (task: Task) => void;
   onDrop: (task: Task) => void;
   onScore: (field: ScoreField, delta: number) => void;
   onNudge: (group: WaitingGroup) => void;
@@ -533,7 +535,7 @@ export default function HomeScreen({
                 <ul className="space-y-1">
                   <AnimatePresence initial={false}>
                     {topThree.map((t) => (
-                      <TodayRow key={t.id} task={t} onComplete={onComplete} />
+                      <TodayRow key={t.id} task={t} onComplete={onComplete} onNext={onNext} />
                     ))}
                   </AnimatePresence>
                 </ul>
