@@ -49,7 +49,22 @@ export async function recomputePriorities() {
  * MorningBrief row — it never deletes tasks or silently overwrites a
  * user's manual priorities.
  */
+/**
+ * Today is a curated list for one day. Items a sync pinned yesterday or earlier
+ * that you never touched (still not started) drop back to Tasks each morning.
+ * Pins you set yourself have no source and are never cleared here.
+ */
+export async function expireSyncPins() {
+  const cutoff = new Date(Date.now() - 20 * 3_600_000);
+  const res = await prisma.task.updateMany({
+    where: { pinnedToday: true, status: TaskStatus.NOT_STARTED, source: { startsWith: "fathom:" }, createdAt: { lt: cutoff } },
+    data: { pinnedToday: false },
+  });
+  return { unpinned: res.count };
+}
+
 export async function runDailyRefresh() {
+  const pins = await expireSyncPins().catch(() => null);
   const fathom = await syncFathom({ force: true }).catch(() => null);
   const calendly = await syncCalendly({ force: true }).catch(() => null);
   const google = await syncGoogle({ force: true }).catch(() => null);
@@ -103,5 +118,5 @@ export async function runDailyRefresh() {
   });
 
   const digest = await morningDigest().catch(() => null);
-  return { fathom, calendly, google, extraction, synthesis, suggestions, priorities, briefId: brief.id, digest };
+  return { pins, fathom, calendly, google, extraction, synthesis, suggestions, priorities, briefId: brief.id, digest };
 }

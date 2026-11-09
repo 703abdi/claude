@@ -12,7 +12,11 @@ import { logSignal } from "@/lib/signals";
 const API = "https://api.fathom.ai/external/v1/meetings";
 const SOURCE = { type: "MANUAL" as const, name: "fathom" };
 const THROTTLE_MS = 30 * 60_000;
-const FIRST_RUN_DAYS = 14;
+const FIRST_RUN_DAYS = 3;
+/** Action items are due this many days after the call, so they go late and clear like any other task. */
+const DUE_AFTER_DAYS = 3;
+/** Only calls this recent pin their items to Today; older calls land in Tasks. */
+const PIN_WITHIN_DAYS = 2;
 const MAX_PAGES = 5;
 
 type Invitee = { name: string | null; email: string | null; is_external?: boolean };
@@ -173,8 +177,11 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
         const owedBy = !mine && !assigneePerson ? cleanName(a.assignee?.name) ?? a.assignee?.email ?? null : null;
         if (!mine && !assigneePerson && !owedBy) continue;
         position += 1000;
-        // Only the first few of your own items per call land in Today; the rest wait in Tasks.
-        const pin = mine && pinnedThisCall < policy.fathomPinMax;
+        // Only the first few of your own items from a recent call land in Today; the rest wait in Tasks.
+        const recent = Date.now() - when.getTime() < PIN_WITHIN_DAYS * 86_400_000;
+        const pin = mine && recent && pinnedThisCall < policy.fathomPinMax;
+        const due = new Date(when.getTime() + DUE_AFTER_DAYS * 86_400_000);
+        due.setHours(12, 0, 0, 0);
         if (pin) pinnedThisCall++;
         const notes = [owedBy ? `Owed by ${owedBy}.` : null, `From the call "${title}" on ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, a.recording_playback_url || link]
           .filter(Boolean)
@@ -187,6 +194,7 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
             source,
             position,
             pinnedToday: pin,
+            dueDate: mine ? due : null,
             status: mine ? TaskStatus.NOT_STARTED : TaskStatus.WAITING,
             waitingAt: mine ? null : new Date(),
             followUpRequired: !mine,
