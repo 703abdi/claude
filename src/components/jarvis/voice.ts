@@ -93,3 +93,90 @@ export function listenOnce(onPartial: (text: string) => void): { done: Promise<s
   rec.start();
   return { done, stop: () => rec.stop() };
 }
+
+const WAKE = /\b(?:hey |ok |okay |yo )?jarvis\b[\s,.!?]*(.*)$/i;
+
+/** Pulls the command out of a heard sentence: "hey Jarvis, what's next" -> "what's next".
+ * Returns "" when only the name was said, null when the name was not said at all. Pure. */
+export function wakeCommand(heard: string): string | null {
+  const m = heard.trim().match(WAKE);
+  if (!m) return null;
+  return m[1].trim().replace(/[.?!]+$/, "");
+}
+
+/** Hands-free: keeps the mic open and calls onCommand for a sentence that starts with "Jarvis".
+ * Saying only "Jarvis" arms it, and the next sentence is the command. The browser stops
+ * recognition every so often, so it restarts itself until stop() is called. */
+export function listenForWake(on: { command: (text: string) => void; armed?: (armed: boolean) => void; blocked?: () => void }): { stop: () => void; pause: () => void; resume: () => void } {
+  const Ctor = recCtor();
+  if (!Ctor) return { stop: () => {}, pause: () => {}, resume: () => {} };
+  let stopped = false;
+  let paused = false;
+  let armedUntil = 0;
+  let rec: Rec | null = null;
+
+  const start = () => {
+    if (stopped || paused) return;
+    rec = new Ctor();
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.continuous = true;
+    rec.onresult = (e) => {
+      const last = e.results[e.results.length - 1];
+      if (!last?.isFinal) return;
+      const heard = last[0].transcript.trim();
+      if (!heard) return;
+      const cmd = wakeCommand(heard);
+      if (cmd === null) {
+        if (Date.now() < armedUntil) {
+          armedUntil = 0;
+          on.armed?.(false);
+          on.command(heard);
+        }
+        return;
+      }
+      if (cmd) {
+        armedUntil = 0;
+        on.armed?.(false);
+        on.command(cmd);
+      } else {
+        armedUntil = Date.now() + 8000;
+        on.armed?.(true);
+        setTimeout(() => Date.now() >= armedUntil && on.armed?.(false), 8100);
+      }
+    };
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        stopped = true;
+        on.blocked?.();
+      }
+    };
+    rec.onend = () => {
+      rec = null;
+      if (!stopped && !paused) setTimeout(start, 400);
+    };
+    try {
+      rec.start();
+    } catch {
+      setTimeout(start, 1000);
+    }
+  };
+  start();
+
+  return {
+    stop: () => {
+      stopped = true;
+      rec?.abort();
+    },
+    // Paused while Jarvis is talking, so he does not hear himself.
+    pause: () => {
+      paused = true;
+      rec?.abort();
+    },
+    resume: () => {
+      if (stopped || !paused) return;
+      paused = false;
+      setTimeout(start, 300);
+    },
+  };
+}

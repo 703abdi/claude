@@ -574,3 +574,68 @@ model PushConfig {
   privateKey String
   createdAt  DateTime @default(now())
 }
+
+// ─────────────────────────────────────────────────────────────
+// JARVIS V2 (Nov 13 2026): notes, memory, action log, nudges
+// ─────────────────────────────────────────────────────────────
+
+model Note {
+  id        String   @id @default(cuid())
+  title     String   @default("")
+  body      String   @default("")
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+}
+
+/// One searchable chunk of something Abdi wrote, said or was told. `source` is
+/// "vault" (Obsidian file), "fathom" (call summary), "note" (Notes page) or "person"
+/// (People notes). Long documents are split; `chunk` is the piece number.
+/// `tsv` is filled by Postgres (generated column); search it with raw SQL.
+model MemoryDoc {
+  id         String                   @id @default(cuid())
+  source     String
+  externalId String
+  chunk      Int                      @default(0)
+  title      String
+  body       String
+  url        String?
+  date       DateTime?
+  hash       String
+  updatedAt  DateTime                 @updatedAt
+  tsv        Unsupported("tsvector")?
+
+  @@unique([source, externalId, chunk])
+  @@index([source, externalId])
+  @@index([tsv], type: Gin)
+}
+
+/// Everything Jarvis did on Abdi's behalf, with what is needed to undo it.
+model JarvisAction {
+  id        String    @id @default(cuid())
+  kind      String
+  summary   String
+  undo      Json?
+  undoneAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+/// Something Jarvis raised on its own. `key` makes each one fire once
+/// (for example "precall:<eventId>" or "waiting:<personId>:2026-11-13").
+model JarvisNudge {
+  id          String    @id @default(cuid())
+  kind        String
+  key         String    @unique
+  title       String
+  body        String
+  url         String?
+  createdAt   DateTime  @default(now())
+  pushedAt    DateTime?
+  dismissedAt DateTime?
+
+  @@index([dismissedAt, createdAt])
+}

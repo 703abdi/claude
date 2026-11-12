@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import MorningBriefSettings from "@/components/settings/MorningBriefSettings";
@@ -36,6 +37,9 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-[28px]">Settings</h1>
         <p className="text-sm text-muted mt-1">Morning brief, context sources, and integrations.</p>
+        <Link href="/library" className="mt-3 inline-block text-[13px] font-semibold text-accent hover:underline">
+          Library (SOPs) ›
+        </Link>
       </div>
 
       <section className="border border-border bg-surface rounded-lg p-4">

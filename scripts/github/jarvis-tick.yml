@@ -1,0 +1,25 @@
+# Template, not active. Runs the Jarvis tick every 5 minutes from GitHub, for when the Mac is asleep.
+# To turn it on: add a repo secret named JARVIS_TICK_TOKEN (the AGENTS_TOKEN or CRON_SECRET value),
+# then copy this file to .github/workflows/jarvis-tick.yml and push.
+# GitHub may run scheduled jobs late or skip some when it is busy.
+name: Jarvis tick
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Hit the tick
+        env:
+          TOKEN: ${{ secrets.JARVIS_TICK_TOKEN }}
+          SERVER_URL: https://claude-tau-six.vercel.app
+        run: |
+          status=$(curl --silent --show-error --max-time 60 --output /dev/null --write-out '%{http_code}' \
+            -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/cron/tick")
+          echo "tick answered $status"
+          test "$status" = "200"

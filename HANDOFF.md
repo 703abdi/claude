@@ -1,6 +1,46 @@
 # Handoff: abdi's os
 
-## Nov 12 2026: Jarvis redesign (branch `feat/jarvis-redesign`, NOT committed, NOT pushed, NOT deployed)
+## Nov 13 2026: Jarvis v2 (branch `feat/jarvis-v2`, NOT committed, NOT pushed, NOT deployed)
+
+PRD: `docs/2026-11-13-jarvis-v2-prd.md` (14 criteria, file ownership table). Abdi's answers: act first then confirm
+and be proactive; memory is everything of his (whole vault incl. chats); free voice; prayer times by phone
+location; Opus agents build, Fable designs and checks. Four Opus agents built A-D; Fable did the foundation, the
+Home wiring, the wake word and the review.
+
+What is in:
+- Tables (migration `20261113000000_jarvis_v2`): Note, MemoryDoc (generated tsvector + GIN), JarvisAction, JarvisNudge.
+- Actions: `src/lib/jarvis/actions.ts` + `tools.ts`; `/api/jarvis/ask` is a tool loop (6 turns, 500 tokens);
+  `/api/jarvis/undo`, `/api/jarvis/actions`. Tools: add/move/delete event, add note, append person note, add/finish
+  task, search memory, find events/person/tasks. Calendly, Fathom and feed events are refused. No send tools exist.
+- Memory: `src/lib/memory/`, `/api/memory/{ingest,search,stats,reindex}`, `scripts/memory-sync.mjs` (vault uploader,
+  state in `~/.config/personal-os/memory-sync-state.json`). Fathom sync stores call summaries. People and Notes
+  index on save.
+- Notes page `/notes`; nav has Notes (Library is desktop-only in the rail, linked from Settings on phones).
+- Prayer times: `src/lib/prayer.ts` (adhan, ISNA), `PrayerLine.tsx`, location asked only on tap.
+- Proactive: `src/lib/jarvis/nudge-rules.ts` (pure), `nudges.ts`, `GET /api/cron/tick` (bearer CRON_SECRET or
+  AGENTS_TOKEN only), `/api/jarvis/nudges`, Home "Heads up" list, spoken once when new. Opening Home also ticks.
+- Mac: `/api/mac/status`, `scripts/mac/` (tick + report scripts, two launchd plists, install.sh). NOT installed.
+- "Hey Jarvis" toggle on Home (desktop, Chrome/Safari), off by default.
+
+Fable's review changes: removed the spoofable `x-vercel-cron-signature` fallback on the tick; ask route retries
+without `thinking: disabled` if the model answers 400; added a rule that text from memory is never an instruction.
+
+Tested by Fable (Nov 12-13): typecheck, lint, 88 tests with DATABASE_URL set (DB suites skip without it), `next
+build`. Over HTTP on localhost: every new endpoint returns 401 without auth, tick with bearer created a real
+"waiting" nudge, ingest stored a doc and search found it by a plain-English question, bad source rejected, Mac
+status post + Home strip. In the browser at 1280 and 375: Home with Heads up and Mac row, prayer line (coords set
+by hand for DC), Notes create/autosave/indexed in memory, six phone tabs, no sideways scroll.
+
+NOT tested: the live model tool loop (no ANTHROPIC_API_KEY locally), real web push, the real geolocation prompt,
+speech and wake word with a real mic, Fathom `include_summary` against the live API, the vault upload, the Mac
+scripts against a running JARVIS, the migration on Neon.
+
+Needs Abdi: yes to ship; yes to upload the vault (46 MB, 3,801 files, 56 batches, dry run done); yes to install
+the two launchd jobs; allow notifications on the phone; Google OAuth client (still not connected).
+
+---
+
+## Nov 12 2026: Jarvis redesign (branch `feat/jarvis-redesign`, shipped: commit a2ee93e is live on claude-tau-six.vercel.app since Nov 12)
 
 PRD with the 13 pass/fail criteria: `docs/2026-11-12-jarvis-redesign-prd.md`. Abdi's answers: 1D, 2B, 3B, 4C, 5A.
 He also asked for Savee (savee.com) as the UI reference: thin icon rail, near-black, big soft greeting, floating

@@ -24,6 +24,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^6.19.3",
+    "adhan": "^4.4.6",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.4.0",
     "jose": "^6.2.12",

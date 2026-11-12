@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { personUpdateSchema } from "@/lib/validation";
 import { taskInclude, serializeTask } from "@/lib/serialize";
 import { TaskStatus } from "@prisma/client";
+import { deleteMemory, indexPerson } from "@/lib/memory";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -51,11 +52,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const person = await prisma.person.update({ where: { id }, data: parsed.data });
+  // Keep memory in step with the notes (the name is the title). A memory failure never blocks the save.
+  if (parsed.data.notes !== undefined || parsed.data.name !== undefined) await indexPerson(person).catch(() => null);
   return NextResponse.json(person);
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   await prisma.person.delete({ where: { id } });
+  await deleteMemory("person", id).catch(() => null);
   return NextResponse.json({ ok: true });
 }

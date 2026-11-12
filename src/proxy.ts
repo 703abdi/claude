@@ -20,6 +20,11 @@ const PUBLIC_EXACT = [
   "/api/state",
   "/api/score",
   "/api/library",
+  // Jarvis v2. The tick takes CRON_SECRET or AGENTS_TOKEN. Mac status takes AGENTS_TOKEN
+  // on POST and a session or the bearer on GET. Memory ingest takes AGENTS_TOKEN.
+  "/api/cron/tick",
+  "/api/mac/status",
+  "/api/memory/ingest",
 ];
 
 async function isValidSession(token: string | undefined) {

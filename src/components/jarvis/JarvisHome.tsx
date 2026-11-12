@@ -7,31 +7,51 @@ import type { Briefing, EventLine } from "@/lib/jarvis/briefing";
 import { ago, useMedia, useNow } from "@/components/hub/hub-ui";
 import { localNotify } from "@/lib/push-client";
 import Backdrop, { BACKDROPS, useBackdrop } from "./Backdrop";
+import PrayerLine from "./PrayerLine";
 import { createOrb, type Orb, type OrbState } from "./orb";
-import { canListen, canSpeak, listenOnce, speak, stopSpeaking } from "./voice";
+import { canListen, canSpeak, listenForWake, listenOnce, speak, stopSpeaking } from "./voice";
 
 type Source = { name: string; ok: boolean; lastSyncAt: string | null; error: string | null };
 type Payload = Briefing & { sources: Source[] };
+type Nudge = { id: string; kind: string; title: string; body: string; url: string | null; createdAt: string };
+type MacStatus = { online: boolean; updatedAt: string | null; sessions: { name: string; state: "running" | "waiting" | "idle"; detail?: string }[] };
+type Done = { id: string; kind: string; summary: string; undone?: boolean };
+type Answer = { q: string; a: string; bad?: boolean; actions?: Done[]; sources?: { title: string; url: string | null }[] };
 
 const POLL_MS = 30_000;
 const SOURCE_LABEL: Record<string, string> = { google: "Google", calendly: "Calendly", fathom: "Fathom" };
+const WAKE_KEY = "pos.wake";
 
-function useBriefing() {
+async function getJson<T>(url: string): Promise<T | null> {
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function useHome() {
   const [data, setData] = useState<Payload | null>(null);
+  const [nudges, setNudges] = useState<Nudge[]>([]);
+  const [mac, setMac] = useState<MacStatus | null>(null);
   const [error, setError] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const res = await fetch(`/api/jarvis/brief?tz=${encodeURIComponent(tz)}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(String(res.status));
-      setData(await res.json());
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const [brief, n, m] = await Promise.all([
+      getJson<Payload>(`/api/jarvis/brief?tz=${encodeURIComponent(tz)}`),
+      getJson<{ nudges: Nudge[] }>("/api/jarvis/nudges"),
+      getJson<MacStatus>("/api/mac/status"),
+    ]);
+    if (brief) {
+      setData(brief);
       setUpdatedAt(Date.now());
-      setError(false);
-    } catch {
-      setError(true);
     }
+    setError(!brief);
+    if (n) setNudges(n.nudges);
+    setMac(m);
   }, []);
 
   useEffect(() => {
@@ -48,7 +68,7 @@ function useBriefing() {
     };
   }, [load]);
 
-  return { data, error, updatedAt, reload: load };
+  return { data, nudges, setNudges, mac, error, updatedAt, reload: load };
 }
 
 function OrbCanvas({ state, level, onTap, label }: { state: OrbState; level: number; onTap: () => void; label: string }) {
@@ -75,7 +95,7 @@ function OrbCanvas({ state, level, onTap, label }: { state: OrbState; level: num
   useEffect(() => orb.current?.setLevel(level), [level]);
 
   return (
-    <button ref={host} onClick={onTap} aria-label={label} title={label} className="jarvis-orb relative block h-[220px] w-full max-w-[520px] cursor-pointer md:h-[300px]">
+    <button ref={host} onClick={onTap} aria-label={label} title={label} className="jarvis-orb relative block h-[200px] w-full max-w-[520px] cursor-pointer md:h-[280px]">
       {failed ? <span className="jarvis-orb-fallback" data-state={state} /> : <canvas ref={canvas} className="absolute inset-0 h-full w-full" />}
     </button>
   );
@@ -86,9 +106,7 @@ function Row({ line, showDay }: { line: EventLine; showDay: boolean }) {
   return (
     <li>
       <Link href={`/calendar?day=${line.dayKey}`} className="jarvis-row">
-        <span className={`w-[92px] shrink-0 font-mono text-[12px] ${soon ? "text-accent" : "text-muted"}`}>
-          {showDay ? line.dayLabel : (line.time ?? "All day")}
-        </span>
+        <span className={`w-[92px] shrink-0 font-mono text-[12px] ${soon ? "text-accent" : "text-muted"}`}>{showDay ? line.dayLabel : (line.time ?? "All day")}</span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-medium text-foreground">{line.title}</span>
           {(line.person || (showDay && line.time)) && (
@@ -114,7 +132,7 @@ function Panel({ title, count, children }: { title: string; count?: number; chil
 }
 
 export default function JarvisHome() {
-  const { data, error, updatedAt, reload } = useBriefing();
+  const { data, nudges, setNudges, mac, error, updatedAt, reload } = useHome();
   const now = useNow(10_000);
   const reduced = useReducedMotion();
   const isDesktop = useMedia("(min-width: 768px)");
@@ -124,16 +142,35 @@ export default function JarvisHome() {
   const [level, setLevel] = useState(0);
   const [question, setQuestion] = useState("");
   const [heard, setHeard] = useState("");
-  const [answer, setAnswer] = useState<{ q: string; a: string; bad?: boolean } | null>(null);
+  const [answer, setAnswer] = useState<Answer | null>(null);
   const [busy, setBusy] = useState(false);
   const [voice, setVoice] = useState({ listen: false, speak: false });
+  const [wake, setWake] = useState(false);
+  const [armed, setArmed] = useState(false);
   const stopListening = useRef<(() => void) | null>(null);
   const decay = useRef<ReturnType<typeof setInterval> | null>(null);
+  const history = useRef<{ q: string; a: string }[]>([]);
+  const prayer = useRef<string | null>(null);
+  const wakeCtl = useRef<ReturnType<typeof listenForWake> | null>(null);
+  // Speech only works after the first tap or key press on the page, so Jarvis stays quiet until then.
+  const touched = useRef(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setVoice({ listen: canListen(), speak: canSpeak() }), 0);
+    const t = setTimeout(() => {
+      setVoice({ listen: canListen(), speak: canSpeak() });
+      try {
+        setWake(canListen() && localStorage.getItem(WAKE_KEY) === "1");
+      } catch {
+        // storage blocked: wake word stays off
+      }
+    }, 0);
+    const mark = () => (touched.current = true);
+    window.addEventListener("pointerdown", mark);
+    window.addEventListener("keydown", mark);
     return () => {
       clearTimeout(t);
+      window.removeEventListener("pointerdown", mark);
+      window.removeEventListener("keydown", mark);
       stopSpeaking();
       if (decay.current) clearInterval(decay.current);
     };
@@ -141,6 +178,7 @@ export default function JarvisHome() {
 
   const say = useCallback((text: string) => {
     if (!canSpeak()) return;
+    wakeCtl.current?.pause();
     speak(text, {
       start: () => {
         setOrbState("speaking");
@@ -154,6 +192,7 @@ export default function JarvisHome() {
         if (decay.current) clearInterval(decay.current);
         setLevel(0);
         setOrbState("idle");
+        wakeCtl.current?.resume();
       },
     });
   }, []);
@@ -162,38 +201,59 @@ export default function JarvisHome() {
     if (orbState === "speaking") {
       stopSpeaking();
       setOrbState("idle");
+      wakeCtl.current?.resume();
       return;
     }
-    if (data) say(data.spoken);
+    if (!data) return;
+    const heads = nudges.length ? ` Heads up: ${nudges.slice(0, 2).map((n) => n.title).join(". ")}.` : "";
+    say(`${data.spoken}${heads}${prayer.current ? ` ${prayer.current}` : ""}`);
   }
 
-  async function ask(q: string) {
-    const text = q.trim();
-    if (!text || busy) return;
-    setBusy(true);
-    setQuestion("");
-    setHeard("");
-    setOrbState("thinking");
-    try {
-      const res = await fetch("/api/jarvis/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: text, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setAnswer({ q: text, a: json.error ?? "Jarvis couldn't answer that.", bad: true });
+  const ask = useCallback(
+    async (q: string) => {
+      const text = q.trim();
+      if (!text) return;
+      setBusy(true);
+      setQuestion("");
+      setHeard("");
+      setOrbState("thinking");
+      try {
+        const res = await fetch("/api/jarvis/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: text, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, history: history.current.slice(-3) }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setAnswer({ q: text, a: json.error ?? "Jarvis couldn't answer that.", bad: true });
+          setOrbState("idle");
+        } else {
+          const a: string = json.answer ?? "";
+          history.current = [...history.current, { q: text, a }].slice(-3);
+          setAnswer({ q: text, a, actions: json.actions ?? [], sources: json.sources ?? [] });
+          if ((json.actions ?? []).length) void reload();
+          if (canSpeak()) say(a);
+          else setOrbState("idle");
+        }
+      } catch {
+        setAnswer({ q: text, a: "No connection. Try again.", bad: true });
         setOrbState("idle");
-      } else {
-        setAnswer({ q: text, a: json.answer });
-        if (canSpeak()) say(json.answer);
-        else setOrbState("idle");
+      } finally {
+        setBusy(false);
       }
-    } catch {
-      setAnswer({ q: text, a: "No connection. Try again.", bad: true });
-      setOrbState("idle");
-    } finally {
-      setBusy(false);
+    },
+    [reload, say]
+  );
+
+  async function undo(action: Done) {
+    try {
+      const res = await fetch("/api/jarvis/undo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: action.id }) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "Couldn't undo that.");
+      setAnswer((prev) => (prev ? { ...prev, actions: prev.actions?.map((x) => (x.id === action.id ? { ...x, undone: true } : x)) } : prev));
+      void reload();
+    } catch (e) {
+      setAnswer((prev) => (prev ? { ...prev, a: (e as Error).message, bad: true } : prev));
     }
   }
 
@@ -203,6 +263,7 @@ export default function JarvisHome() {
       return;
     }
     stopSpeaking();
+    wakeCtl.current?.pause();
     setOrbState("listening");
     setHeard("");
     try {
@@ -215,6 +276,44 @@ export default function JarvisHome() {
     } catch (e) {
       setOrbState("idle");
       setAnswer({ q: "", a: (e as Error).message === "mic-blocked" ? "The microphone is blocked for this site. Allow it in the browser's site settings." : "This browser can't listen. Type instead.", bad: true });
+    } finally {
+      wakeCtl.current?.resume();
+    }
+  }
+
+  // "Hey Jarvis": the mic stays open while this page is, and only acts on sentences that start with his name.
+  const askRef = useRef(ask);
+  useEffect(() => {
+    askRef.current = ask;
+  }, [ask]);
+  useEffect(() => {
+    if (!wake) return;
+    const ctl = listenForWake({
+      command: (text) => void askRef.current(text),
+      armed: (on) => {
+        setArmed(on);
+        if (on) setOrbState("listening");
+        else setOrbState((s) => (s === "listening" ? "idle" : s));
+      },
+      blocked: () => {
+        setWake(false);
+        setAnswer({ q: "", a: "The microphone is blocked for this site, so Hey Jarvis is off.", bad: true });
+      },
+    });
+    wakeCtl.current = ctl;
+    return () => {
+      ctl.stop();
+      wakeCtl.current = null;
+    };
+  }, [wake]);
+
+  function toggleWake() {
+    const next = !wake;
+    setWake(next);
+    try {
+      localStorage.setItem(WAKE_KEY, next ? "1" : "0");
+    } catch {
+      // ignore
     }
   }
 
@@ -229,6 +328,25 @@ export default function JarvisHome() {
     }
   }, [data]);
 
+  // Proactive: when something new comes in while the page is open, say it once.
+  const spoken = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (spoken.current === null) {
+      // First load: don't read out old ones.
+      spoken.current = new Set(nudges.map((n) => n.id));
+      return;
+    }
+    const fresh = nudges.filter((n) => !spoken.current!.has(n.id));
+    if (!fresh.length) return;
+    fresh.forEach((n) => spoken.current!.add(n.id));
+    if (touched.current && !busy) say(`Heads up. ${fresh[0].title}. ${fresh[0].body}`.slice(0, 320));
+  }, [nudges, busy, say]);
+
+  async function dismiss(n: Nudge) {
+    setNudges((prev) => prev.filter((x) => x.id !== n.id));
+    await fetch(`/api/jarvis/nudges/${n.id}/dismiss`, { method: "POST" }).catch(() => null);
+  }
+
   const nextBackdrop = () => {
     const i = BACKDROPS.findIndex((b) => b.id === backdropId);
     choose(BACKDROPS[(i + 1) % BACKDROPS.length].id);
@@ -236,31 +354,81 @@ export default function JarvisHome() {
 
   const orbLabel = orbState === "speaking" ? "Stop talking" : "Read me the briefing";
   const empty = data && data.today.length === 0 && data.ahead.length === 0;
+  const waitingMac = mac?.online ? mac.sessions.filter((s) => s.state === "waiting") : [];
+  const runningMac = mac?.online ? mac.sessions.filter((s) => s.state === "running") : [];
+  const status =
+    orbState === "listening" ? (armed ? "Yes?" : "Listening") : orbState === "thinking" ? "Thinking" : orbState === "speaking" ? "Speaking" : wake ? "Say Jarvis, then what you need" : voice.speak ? "Tap the orb to hear it" : "Jarvis";
 
   return (
     <div className="relative flex min-h-[100svh] flex-col">
       <Backdrop src={backdrop.src} kenBurns={isDesktop && !reduced} />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[980px] flex-1 flex-col items-center px-4 pb-56 pt-4 md:px-8 md:pb-36 md:pt-8">
+      <div className="relative z-10 mx-auto flex w-full max-w-[980px] flex-1 flex-col items-center px-4 pb-56 pt-4 md:px-8 md:pb-36 md:pt-6">
         <OrbCanvas state={orbState} level={level} onTap={tapOrb} label={orbLabel} />
 
         <div className="-mt-4 w-full text-center md:-mt-6">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-2">
-            {orbState === "listening" ? "Listening" : orbState === "thinking" ? "Thinking" : orbState === "speaking" ? "Speaking" : voice.speak ? "Tap the orb to hear it" : "Jarvis"}
-          </p>
-          <h1 className="mt-2 text-[clamp(1.9rem,5vw,3.1rem)] font-semibold leading-[1.05] tracking-[-0.035em] text-foreground">
-            {data ? data.greeting : " "}
-          </h1>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-2">{status}</p>
+          <h1 className="mt-2 text-[clamp(1.9rem,5vw,3.1rem)] font-semibold leading-[1.05] tracking-[-0.035em] text-foreground">{data ? data.greeting : " "}</h1>
           <p className="mx-auto mt-3 max-w-[640px] text-[clamp(1rem,2.2vw,1.2rem)] leading-snug text-muted">
             {data ? data.headline : error ? "Can't reach the server. Retrying." : "Reading your day."}
           </p>
         </div>
 
+        {(nudges.length > 0 || waitingMac.length > 0) && (
+          <section className="jarvis-panel mt-8 w-full" aria-label="Heads up">
+            <h2 className="mb-1 px-1">
+              <span className="eyebrow eyebrow-accent">Heads up</span>
+            </h2>
+            <ul>
+              {waitingMac.map((s) => (
+                <li key={`mac-${s.name}`} className="jarvis-row">
+                  <span className="w-[92px] shrink-0 font-mono text-[12px] text-accent">On your Mac</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium text-foreground">{s.name} is waiting on you</span>
+                    {s.detail && <span className="block truncate text-[12px] text-muted-2">{s.detail}</span>}
+                  </span>
+                </li>
+              ))}
+              {nudges.map((n) => {
+                const body = (
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium text-foreground">{n.title}</span>
+                    {n.body && <span className="line-clamp-2 block text-[12px] text-muted-2">{n.body}</span>}
+                  </span>
+                );
+                const when = <span className="w-[92px] shrink-0 font-mono text-[12px] text-accent">{now ? ago(n.createdAt, now) : ""}</span>;
+                return (
+                  <li key={n.id} className="jarvis-row">
+                    {n.url ? (
+                      <a href={n.url} target={n.url.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-3">
+                        {when}
+                        {body}
+                      </a>
+                    ) : (
+                      <span className="flex min-w-0 flex-1 items-center gap-3">
+                        {when}
+                        {body}
+                      </span>
+                    )}
+                    <button onClick={() => dismiss(n)} aria-label={`Dismiss: ${n.title}`} className="shrink-0 px-2 py-1 text-[16px] leading-none text-muted-2 hover:text-foreground">
+                      ×
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
         {data && (
           <div className="mt-9 grid w-full gap-x-10 gap-y-8 md:grid-cols-2">
             <Panel title="Today" count={data.today.length}>
               {data.today.length ? (
-                <ul>{data.today.map((l) => <Row key={l.id} line={l} showDay={false} />)}</ul>
+                <ul>
+                  {data.today.map((l) => (
+                    <Row key={l.id} line={l} showDay={false} />
+                  ))}
+                </ul>
               ) : (
                 <p className="px-1 py-3 text-[14px] text-muted-2">Nothing left today.</p>
               )}
@@ -268,12 +436,19 @@ export default function JarvisHome() {
 
             <Panel title="Next 7 days" count={data.ahead.length}>
               {data.ahead.length ? (
-                <ul>{data.ahead.slice(0, 6).map((l) => <Row key={l.id} line={l} showDay />)}</ul>
+                <ul>
+                  {data.ahead.slice(0, 6).map((l) => (
+                    <Row key={l.id} line={l} showDay />
+                  ))}
+                </ul>
               ) : (
                 <p className="px-1 py-3 text-[14px] text-muted-2">
                   {empty ? (
                     <>
-                      Nothing on the calendar. <Link href="/calendar" className="text-accent hover:underline">Add something</Link>
+                      Nothing on the calendar.{" "}
+                      <Link href="/calendar" className="text-accent hover:underline">
+                        Add something
+                      </Link>
                     </>
                   ) : (
                     "Nothing after today."
@@ -326,7 +501,8 @@ export default function JarvisHome() {
           </div>
         )}
 
-        <div className="mt-10 flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[11px] text-muted-2">
+        <div className="mt-10 flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-1.5 font-mono text-[11px] text-muted-2">
+          <PrayerLine onText={(t) => (prayer.current = t)} />
           <button onClick={reload} className="hover:text-foreground" title="Refresh now">
             <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${error ? "bg-danger" : "bg-ok"}`} />
             {error ? "offline" : updatedAt && now ? `live · checked ${ago(updatedAt, now)}` : "connecting"}
@@ -338,6 +514,12 @@ export default function JarvisHome() {
               {s.lastSyncAt && now ? ` ${ago(s.lastSyncAt, now)}` : ""}
             </Link>
           ))}
+          {mac?.online && (
+            <span title={mac.sessions.map((s) => `${s.name}: ${s.state}`).join("\n") || "No Claude Code sessions open"}>
+              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-ok" />
+              mac · {runningMac.length} running{waitingMac.length ? ` · ${waitingMac.length} waiting` : ""}
+            </span>
+          )}
           <button onClick={nextBackdrop} className="hover:text-foreground" title="Change the background">
             bg: {backdrop.label.toLowerCase()}
           </button>
@@ -356,6 +538,39 @@ export default function JarvisHome() {
                   <>
                     {answer.q && <p className="mb-1 truncate font-mono text-[11px] text-muted-2">{answer.q}</p>}
                     <p className="text-[15px] leading-snug text-foreground">{answer.a}</p>
+                    {!!answer.actions?.length && (
+                      <ul className="mt-2 space-y-1 border-t border-border pt-2">
+                        {answer.actions.map((x) => (
+                          <li key={x.id} className="flex items-center justify-between gap-3 text-[13px]">
+                            <span className={`min-w-0 truncate ${x.undone ? "text-muted-2 line-through" : "text-muted"}`}>{x.summary}</span>
+                            {x.undone ? (
+                              <span className="shrink-0 font-mono text-[11px] text-muted-2">undone</span>
+                            ) : (
+                              <button onClick={() => undo(x)} className="shrink-0 font-semibold text-accent hover:underline">
+                                Undo
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {!!answer.sources?.length && (
+                      <p className="mt-2 truncate font-mono text-[11px] text-muted-2">
+                        from:{" "}
+                        {answer.sources.slice(0, 3).map((s, i) => (
+                          <span key={i}>
+                            {i > 0 && ", "}
+                            {s.url ? (
+                              <a href={s.url} target={s.url.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="hover:text-foreground hover:underline">
+                                {s.title}
+                              </a>
+                            ) : (
+                              s.title
+                            )}
+                          </span>
+                        ))}
+                      </p>
+                    )}
                     <button onClick={() => setAnswer(null)} aria-label="Close answer" className="absolute right-2 top-1.5 px-2 py-1 text-[16px] leading-none text-muted-2 hover:text-foreground">
                       ×
                     </button>
@@ -367,18 +582,29 @@ export default function JarvisHome() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void ask(question);
+              if (!busy) void ask(question);
             }}
-            className="command-bar flex h-14 items-center gap-2 rounded-full pl-5 pr-2"
+            className="command-bar flex h-14 items-center gap-1.5 rounded-full pl-5 pr-2"
           >
             <input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               disabled={busy}
               aria-label="Ask Jarvis"
-              placeholder={busy ? "Thinking" : "Ask Jarvis: what's next, who am I waiting on"}
+              placeholder={busy ? "Thinking" : "Ask, or tell me what to do: add lunch with Ali fri 1pm"}
               className="min-w-0 flex-1 bg-transparent text-[16px] text-foreground outline-none placeholder:text-muted-2"
             />
+            {voice.listen && (
+              <button
+                type="button"
+                onClick={toggleWake}
+                aria-pressed={wake}
+                title={wake ? "Hey Jarvis is on. The mic stays open on this page." : "Turn on Hey Jarvis (hands-free)"}
+                className={`hidden h-8 shrink-0 rounded-full border px-2.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:block ${wake ? "border-accent text-accent" : "border-border-2 text-muted-2 hover:text-foreground"}`}
+              >
+                Hey Jarvis {wake ? "on" : "off"}
+              </button>
+            )}
             {voice.listen && (
               <button
                 type="button"

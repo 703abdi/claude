@@ -5,13 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode } from "react";
 
 // One rail on the left, icons only, like a tool you live in. No top bar anywhere.
-// Phones get the same items as a bottom tab bar.
-const NAV_ITEMS = [
+// Phones get a bottom tab bar with six of them. Library is reached from Settings there.
+const NAV_ITEMS: { href: string; label: string; icon: (p: { className?: string }) => ReactNode; desktopOnly?: boolean }[] = [
   { href: "/hub", label: "Home", icon: HubIcon },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon },
   { href: "/people", label: "People", icon: PeopleIcon },
+  { href: "/notes", label: "Notes", icon: NotesIcon },
   { href: "/tasks", label: "Tasks", icon: TasksIcon },
-  { href: "/library", label: "Library", icon: LibraryIcon },
+  { href: "/library", label: "Library", icon: LibraryIcon, desktopOnly: true },
   { href: "/settings", label: "Settings", icon: GearIcon },
 ];
 
@@ -53,7 +54,7 @@ export default function NavShell({ children, email }: { children: ReactNode; ema
 
       {/* Phone tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-border bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden" aria-label="Main">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !item.desktopOnly).map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link
@@ -137,6 +138,20 @@ function CalendarIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="none" className={className}>
       <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
       <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function NotesIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
