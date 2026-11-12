@@ -139,7 +139,7 @@ export default function TasksView({ initialTasks, categories, people }: { initia
       <h1 className="mt-1 text-[26px] font-semibold tracking-[-0.03em] sm:text-[32px]">{tasks.length} open</h1>
 
       <form onSubmit={add} className="mt-5">
-        <div className="command-bar flex h-14 items-center gap-2 rounded-full pl-5 pr-2">
+        <div className="command-bar flex h-14 items-center gap-2 pl-4 pr-2">
           <input
             value={value}
             onChange={(e) => setValue(e.target.value)}
@@ -148,7 +148,7 @@ export default function TasksView({ initialTasks, categories, people }: { initia
             placeholder="Add a task"
             className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-2"
           />
-          <button type="submit" disabled={busy || !parsed?.title} className="h-10 shrink-0 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background disabled:opacity-25">
+          <button type="submit" disabled={busy || !parsed?.title} className="h-10 shrink-0 rounded-lg bg-foreground px-4 text-[13px] font-semibold text-background disabled:opacity-25">
             Add
           </button>
         </div>
@@ -242,7 +242,7 @@ function TaskRow({
   const [notes, setNotes] = useState(task.notes ?? "");
   const due = dueLabel(task);
   const who = task.followUpPerson?.name ?? task.people[0]?.name ?? null;
-  const field = "rounded-xl border border-border bg-surface px-3 py-2 text-[14px] outline-none focus:border-accent";
+  const field = "type-box min-h-10 bg-surface px-3 py-2 text-[14px] outline-none";
 
   return (
     <li className="border-b border-border">

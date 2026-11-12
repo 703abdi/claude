@@ -93,7 +93,7 @@ export default function PeopleList({ initialPeople }: { initialPeople: PersonSum
     setTimeout(() => setStatus(null), 4000);
   }
 
-  const input = "h-10 min-w-0 rounded-full border border-border bg-surface px-4 text-[14px] outline-none placeholder:text-muted-2 focus:border-accent";
+  const input = "type-box h-10 min-w-0 bg-surface px-3 text-[14px] outline-none placeholder:text-muted-2";
 
   return (
     <div className="flex h-full flex-col">
@@ -109,7 +109,7 @@ export default function PeopleList({ initialPeople }: { initialPeople: PersonSum
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search people" className={`${input} mt-3 w-full`} />
         <form onSubmit={addPerson} className="mt-2 flex gap-2">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Add someone" aria-label="Add a person by name" className={`${input} flex-1`} />
-          <button type="submit" disabled={!name.trim()} className="h-10 shrink-0 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background disabled:opacity-25">
+          <button type="submit" disabled={!name.trim()} className="h-10 shrink-0 rounded-lg bg-foreground px-4 text-[13px] font-semibold text-background disabled:opacity-25">
             Add
           </button>
         </form>

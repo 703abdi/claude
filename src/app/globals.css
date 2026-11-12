@@ -478,17 +478,36 @@ select:focus-visible {
   transform-origin: center;
   will-change: transform;
 }
+/* Typing boxes, Claude-composer style: one flat rectangle, one 1px border,
+   12px corners, and focus only brightens the border (no ring, no glow).
+   `.type-box` is in the components layer so per-field utilities (bg, padding) still apply. */
+@layer components {
+  .type-box {
+    border: 1px solid var(--border-2);
+    border-radius: 12px;
+    transition: border-color 0.15s ease;
+  }
+  .type-box:focus,
+  .type-box:focus-within {
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+}
+/* Unlayered so it beats the global focus ring above; the brighter border is the focus cue. */
+.type-box:is(input, textarea, select):focus-visible,
+.command-bar :is(input, textarea):focus-visible {
+  outline: none;
+}
 .command-bar {
   position: relative;
   background: color-mix(in srgb, var(--surface-2) 85%, transparent);
   border: 1px solid var(--border-2);
+  border-radius: 12px;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  transition: border-color 0.15s ease, box-shadow 0.25s ease;
+  transition: border-color 0.15s ease;
 }
 .command-bar:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 0 60px -10px rgba(90, 184, 240, 0.35);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 .tile-home {
   min-height: 104px;

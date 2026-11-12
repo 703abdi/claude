@@ -584,7 +584,7 @@ export default function JarvisHome() {
               e.preventDefault();
               if (!busy) void ask(question);
             }}
-            className="command-bar flex h-14 items-center gap-1.5 rounded-full pl-5 pr-2"
+            className="command-bar flex h-14 items-center gap-1.5 pl-4 pr-2"
           >
             <input
               value={question}
@@ -600,7 +600,7 @@ export default function JarvisHome() {
                 onClick={toggleWake}
                 aria-pressed={wake}
                 title={wake ? "Hey Jarvis is on. The mic stays open on this page." : "Turn on Hey Jarvis (hands-free)"}
-                className={`hidden h-8 shrink-0 rounded-full border px-2.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:block ${wake ? "border-accent text-accent" : "border-border-2 text-muted-2 hover:text-foreground"}`}
+                className={`hidden h-8 shrink-0 rounded-lg px-2.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:block ${wake ? "bg-accent-soft text-accent" : "text-muted-2 hover:bg-surface-hover hover:text-foreground"}`}
               >
                 Hey Jarvis {wake ? "on" : "off"}
               </button>
@@ -611,7 +611,7 @@ export default function JarvisHome() {
                 onClick={mic}
                 aria-label={orbState === "listening" ? "Stop listening" : "Talk to Jarvis"}
                 aria-pressed={orbState === "listening"}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${orbState === "listening" ? "bg-accent text-accent-ink" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${orbState === "listening" ? "bg-accent text-accent-ink" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
               >
                 <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]">
                   <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="2" />
@@ -619,7 +619,7 @@ export default function JarvisHome() {
                 </svg>
               </button>
             )}
-            <button type="submit" disabled={busy || !question.trim()} aria-label="Send" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity disabled:opacity-25">
+            <button type="submit" disabled={busy || !question.trim()} aria-label="Send" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-opacity disabled:opacity-25">
               <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]">
                 <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>

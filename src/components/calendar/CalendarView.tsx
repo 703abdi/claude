@@ -331,7 +331,7 @@ function QuickAdd({
 
   return (
     <form onSubmit={submit} className="mb-3">
-      <div className="command-bar flex h-14 items-center gap-2 rounded-full pl-5 pr-2">
+      <div className="command-bar flex h-14 items-center gap-2 pl-4 pr-2">
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -340,10 +340,10 @@ function QuickAdd({
           placeholder="Add an event: Lunch with Ali fri 1pm"
           className="min-w-0 flex-1 bg-transparent text-[16px] text-foreground outline-none placeholder:text-muted-2"
         />
-        <button type="button" onClick={onFull} className="hidden h-10 shrink-0 rounded-full px-3 text-[13px] text-muted hover:bg-surface-hover hover:text-foreground sm:block">
+        <button type="button" onClick={onFull} className="hidden h-10 shrink-0 rounded-lg px-3 text-[13px] text-muted hover:bg-surface-hover hover:text-foreground sm:block">
           More fields
         </button>
-        <button type="submit" disabled={busy || !parsed?.title} className="h-10 shrink-0 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity disabled:opacity-25">
+        <button type="submit" disabled={busy || !parsed?.title} className="h-10 shrink-0 rounded-lg bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity disabled:opacity-25">
           Add
         </button>
       </div>

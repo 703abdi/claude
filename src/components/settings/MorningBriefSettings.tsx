@@ -41,7 +41,7 @@ export default function MorningBriefSettings({
             value={time}
             onChange={(e) => setTime(e.target.value)}
             onBlur={save}
-            className="w-full bg-surface-2 border border-border rounded-md px-2 py-1.5 text-sm outline-none"
+            className="type-box w-full bg-surface-2 px-2 py-1.5 text-sm outline-none"
           />
         </label>
         <label className="block">
@@ -50,7 +50,7 @@ export default function MorningBriefSettings({
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
             onBlur={save}
-            className="w-full bg-surface-2 border border-border rounded-md px-2 py-1.5 text-sm outline-none"
+            className="type-box w-full bg-surface-2 px-2 py-1.5 text-sm outline-none"
           />
         </label>
       </div>
@@ -62,7 +62,7 @@ export default function MorningBriefSettings({
             setVoiceStyle(e.target.value);
           }}
           onBlur={save}
-          className="w-full bg-surface-2 border border-border rounded-md px-2 py-1.5 text-sm outline-none"
+          className="type-box w-full bg-surface-2 px-2 py-1.5 text-sm outline-none"
         >
           {VOICE_STYLES.map((v) => (
             <option key={v.id} value={v.id}>

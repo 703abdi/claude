@@ -64,7 +64,7 @@ export default function NotesShell({ initialNotes }: { initialNotes: NoteDTO[] }
     go(null);
   }, []);
 
-  const input = "h-10 min-w-0 rounded-full border border-border bg-surface px-4 text-[14px] outline-none placeholder:text-muted-2 focus:border-accent";
+  const input = "type-box h-10 min-w-0 bg-surface px-3 text-[14px] outline-none placeholder:text-muted-2";
 
   return (
     <div className="md:grid md:h-screen md:grid-cols-[320px_1fr]">

@@ -93,7 +93,7 @@ export default function PersonNotes({ person }: { person: { id: string; name: st
           }}
           placeholder="Who they are, what you talked about, what matters to them."
           rows={Math.min(16, Math.max(5, notes.split("\n").length + 1))}
-          className="w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-[15px] leading-relaxed outline-none placeholder:text-muted-2 focus:border-accent"
+          className="type-box w-full resize-y bg-surface px-4 py-3 text-[15px] leading-relaxed outline-none placeholder:text-muted-2"
         />
       </div>
     </div>

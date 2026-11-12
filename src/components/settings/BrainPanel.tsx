@@ -91,7 +91,7 @@ export default function BrainPanel() {
               max={data.bounds[k].max}
               value={Number(val(k))}
               onChange={(e) => setDraft((d) => ({ ...d, [k]: Number(e.target.value) }))}
-              className="w-20 rounded-lg border border-border bg-surface px-2 py-1 text-right font-mono text-xs"
+              className="type-box w-20 bg-surface px-2 py-1 text-right font-mono text-xs outline-none"
             />
           </li>
         ))}

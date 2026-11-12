@@ -9,7 +9,7 @@ import { formatClock } from "@/lib/quick-add-parse";
 type PersonLite = { id: string; name: string };
 
 const SOURCE_NAME: Record<string, string> = { google: "Google Calendar", calendly: "Calendly", fathom: "Fathom", feed: "a calendar feed" };
-const field = "w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-[15px] outline-none transition-colors focus:border-accent";
+const field = "type-box w-full bg-surface px-3 py-2.5 text-[15px] outline-none";
 
 function isUrl(s: string | null | undefined): s is string {
   return !!s && /^https?:\/\//i.test(s);

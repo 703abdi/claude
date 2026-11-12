@@ -1,5 +1,28 @@
 # Handoff: abdi's os
 
+## Nov 12 2026 (afternoon): v2 follow-through
+
+Abdi said yes to the vault upload and the Mac jobs. Both done and checked:
+- Vault upload: `node scripts/memory-sync.mjs` sent 57 batches, 3,803 files, server upserted 3,820 docs, 0 batches
+  failed, 0 skipped. Re-run it any time; it only sends changed files. `GET /api/memory/stats` not checked (needs
+  his session).
+- Mac jobs: `zsh scripts/mac/install.sh` loaded `com.abdi.jarvis-tick` (5 min) and `com.abdi.jarvis-report` (60 s).
+  `launchctl list` shows exit 0 for both; logs at `/tmp/com.abdi.jarvis-*.log` are empty (scripts only write on
+  failure). Undo with `scripts/mac/uninstall.sh`.
+
+Live AI actions: Abdi signed in on the live site and reported all three worked (add lunch with Ali friday 1pm
+then Undo, "what did John and I talk about", tap the orb). That is his report; Claude did not see the screen or
+check logs.
+
+Typing boxes restyled (Abdi: "like Claude style, not a double box, not an oval, just a rectangle"): shared
+`.type-box` in `globals.css` (12px corners, one 1px border, focus only brightens the border), command bars lost
+the pill shape and blue glow, buttons beside a box are `rounded-lg`. Built by Opus agents; Fable read the diff,
+looked at Home, Tasks, Calendar and People at desktop and 375 wide (no sideways scroll), and re-ran typecheck,
+lint, 88 tests and the build. Settings, Notes, login and the event pop-up were not looked at in the browser.
+Abdi's new standing rule (in `~/.claude/CLAUDE.md` habit 4): Fable plans and checks, Opus agents do the work.
+
+Still open, waiting on Abdi (steps given): Google OAuth client + env vars in Vercel, then a
+redeploy (needs his yes) and Connect on the Calendar page; allow notifications on his phone.
 ## Nov 13 2026: Jarvis v2 (SHIPPED: commit 8d3edfa live on claude-tau-six.vercel.app; production branch is `claude/personal-os-dashboard-pv38le`)
 
 Live checks done after deploy: Vercel build Ready, migration ran, `scripts/mac/jarvis-tick.sh` returned 200 against

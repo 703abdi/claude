@@ -76,7 +76,7 @@ export default function CalendarFeeds() {
             onChange={(e) => setValue(e.target.value)}
             rows={3}
             placeholder={"https://calendar.google.com/calendar/ical/.../basic.ics\nOne URL per line. This replaces the current list."}
-            className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 font-mono text-[12px] text-foreground placeholder:text-muted-2 focus:border-accent focus:outline-none"
+            className="type-box w-full bg-surface-2 px-3 py-2 font-mono text-[12px] text-foreground placeholder:text-muted-2 focus:outline-none"
           />
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex gap-2">

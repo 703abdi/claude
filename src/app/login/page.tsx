@@ -37,7 +37,7 @@ function LoginForm() {
   }
 
   const inputClass =
-    "w-full rounded-[10px] border border-border-2 bg-surface-hover px-3.5 py-3 text-[15px] text-foreground placeholder:text-muted-2 transition-colors";
+    "type-box w-full bg-surface-hover px-3.5 py-3 text-[15px] text-foreground placeholder:text-muted-2 outline-none";
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-4">
