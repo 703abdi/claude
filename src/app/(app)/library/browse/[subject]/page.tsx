@@ -11,7 +11,7 @@ export default async function LibrarySubjectPage({ params }: PageProps<"/library
   const sources = await sourcesIn(subject);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
       <Breadcrumb crumbs={[{ label: "Library", href: "/library" }, { label: info.label }]} />
       <div className="mt-4 mb-6">
         <h1 className="text-[30px] leading-tight">{info.label}</h1>

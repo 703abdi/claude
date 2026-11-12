@@ -1,5 +1,6 @@
-import { SUBJECTS, UNSORTED, searchLibrary, subjectCounts } from "@/lib/library";
-import { BoxGrid, ItemList, type Box } from "@/components/library/parts";
+import { SUBJECTS, UNSORTED, kindFilters, searchLibrary, subjectCounts, toCard } from "@/lib/library";
+import { BoxGrid, type Box } from "@/components/library/parts";
+import ItemBrowser from "@/components/library/ItemBrowser";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,7 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
   const q = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
       <div className="mb-6">
         <h1 className="text-[34px]">Library</h1>
         <p className="mt-1 text-sm text-muted">Everything in the vault worth learning from. Read here, edit in Obsidian.</p>
@@ -41,7 +42,14 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
 async function Results({ q }: { q: string }) {
   const items = await searchLibrary(q);
   if (items.length === 0) return <p className="px-1 text-sm text-muted">Nothing matches &quot;{q}&quot;.</p>;
-  return <ItemList items={items} title={`${items.length} ${items.length === 1 ? "match" : "matches"} for "${q}"`} showPath />;
+  return (
+    <section>
+      <h2 className="eyebrow mb-3 px-1">
+        {items.length} {items.length === 1 ? "match" : "matches"} for &quot;{q}&quot;
+      </h2>
+      <ItemBrowser items={items.map(toCard)} filters={kindFilters(items)} showPath />
+    </section>
+  );
 }
 
 async function Subjects() {

@@ -817,3 +817,193 @@ select:focus-visible {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+
+/* ---------- Library presentation (lib-*) ---------- */
+/* Explanations: three columns side by side from 700px; below that a sideways swipe row with snap. */
+.lib-explain {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+  scroll-padding: 0 16px;
+}
+.lib-explain::-webkit-scrollbar {
+  display: none;
+}
+.lib-explain > * {
+  flex: 0 0 85%;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+@media (min-width: 700px) {
+  .lib-explain {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 24px;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+  }
+}
+.lib-explain-block {
+  border-top: 1px solid var(--border-2);
+  padding-top: 12px;
+}
+
+/* Steps: one horizontal line of numbered nodes joined by a thin rule. Scrolls sideways, never wraps. */
+.lib-steps {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.lib-step {
+  position: relative;
+  flex: 1 0 150px;
+  min-width: 150px;
+  padding: 0 12px 0 0;
+  scroll-snap-align: start;
+}
+.lib-step::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-2);
+}
+.lib-step:first-child::before {
+  left: 15px;
+}
+.lib-step:last-child::before {
+  right: auto;
+  width: 15px;
+}
+.lib-step:only-child::before {
+  display: none;
+}
+.lib-step-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+/* Small kind tag: muted rectangle, not a pill. */
+.lib-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Segmented control: one row of buttons, the pressed one in the accent. */
+.lib-seg {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: max-content;
+  max-width: 100%;
+}
+.lib-seg::-webkit-scrollbar {
+  display: none;
+}
+.lib-seg button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.lib-seg button:hover {
+  color: var(--foreground);
+}
+.lib-seg button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Pop-up: centered dialog on desktop, bottom sheet on phones. */
+.lib-dialog {
+  margin: auto; /* preflight zeroes the native centering */
+  width: calc(100% - 32px);
+  max-width: 960px;
+  max-height: 85vh;
+  padding: 0;
+  border: 1px solid var(--border-2);
+  border-radius: 24px;
+  background: var(--surface-2);
+  color: var(--foreground);
+  overflow: hidden;
+}
+.lib-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.lib-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+.lib-dialog-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 699px) {
+  .lib-dialog {
+    width: 100%;
+    max-width: 100%;
+    margin: auto 0 0 0;
+    border-radius: 20px 20px 0 0;
+    border-bottom: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lib-dialog[open] {
+    animation: lib-rise 0.18s ease-out;
+  }
+}
+@keyframes lib-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.lib-noscroll {
+  overflow: hidden;
+}

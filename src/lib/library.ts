@@ -203,9 +203,74 @@ const itemSelect = {
   subject: true,
   source: true,
   topic: true,
+  origin: true,
+  purpose: true,
+  steps: true,
+  url: true,
 } satisfies Prisma.LibraryDocSelect;
 
 export type LibraryItem = Prisma.LibraryDocGetPayload<{ select: typeof itemSelect }>;
+
+/** Plain, serializable shape for cards and the pop-up (client components). */
+export type CardItem = {
+  slug: string;
+  title: string;
+  kind: string | null;
+  kindLabel: string;
+  summary: string | null;
+  origin: string | null;
+  purpose: string | null;
+  steps: string[];
+  url: string | null;
+  path: string;
+};
+
+export function toCard(d: LibraryItem): CardItem {
+  const subject = d.subject ? (subjectInfo(d.subject)?.label ?? d.subject) : UNSORTED.label;
+  return {
+    slug: d.slug,
+    title: d.title,
+    kind: d.kind,
+    kindLabel: kindLabel(d.kind),
+    summary: d.summary,
+    origin: d.origin,
+    purpose: d.purpose,
+    steps: parseSteps(d.steps),
+    url: d.url,
+    path: [subject, d.source || OTHER, d.topic || OTHER].join(" / "),
+  };
+}
+
+const KIND_PLURALS: Record<string, string> = {
+  sop: "SOPs",
+  research: "Research",
+  method: "Methods",
+  report: "Reports",
+  chat: "Chats",
+  note: "Notes",
+  link: "Links",
+};
+const KIND_ORDER = ["sop", "research", "chat", "report", "method", "note", "link"];
+
+export type KindFilter = { kind: string; label: string; count: number };
+
+/** Segmented control options: "all" first, then each kind present, with counts. Items with no kind
+ * count as "doc". Fewer than two kinds means no control is needed, so this returns []. */
+export function kindFilters(items: { kind: string | null }[]): KindFilter[] {
+  const counts = new Map<string, number>();
+  for (const it of items) counts.set(it.kind ?? "doc", (counts.get(it.kind ?? "doc") ?? 0) + 1);
+  if (counts.size < 2) return [];
+  const rank = (k: string) => (KIND_ORDER.includes(k) ? KIND_ORDER.indexOf(k) : 99);
+  const kinds = [...counts.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  return [
+    { kind: "all", label: "All", count: items.length },
+    ...kinds.map((k) => ({ kind: k, label: KIND_PLURALS[k] ?? (k === "doc" ? "Other" : k), count: counts.get(k)! })),
+  ];
+}
+
+export function matchesKind(item: { kind: string | null }, filter: string): boolean {
+  return filter === "all" || (item.kind ?? "doc") === filter;
+}
 
 export async function itemsIn(subject: string, sourceValues: (string | null)[], topicValues: (string | null)[]): Promise<LibraryItem[]> {
   return prisma.libraryDoc.findMany({

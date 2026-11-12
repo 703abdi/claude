@@ -5,7 +5,10 @@ import {
   browseHref,
   buildTabs,
   groupBySegment,
+  kindFilters,
   kindLabel,
+  matchesKind,
+  toCard,
   parseSteps,
   parseVariants,
   searchTerms,
@@ -99,4 +102,27 @@ test("kind labels and browse hrefs", () => {
   assert.equal(browseHref("content", "Agency SOPs"), "/library/browse/content/agency-sops");
   assert.equal(browseHref("content", "Agency SOPs", "Hooks and scripts"), "/library/browse/content/agency-sops/hooks-and-scripts");
   assert.equal(browseHref("content", null, null), "/library/browse/content/other/other");
+});
+
+test("kindFilters lists present kinds in a fixed order with counts, none for one kind", () => {
+  const items = [{ kind: "chat" }, { kind: "sop" }, { kind: "chat" }, { kind: null }];
+  assert.deepEqual(kindFilters(items), [
+    { kind: "all", label: "All", count: 4 },
+    { kind: "sop", label: "SOPs", count: 1 },
+    { kind: "chat", label: "Chats", count: 2 },
+    { kind: "doc", label: "Other", count: 1 },
+  ]);
+  assert.deepEqual(kindFilters([{ kind: "sop" }, { kind: "sop" }]), []);
+  assert.equal(matchesKind({ kind: null }, "doc"), true);
+  assert.equal(matchesKind({ kind: "sop" }, "chat"), false);
+  assert.equal(matchesKind({ kind: "sop" }, "all"), true);
+});
+
+test("toCard flattens a row for the client", () => {
+  const c = toCard({
+    slug: "s", title: "T", kind: "sop", summary: "sum", subject: "content", source: null, topic: "Hooks",
+    origin: null, purpose: "p", steps: ["a", 2, "b"], url: null,
+  });
+  assert.deepEqual(c.steps, ["a", "b"]);
+  assert.equal(c.path, "Content / Other / Hooks");
 });

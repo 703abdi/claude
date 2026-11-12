@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { browseHref, itemsIn, resolveSource, resolveTopic, subjectInfo } from "@/lib/library";
-import { Breadcrumb, ItemList } from "@/components/library/parts";
+import { browseHref, itemsIn, kindFilters, resolveSource, resolveTopic, subjectInfo, toCard } from "@/lib/library";
+import { Breadcrumb } from "@/components/library/parts";
+import ItemBrowser from "@/components/library/ItemBrowser";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function LibraryTopicPage({ params }: PageProps<"/library/b
   const items = await itemsIn(subject, source.values, topic.values);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
       <Breadcrumb
         crumbs={[
           { label: "Library", href: "/library" },
@@ -30,7 +31,7 @@ export default async function LibraryTopicPage({ params }: PageProps<"/library/b
           {items.length} {items.length === 1 ? "item" : "items"} from {source.name}
         </p>
       </div>
-      <ItemList items={items} />
+      <ItemBrowser items={items.map(toCard)} filters={kindFilters(items)} />
     </div>
   );
 }

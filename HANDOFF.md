@@ -326,7 +326,7 @@ Hard Knocks -> every topic learned from it -> Instagram videos -> everything he 
 from, scrapes, info), organized and visual. Moved to its own session because the previous one passed 500k
 tokens. That session starts with lettered questions (habit 3) before building.
 
-## Nov 12-13 2026: Library rework built (local only, not committed)
+## Nov 12-13 2026: Library rework shipped (commit 404116f, live)
 
 PRD: `docs/2026-11-13-library-rework-prd.md`. Abdi's answers: 7 subject boxes, SOPs + research + methods +
 Nightshift + Grok reports + relevant chats, sources as they really exist (he adds School of Hard Knocks through
@@ -338,7 +338,7 @@ What exists now:
   Human / AI / Client tabs), `/library/new`. Code: `src/lib/library.ts`, `src/components/library/`,
   `src/app/(app)/library/**`, `src/app/api/library/route.ts` and `new/route.ts`.
 - `LibraryDoc` has new nullable columns (subject, source, topic, kind, summary, origin, purpose, steps, variants,
-  url, addedBy). Migration `20261113120000_library_rework` is additive and applied to the LOCAL db only.
+  url, addedBy). Migration `20261113120000_library_rework` is additive and applied locally and in production.
 - The explanations live in the vault at `_scripts/library/meta/*.json` (11 files, 440 entries, 20 marked skip).
   `scripts/sync-library.sh [app-url]` (calls `sync-library.py`) reads them plus the `SOPs/` folder and posts in
   batches. `LIBRARY_DRY_RUN=1` prints without posting. Rows added in the app (`addedBy = manual`) are never
@@ -350,8 +350,9 @@ Checked by Fable: typecheck, lint (0 errors), `npm test`, `next build`; click-th
 subject -> source -> topic -> item path, search, an agency SOP with tabs, an old SOP link, Add new end to end; no
 sideways scroll at 375px on 9 library pages.
 
-Not done, needs Abdi's yes: commit, push, deploy (the migration runs on deploy via `vercel-build`), then
-`scripts/sync-library.sh` against production to load the 420 docs.
+Shipped on Abdi's yes (Nov 12): committed, pushed, deployed, migration ran on deploy, and
+`scripts/sync-library.sh` loaded 420 docs into production. Checked live: /library, the School of Hard Knocks
+path and an old SOP link.
 
 Gotchas:
 - A dev server started before a migration keeps the old Prisma client and returns 500 on `/api/library`. Restart it.
