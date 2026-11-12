@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { calendarEventCreateSchema } from "@/lib/validation";
 import { getFeedEvents } from "@/lib/calendar-feeds";
 import { resolveTz } from "@/lib/hub-data";
+import { pushEventToGoogle } from "@/lib/google";
+import { isLockedSource } from "@/lib/calendar-utils";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
   const fromMs = from ? new Date(from).getTime() : -Infinity;
   const toMs = to ? new Date(to).getTime() : Infinity;
   const merged = [
-    ...events.map((e) => ({ ...e, source: e.source ?? null, readOnly: Boolean(e.source) })),
+    ...events.map((e) => ({ ...e, source: e.source ?? null, readOnly: isLockedSource(e.source) })),
     ...feed.filter((e) => {
       const t = new Date(e.date).getTime();
       return t >= fromMs && t <= toMs;
@@ -71,5 +73,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(event, { status: 201 });
+  // Mirror it to Google when the connection can write. The local save stands either way.
+  const pushed = await pushEventToGoogle(event, await resolveTz(new URL(req.url).searchParams.get("tz")));
+  if ("externalId" in pushed) {
+    const linked = await prisma.calendarEvent.update({
+      where: { id: event.id },
+      data: { externalId: pushed.externalId, source: "google" },
+      include: { category: true, person: true, task: { select: { id: true, title: true, status: true } } },
+    });
+    return NextResponse.json({ ...linked, google: "saved" }, { status: 201 });
+  }
+  return NextResponse.json({ ...event, google: "error" in pushed ? pushed.error : pushed.skipped }, { status: 201 });
 }

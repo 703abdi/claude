@@ -5,7 +5,7 @@ import ChatGPTUploader from "@/components/settings/ChatGPTUploader";
 import ClaudeUploader from "@/components/settings/ClaudeUploader";
 import ProcessContextButton from "@/components/settings/ProcessContextButton";
 import DailyRefreshButton from "@/components/settings/DailyRefreshButton";
-import AgentsSettings from "@/components/settings/AgentsSettings";
+import SignOutButton from "@/components/settings/SignOutButton";
 import SourcesPanel from "@/components/settings/SourcesPanel";
 import BrainPanel from "@/components/settings/BrainPanel";
 
@@ -48,11 +48,6 @@ export default async function SettingsPage() {
         <h2 className="text-sm font-bold uppercase tracking-wide mb-1">Brain</h2>
         <p className="text-xs text-muted mb-3">Every night at 9 it reads what the Hub showed, what you did, and the scoreboard, then orders tomorrow and turns these knobs within limits. It explains every change in the feed.</p>
         <BrainPanel />
-      </section>
-
-      <section className="border border-border bg-surface rounded-lg p-4">
-        <h2 className="text-sm font-bold uppercase tracking-wide mb-3">Agents</h2>
-        <AgentsSettings />
       </section>
 
       <section className="border border-border bg-surface rounded-lg p-4">
@@ -157,6 +152,7 @@ export default async function SettingsPage() {
           </div>
         )}
       </section>
+      <SignOutButton />
     </div>
   );
 }

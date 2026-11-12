@@ -1,5 +1,59 @@
 # Handoff: abdi's os
 
+## Nov 12 2026: Jarvis redesign (branch `feat/jarvis-redesign`, NOT committed, NOT pushed, NOT deployed)
+
+PRD with the 13 pass/fail criteria: `docs/2026-11-12-jarvis-redesign-prd.md`. Abdi's answers: 1D, 2B, 3B, 4C, 5A.
+He also asked for Savee (savee.com) as the UI reference: thin icon rail, near-black, big soft greeting, floating
+pill command bar. His Savee account has no saves or boards, so the references came from search results.
+
+What changed:
+- Nav: left icon rail on desktop, bottom tab bar on phones, no top bar (`src/components/NavShell.tsx`).
+  Calendar and People are their own pages again. Accent is Jarvis blue; the old gold values are in a comment at
+  the top of `src/app/globals.css` so it can be switched back in one edit.
+- Home (`/hub`): `src/components/jarvis/JarvisHome.tsx`. Particle orb (`orb.ts`, adapted from ethanplusai/jarvis,
+  license notice kept in the file: personal non-commercial use only), a briefing rebuilt from the database on every
+  load and every 30s (`src/lib/jarvis/briefing.ts` pure + `data.ts` loader, `GET /api/jarvis/brief`), tap the orb to
+  hear it (browser speech), a mic and text box that ask `POST /api/jarvis/ask` (Claude, 400 token cap, live rows
+  only). Removed from Home: cash, numbers, scoreboard, week goal, Do-now card, today's tasks, agent feed.
+- Agents, the 3D Town, Agent Feed and their API routes are deleted. The `Agent`/`AgentRun` tables are still in the
+  schema (no migration drops them).
+- Calendar: one-line quick add, click a day to add, new event pop-up, connection status row, refreshes every
+  minute. Google is two-way in code (`pushEventToGoogle`, `deleteEventFromGoogle` in `src/lib/google.ts`, scope is
+  now `calendar.events`). Calendly and Fathom events are locked.
+- Fathom (`src/lib/fathom.ts`): no more tasks or inbox posts. Each call attaches its recording link to the matching
+  calendar event (same day, closest start, within 90 min) or becomes its own `fathom` event. New column
+  `CalendarEvent.recordingUrl` (migration `20261112000000_event_recording_url`).
+- Pull throttles: Google 3 min, Calendly 3 min, Fathom 5 min (were 15/15/30).
+- People: list on the left, one person on the right with autosaving notes, upcoming and past meetings, open items.
+- Tasks: one list (Today, Next, Later, Waiting), one-line add, a banner that removes the old tasks made from calls.
+
+Tested (by me, Nov 12): `npm run typecheck`, `npm run lint`, `npm test` (36 pass, includes briefing, call matching,
+Google event body), `next build`. Clicked through Home, Calendar (quick add made an event and Home showed it on
+the next load), People, Tasks, Settings, Library at 1280 and 375 wide: no sideways scroll.
+
+NOT tested: `/api/jarvis/ask` with a real key (local has none; it returned the "key isn't set" message), speech in
+and out (needs a real mic and speakers), Google two-way (Google is not set up on Vercel at all: no
+GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET), Fathom and Calendly pulls against the live APIs, the migration on Neon.
+
+Known gaps:
+- If Fathom pulls a call before Google has pulled its event, the call becomes its own event and the Google one
+  shows next to it. No merge yet.
+- `src/app/globals.css` still has dead `.town-*`, `.agent-*`, `.do-now` rules.
+- Local dev login: user `me@test.dev`, password in `.env.local` as `LOCAL_TEST_PASSWORD` (local Postgres only).
+  Dev server: `DATABASE_URL=postgresql://app:app@localhost:5432/pos AUTH_SECRET=local-dev-secret-local-dev-secret-1234 npx next dev -p 3010`.
+
+Jarvis on the Mac: cloned to `~/Projects/jarvis` (ethanplusai/jarvis @ 16e37bd), venv on Python 3.14, deps,
+Playwright Chromium, certs and frontend installed, `USER_NAME=Abdi` in its `.env`. Server boots and answers.
+`start-jarvis.command` in that folder starts both halves and opens Chrome. It has no voice until `FISH_API_KEY` is
+in `~/Projects/jarvis/.env` (Fish Audio, paid; Abdi has not approved it). It also wants Screen Recording permission
+for whatever app launches it. It is not connected to this dashboard yet.
+
+Needs Abdi: (1) yes to commit and push so Vercel builds a preview, (2) Google OAuth client id + secret in Vercel,
+then Connect Google on the Calendar page, (3) decide on a Fish Audio key for Mac Jarvis, (4) click "Remove them"
+on Tasks to clear the old call-made tasks.
+
+---
+
 ## Where things stand
 
 **Live site:** https://claude-tau-six.vercel.app. Vercel production deploys

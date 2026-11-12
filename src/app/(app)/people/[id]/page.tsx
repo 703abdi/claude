@@ -1,143 +1,102 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { taskInclude, serializeTask } from "@/lib/serialize";
-import StatusDot from "@/components/shared/StatusDot";
-import EffortBars from "@/components/shared/EffortBars";
-import PersonHeader from "@/components/people/PersonHeader";
+import { fmtClock } from "@/lib/jarvis/briefing";
+import PersonNotes from "@/components/people/PersonNotes";
 
 export const dynamic = "force-dynamic";
 
-export default async function PersonPage({ params }: { params: Promise<{ id: string }> }) {
+function day(d: Date) {
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+export default async function PersonPage({ params }: PageProps<"/people/[id]">) {
   const { id } = await params;
   const person = await prisma.person.findUnique({ where: { id } });
   if (!person) notFound();
 
-  const [linkedTasks, events, contextItems] = await Promise.all([
+  const [tasks, events] = await Promise.all([
     prisma.task.findMany({
-      where: { OR: [{ people: { some: { personId: id } } }, { followUpPersonId: id }] },
-      include: taskInclude,
+      where: { status: { not: TaskStatus.COMPLETED }, OR: [{ people: { some: { personId: id } } }, { followUpPersonId: id }] },
+      select: { id: true, title: true, status: true, dueDate: true },
       orderBy: { position: "asc" },
     }),
-    prisma.calendarEvent.findMany({
-      where: { personId: id },
-      orderBy: { date: "asc" },
-      include: { category: true, task: { select: { id: true, title: true, status: true } } },
-    }),
-    prisma.contextItem.findMany({ where: { personId: id }, orderBy: { timestamp: "desc" }, take: 10 }),
+    prisma.calendarEvent.findMany({ where: { personId: id }, orderBy: { date: "asc" } }),
   ]);
 
-  const tasks = linkedTasks.map(serializeTask);
-  const active = tasks.filter((t) => t.status !== "COMPLETED");
-  const waiting = tasks.filter((t) => t.status === "WAITING");
-  const completed = tasks.filter((t) => t.status === "COMPLETED");
-  const upcoming = tasks.filter((t) => t.dueDate && t.status !== "COMPLETED");
+  const now = new Date();
+  const upcoming = events.filter((e) => e.date >= now);
+  const past = events.filter((e) => e.date < now).reverse().slice(0, 12);
+  const owesYou = tasks.filter((t) => t.status === TaskStatus.WAITING);
+  const yours = tasks.filter((t) => t.status !== TaskStatus.WAITING);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-6">
-      <Link href="/people" className="text-xs text-muted hover:text-foreground">
-        ← People
+    <div className="mx-auto max-w-[760px] px-4 py-5 md:px-10 md:py-8">
+      <Link href="/people" className="mb-4 inline-block text-[13px] text-muted hover:text-foreground md:hidden">
+        ‹ People
       </Link>
 
-      <PersonHeader person={{ id: person.id, name: person.name, notes: person.notes }} />
+      <PersonNotes key={person.id} person={{ id: person.id, name: person.name, notes: person.notes }} />
 
-      {waiting.length > 0 && (
-        <div className="mt-4 text-sm border border-status-yellow/40 bg-status-yellow/10 text-status-yellow rounded-lg px-3 py-2.5">
-          {waiting.length} unresolved {waiting.length === 1 ? "task" : "tasks"} involving {person.name} —{" "}
-          {waiting.map((t) => t.title).join(", ")}.
-        </div>
-      )}
+      <div className="mt-9 space-y-9">
+        {upcoming.length > 0 && (
+          <section className="jarvis-panel">
+            <h2 className="mb-1 px-1 eyebrow">Coming up</h2>
+            <ul>
+              {upcoming.map((e) => (
+                <li key={e.id}>
+                  <Link href={`/calendar?day=${e.date.toISOString().slice(0, 10)}`} className="jarvis-row">
+                    <span className="w-[104px] shrink-0 font-mono text-[12px] text-muted">{day(e.date)}</span>
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{e.title}</span>
+                    {e.startTime && !e.allDay && <span className="shrink-0 font-mono text-[12px] text-muted-2">{fmtClock(e.startTime)}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      <Section title="Active" tasks={active} emptyState={`Nothing active with ${person.name}.`} />
-      <Section title="Waiting / follow-up" tasks={waiting} emptyState="Nothing waiting." />
-      <Section title="Upcoming (dated)" tasks={upcoming} emptyState="Nothing scheduled." />
-      <Section title="Completed" tasks={completed} emptyState="Nothing completed yet." collapsedByDefault />
+        {(owesYou.length > 0 || yours.length > 0) && (
+          <section className="jarvis-panel">
+            <h2 className="mb-1 px-1 eyebrow">Open between you</h2>
+            <ul>
+              {[...owesYou, ...yours].map((t) => (
+                <li key={t.id}>
+                  <Link href={`/tasks?highlight=${t.id}`} className="jarvis-row">
+                    <span className={`w-[104px] shrink-0 font-mono text-[12px] ${t.status === TaskStatus.WAITING ? "text-accent" : "text-muted"}`}>
+                      {t.status === TaskStatus.WAITING ? "They owe you" : "You owe"}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{t.title}</span>
+                    {t.dueDate && <span className="shrink-0 font-mono text-[12px] text-muted-2">{day(t.dueDate)}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      {events.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-sm font-bold uppercase tracking-wide mb-2.5">Calendar</h2>
-          <div className="space-y-2">
-            {events.map((e) => (
-              <div key={e.id} className="border border-border bg-surface rounded-lg px-3 py-2.5 flex items-center gap-3">
-                {e.category && (
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: e.category.color }} />
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{e.title}</p>
-                  <p className="text-xs text-muted">
-                    {new Date(e.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                    {e.startTime ? ` · ${e.startTime}` : ""}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+        <section className="jarvis-panel">
+          <h2 className="mb-1 px-1 eyebrow">Past meetings</h2>
+          {past.length === 0 ? (
+            <p className="border-t border-border px-1 py-3 text-[14px] text-muted-2">None yet. Meetings show here once they are on the calendar with {person.name.split(" ")[0]}.</p>
+          ) : (
+            <ul>
+              {past.map((e) => (
+                <li key={e.id} className="jarvis-row">
+                  <span className="w-[104px] shrink-0 font-mono text-[12px] text-muted">{day(e.date)}</span>
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{e.title}</span>
+                  {e.recordingUrl && (
+                    <a href={e.recordingUrl} target="_blank" rel="noreferrer" className="shrink-0 text-[12px] text-accent hover:underline">
+                      Recording
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
-      )}
-
-      {contextItems.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-sm font-bold uppercase tracking-wide mb-2.5">Context</h2>
-          <div className="space-y-2">
-            {contextItems.map((c) => (
-              <div key={c.id} className="border border-border bg-surface rounded-lg px-3 py-2.5">
-                <p className="text-sm">{c.content}</p>
-                <p className="text-xs text-muted-2 mt-1">
-                  {c.contentType.toLowerCase().replace("_", " ")} · {c.source.toLowerCase()} ·{" "}
-                  {new Date(c.timestamp).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      </div>
     </div>
-  );
-}
-
-function Section({
-  title,
-  tasks,
-  emptyState,
-  collapsedByDefault,
-}: {
-  title: string;
-  tasks: ReturnType<typeof serializeTask>[];
-  emptyState: string;
-  collapsedByDefault?: boolean;
-}) {
-  return (
-    <section className="mt-8">
-      <h2 className="text-sm font-bold uppercase tracking-wide mb-2.5">
-        {title} <span className="text-muted-2 font-normal">{tasks.length}</span>
-      </h2>
-      {tasks.length === 0 ? (
-        <p className="text-sm text-muted-2">{emptyState}</p>
-      ) : (
-        <details open={!collapsedByDefault}>
-          <summary className="sr-only">{title}</summary>
-          <div className="space-y-2">
-            {tasks.map((t) => (
-              <Link
-                key={t.id}
-                href={`/tasks?highlight=${t.id}`}
-                className="flex items-center gap-3 border border-border bg-surface rounded-lg px-3 py-2.5 hover:border-muted-2 transition-colors"
-              >
-                <StatusDot status={t.status} className="w-2.5 h-2.5 shrink-0" />
-                <span className={`flex-1 min-w-0 text-sm font-semibold truncate ${t.status === "COMPLETED" ? "line-through text-muted" : ""}`}>
-                  {t.title}
-                </span>
-                {t.dueDate && (
-                  <span className={`text-xs shrink-0 ${t.overdue ? "text-status-red" : "text-muted"}`}>
-                    {new Date(t.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                  </span>
-                )}
-                <EffortBars effort={t.effort} className="shrink-0" />
-              </Link>
-            ))}
-          </div>
-        </details>
-      )}
-    </section>
   );
 }

@@ -1,23 +1,20 @@
-import { pushLater } from "@/lib/push";
-import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getPolicy } from "@/lib/policy";
 import { notePerson } from "@/lib/people-auto";
 import { logSignal } from "@/lib/signals";
+import { clockInTz, dayKey, startOfDayInTz } from "@/lib/day";
 
-/** Fathom call recorder -> the OS. After every recorded call, the action items become
- * tasks (yours in Today, other people's as Waiting on them) and the call itself shows in
- * the agent feed with its link. Needs FATHOM_API_KEY (Fathom: Settings -> API).
- * Throttled: at most one pull every 30 minutes, tracked in SyncSource MANUAL/"fathom". */
+/** Fathom call recorder -> the calendar. Every recorded call attaches its recording link to
+ * the calendar event it belongs to (same day, closest start, within 90 minutes), or becomes
+ * its own read-only event when nothing matches. It makes no tasks and posts nothing to a feed
+ * (Abdi, Nov 12 2026: the auto-made tasks were stale noise). The people on the call are still
+ * noted. Needs FATHOM_API_KEY (Fathom: Settings -> API). Throttled to one pull every 5
+ * minutes, tracked in SyncSource MANUAL/"fathom". */
 
 const API = "https://api.fathom.ai/external/v1/meetings";
 const SOURCE = { type: "MANUAL" as const, name: "fathom" };
-const THROTTLE_MS = 30 * 60_000;
+const THROTTLE_MS = 5 * 60_000;
+const MATCH_WINDOW_MIN = 90;
 const FIRST_RUN_DAYS = 3;
-/** Action items are due this many days after the call, so they go late and clear like any other task. */
-const DUE_AFTER_DAYS = 3;
-/** Only calls this recent pin their items to Today; older calls land in Tasks. */
-const PIN_WITHIN_DAYS = 2;
 const MAX_PAGES = 5;
 
 type Invitee = { name: string | null; email: string | null; is_external?: boolean };
@@ -103,7 +100,28 @@ function isMe(a: ActionItem["assignee"], myEmail: string | null, myName: string 
   return name.includes("abdi");
 }
 
-export async function syncFathom(opts: { force?: boolean } = {}) {
+function minutesOf(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** Which of the day's events a call belongs to: closest start within the window, else none. Pure. */
+export function matchCallToEvent<T extends { id: string; startTime: string | null; recordingUrl: string | null }>(
+  callClock: string,
+  dayEvents: T[],
+  windowMin = MATCH_WINDOW_MIN
+): T | null {
+  const at = minutesOf(callClock);
+  let best: { ev: T; gap: number } | null = null;
+  for (const ev of dayEvents) {
+    if (!ev.startTime || ev.recordingUrl) continue;
+    const gap = Math.abs(minutesOf(ev.startTime) - at);
+    if (gap <= windowMin && (!best || gap < best.gap)) best = { ev, gap };
+  }
+  return best?.ev ?? null;
+}
+
+export async function syncFathom(opts: { force?: boolean; tz?: string } = {}) {
   if (!fathomConfigured()) return { skipped: "not configured" as const };
   const row = await prisma.syncSource.upsert({
     where: { type_name: SOURCE },
@@ -115,7 +133,8 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
   }
 
   const since = row.lastSyncAt ? new Date(row.lastSyncAt.getTime() - 86_400_000) : new Date(Date.now() - FIRST_RUN_DAYS * 86_400_000);
-  const user = await prisma.user.findFirst({ select: { email: true, name: true } });
+  const user = await prisma.user.findFirst({ select: { email: true, name: true, timezone: true } });
+  const tz = opts.tz ?? user?.timezone ?? "America/New_York";
   const people = await prisma.person.findMany({ select: { id: true, name: true } });
 
   /** Tracked person by name, or a sighting that becomes a Person after enough calls (see people-auto). */
@@ -126,104 +145,55 @@ export async function syncFathom(opts: { force?: boolean } = {}) {
     return notePerson({ name, email: email ?? null, ref, source: "fathom", note }, people);
   }
 
-  const { policy } = await getPolicy();
-  let calls = 0;
-  let newCallTitle = "";
-  let tasks = 0;
-  let waiting = 0;
+  let attached = 0;
+  let created = 0;
   try {
     const meetings = await fetchMeetings(since);
-    const last = await prisma.task.findFirst({ orderBy: { position: "desc" }, select: { position: true } });
-    let position = last?.position ?? 0;
-
     for (const m of meetings) {
+      const link = m.share_url || m.url;
+      if (!link) continue;
+      const externalId = `fathom:${m.recording_id}`;
       const title = m.title || m.meeting_title || "Call";
       const when = new Date(m.recording_start_time || m.scheduled_start_time || m.created_at);
-      const link = m.share_url || m.url;
       const external = (m.calendar_invitees ?? []).filter((i) => i.is_external !== false && (i.name || i.email));
       let callPerson: { id: string; name: string } | null = null;
       for (const i of external) {
-        const p = await personFor(i.name, `Met on a recorded call, ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, i.email, `fathom:${m.recording_id}`);
+        const p = await personFor(i.name, `Met on a recorded call, ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, i.email, externalId);
         if (p && !callPerson) callPerson = p;
       }
-      const items = (m.action_items ?? []).filter((a) => a.description?.trim() && !a.completed);
 
-      const seen = await prisma.inboxItem.findFirst({ where: { agent: "fathom", link } , select: { id: true } });
-      if (!seen) {
-        await prisma.inboxItem.create({
-          data: {
-            agent: "fathom",
-            kind: "update",
-            title: `Call: ${title}`,
-            body: [
-              when.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
-              external.map((i) => cleanName(i.name) ?? i.email).filter(Boolean).join(", ") || null,
-              `${items.length} action item${items.length === 1 ? "" : "s"}`,
-            ]
-              .filter(Boolean)
-              .join(" · "),
-            link,
-          },
-        });
-        calls++;
-        newCallTitle = title;
-      }
+      // Already placed on an earlier pull?
+      const placed = await prisma.calendarEvent.findFirst({ where: { OR: [{ externalId }, { recordingUrl: link }] }, select: { id: true } });
+      if (placed) continue;
 
-      let pinnedThisCall = 0;
-      for (let i = 0; i < items.length; i++) {
-        const a = items[i];
-        const source = `fathom:${m.recording_id}:${i}`;
-        const exists = await prisma.task.findFirst({ where: { source }, select: { id: true } });
-        if (exists) continue;
-        const mine = isMe(a.assignee, user?.email ?? null, user?.name ?? null);
-        const assigneePerson = !mine ? await personFor(a.assignee?.name, "Promised something on a recorded call.", a.assignee?.email, `fathom:${m.recording_id}`) : null;
-        const owedBy = !mine && !assigneePerson ? cleanName(a.assignee?.name) ?? a.assignee?.email ?? null : null;
-        if (!mine && !assigneePerson && !owedBy) continue;
-        position += 1000;
-        // Only the first few of your own items from a recent call land in Today; the rest wait in Tasks.
-        const recent = Date.now() - when.getTime() < PIN_WITHIN_DAYS * 86_400_000;
-        const pin = mine && recent && pinnedThisCall < policy.fathomPinMax;
-        const due = new Date(when.getTime() + DUE_AFTER_DAYS * 86_400_000);
-        due.setHours(12, 0, 0, 0);
-        if (pin) pinnedThisCall++;
-        const notes = [owedBy ? `Owed by ${owedBy}.` : null, `From the call "${title}" on ${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`, a.recording_playback_url || link]
-          .filter(Boolean)
-          .join("\n");
-        const linkPerson = mine ? callPerson : assigneePerson;
-        await prisma.task.create({
-          data: {
-            title: a.description.trim().slice(0, 300),
-            notes,
-            source,
-            position,
-            pinnedToday: pin,
-            dueDate: mine ? due : null,
-            status: mine ? TaskStatus.NOT_STARTED : TaskStatus.WAITING,
-            waitingAt: mine ? null : new Date(),
-            followUpRequired: !mine,
-            followUpPersonId: !mine && assigneePerson ? assigneePerson.id : null,
-            people: linkPerson ? { create: [{ personId: linkPerson.id }] } : undefined,
-          },
+      const dayStart = startOfDayInTz(when, tz);
+      const sameDay = (
+        await prisma.calendarEvent.findMany({
+          where: { date: { gte: new Date(dayStart.getTime() - 12 * 3_600_000), lt: new Date(dayStart.getTime() + 36 * 3_600_000) } },
+          select: { id: true, date: true, startTime: true, recordingUrl: true, personId: true },
+        })
+      ).filter((e) => dayKey(e.date, tz) === dayKey(when, tz));
+      const clock = clockInTz(when, tz);
+      const match = matchCallToEvent(clock, sameDay);
+      if (match) {
+        await prisma.calendarEvent.update({
+          where: { id: match.id },
+          data: { recordingUrl: link, personId: match.personId ?? callPerson?.id ?? null },
         });
-        if (mine) tasks++;
-        else waiting++;
+        attached++;
+      } else {
+        await prisma.calendarEvent.create({
+          data: { title: title.slice(0, 200), date: when, startTime: clock, allDay: false, source: "fathom", externalId, recordingUrl: link, personId: callPerson?.id ?? null },
+        });
+        created++;
       }
     }
     await prisma.syncSource.update({
       where: { type_name: SOURCE },
       data: { lastSyncAt: new Date(), lastSyncStatus: "success", lastSyncError: null },
     });
-    if (calls > 0) {
-      const parts = [tasks ? `${tasks} task${tasks === 1 ? "" : "s"} for you` : null, waiting ? `${waiting} waiting on others` : null].filter(Boolean);
-      pushLater({
-        title: calls === 1 ? `Call done: ${newCallTitle}` : `${calls} calls synced`,
-        body: parts.join(", ") || "No action items.",
-        url: tasks ? "/hub#today" : "/hub#feed",
-        tag: "fathom",
-      });
-    }
-    void logSignal("sync", { source: "fathom", data: { calls, tasks, waiting } });
-    return { calls, tasks, waiting };
+    void logSignal("sync", { source: "fathom", data: { attached, created } });
+    return { calls: attached + created, attached, created };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Fathom sync failed";
     void logSignal("sync", { source: "fathom", data: { error: message } });

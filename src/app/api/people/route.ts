@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { personCreateSchema } from "@/lib/validation";
-import { getPeopleWithCounts } from "@/lib/people-data";
+import { getPeopleSummaries } from "@/lib/people-data";
 
 export async function GET() {
-  const result = await getPeopleWithCounts();
+  const result = await getPeopleSummaries();
   return NextResponse.json(result);
 }
 

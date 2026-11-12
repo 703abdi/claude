@@ -1,5 +1,4 @@
 import type { AbdiformResult } from "@/lib/abdiform-types";
-import type { AgentsResponse } from "@/lib/agents/types";
 import type { CalendarEvent, Category, MorningBrief, Task } from "@/lib/types";
 
 export type Outcome = { text: string; done: boolean };
@@ -56,7 +55,6 @@ export type HubPayload = {
     goal: GoalView;
   };
   stats: { open: number; overdue: number; dueToday: number; waiting: number; doneToday: number };
-  agents: AgentsResponse;
   inbox: InboxItem[];
   brief: MorningBrief | null;
   metrics: AbdiformResult;

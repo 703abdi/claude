@@ -228,6 +228,8 @@ model CalendarEvent {
   source     String?
   /** Stable id at the source, so a pull can update instead of duplicate. */
   externalId String? @unique
+  /** Fathom share link when the call was recorded. */
+  recordingUrl String?
 
   isSeed    Boolean  @default(false)
   createdAt DateTime @default(now())

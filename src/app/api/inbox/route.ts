@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   if (d.agent !== "os") {
     const what = d.kind === "question" ? "needs your answer" : d.kind === "task" ? "added a task" : "posted an update";
-    pushLater({ title: `${d.agent} ${what}`, body: d.title, url: d.kind === "task" && task ? `/tasks?highlight=${task.id}` : "/hub#feed", tag: `inbox-${item.id}` });
+    pushLater({ title: `${d.agent} ${what}`, body: d.title, url: d.kind === "task" && task ? `/tasks?highlight=${task.id}` : "/hub", tag: `inbox-${item.id}` });
   }
   void logSignal("feed.post", { source: d.agent, ref: item.id, data: { kind: d.kind, title: d.title, taskId: task?.id ?? null, score: Boolean(score) } });
   if (score) void logSignal("score.set", { source: d.agent, data: { ...score } });

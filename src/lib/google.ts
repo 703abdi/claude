@@ -1,25 +1,27 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { clockInTz, zonedTime } from "@/lib/day";
+import { addDaysKey, clockInTz, dayKey, zonedTime } from "@/lib/day";
 import { notePerson } from "@/lib/people-auto";
 import { logSignal } from "@/lib/signals";
 
-/** Google -> the OS. One OAuth connection (Settings, Sources, Connect Google) gives read access
- * to the primary calendar and Gmail. Calendar events land as read-only events with the first
- * outside attendee as a person; unread primary-inbox mail from the last two days posts to the
+/** Google <-> the OS. One OAuth connection (Settings, Sources, Connect Google) gives read and
+ * write access to events on the primary calendar, and read access to Gmail. Google events land
+ * here with the first outside attendee as a person, and events made or edited here are written
+ * back to Google (see pushEventToGoogle). A connection made before Nov 12 2026 is read-only
+ * until Google is connected again; unread primary-inbox mail from the last two days posts to the
  * feed as "gmail". Needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (a Web OAuth client whose
  * redirect URI is <origin>/api/google/callback). Tokens live in SyncSource MANUAL/"google".
- * Throttled to one pull every 15 minutes. */
+ * Throttled to one pull every 3 minutes. */
 
 const SOURCE = { type: "MANUAL" as const, name: "google" };
-const THROTTLE_MS = 15 * 60_000;
+const THROTTLE_MS = 3 * 60_000;
 const PAST_DAYS = 7;
 const FUTURE_DAYS = 45;
 const MAIL_MAX = 15;
 const SCOPES = [
   "openid",
   "email",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/gmail.readonly",
 ];
 
@@ -29,6 +31,8 @@ type Config = {
   expiresAt?: number;
   email?: string;
   seenMail?: string[];
+  /** True once the connection was granted calendar.events (write). */
+  canWrite?: boolean;
 };
 
 function clientId() {
@@ -71,6 +75,7 @@ export async function googleStatus() {
   return {
     configured: googleConfigured(),
     connected: Boolean(cfg.refreshToken),
+    canWrite: Boolean(cfg.refreshToken && cfg.canWrite),
     email: cfg.email ?? null,
     lastSyncAt: row?.lastSyncAt?.toISOString() ?? null,
     lastSyncStatus: row?.lastSyncStatus ?? null,
@@ -115,7 +120,7 @@ export function authUrl(reqOrigin: string | null) {
   return u.toString();
 }
 
-type TokenResponse = { access_token: string; expires_in: number; refresh_token?: string; id_token?: string; error?: string; error_description?: string };
+type TokenResponse = { access_token: string; expires_in: number; scope?: string; refresh_token?: string; id_token?: string; error?: string; error_description?: string };
 
 async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -141,7 +146,7 @@ export async function connectGoogle(code: string, reqOrigin: string | null) {
     /* email is cosmetic */
   }
   const prev = await readConfig();
-  await writeConfig({ ...prev, refreshToken: tok.refresh_token, accessToken: tok.access_token, expiresAt: Date.now() + tok.expires_in * 1000 - 60_000, email });
+  await writeConfig({ ...prev, refreshToken: tok.refresh_token, accessToken: tok.access_token, expiresAt: Date.now() + tok.expires_in * 1000 - 60_000, email, canWrite: (tok.scope ?? "").includes("auth/calendar.events") || (tok.scope ?? "").split(" ").includes("https://www.googleapis.com/auth/calendar") });
   await prisma.syncSource.update({ where: { type_name: SOURCE }, data: { lastSyncStatus: null, lastSyncError: null } });
   return { email: email ?? null };
 }
@@ -278,6 +283,93 @@ async function syncCalendar(cfg: Config, tz: string, people: { id: string; name:
     events++;
   }
   return { events, removed, newPeople };
+}
+
+// ── Writing back ─────────────────────────────────────────────────────────────
+
+export type PushableEvent = {
+  id: string;
+  title: string;
+  date: Date;
+  startTime: string | null;
+  endTime: string | null;
+  allDay: boolean;
+  location: string | null;
+  notes: string | null;
+  externalId: string | null;
+};
+
+function plusMinutes(hhmm: string, mins: number) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const t = Math.min(23 * 60 + 59, h * 60 + m + mins);
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+/** The Google Calendar body for one of our events. Pure, so it can be tested. */
+export function googleEventBody(ev: Omit<PushableEvent, "id" | "externalId">, tz: string) {
+  const key = dayKey(ev.date, tz);
+  const base = { summary: ev.title, location: ev.location ?? undefined, description: ev.notes ?? undefined };
+  if (ev.allDay || !ev.startTime) {
+    return { ...base, start: { date: key }, end: { date: addDaysKey(key, 1) } };
+  }
+  const end = ev.endTime && ev.endTime > ev.startTime ? ev.endTime : plusMinutes(ev.startTime, 30);
+  return {
+    ...base,
+    start: { dateTime: `${key}T${ev.startTime}:00`, timeZone: tz },
+    end: { dateTime: `${key}T${end}:00`, timeZone: tz },
+  };
+}
+
+async function writeApi<T>(cfg: Config, method: "POST" | "PATCH" | "DELETE", url: string, body?: unknown): Promise<T | null> {
+  const token = await accessToken(cfg);
+  const res = await fetch(url, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(8000),
+  });
+  if (method === "DELETE" && (res.status === 204 || res.status === 404 || res.status === 410)) return null;
+  if (res.status === 403) throw new Error("Google refused the change. Connect Google again in Settings to allow adding events.");
+  if (!res.ok) throw new Error(`Google answered ${res.status}`);
+  return (await res.json().catch(() => null)) as T | null;
+}
+
+const EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+/** Writes one event to Google: creates it when it has no Google id, updates it when it does.
+ * Returns { externalId } on success, { skipped } when Google is not connected for writing,
+ * { error } when Google said no. Never throws: the local save already happened. */
+export async function pushEventToGoogle(ev: PushableEvent, tz: string): Promise<{ externalId: string } | { skipped: string } | { error: string }> {
+  if (!googleConfigured()) return { skipped: "not configured" };
+  const cfg = await readConfig();
+  if (!cfg.refreshToken) return { skipped: "not connected" };
+  if (!cfg.canWrite) return { skipped: "read-only connection" };
+  if (ev.externalId && !ev.externalId.startsWith("google:")) return { skipped: "owned by another source" };
+  try {
+    const body = googleEventBody(ev, tz);
+    const gid = ev.externalId?.slice("google:".length);
+    const out = gid
+      ? await writeApi<{ id: string }>(cfg, "PATCH", `${EVENTS_URL}/${encodeURIComponent(gid)}`, body)
+      : await writeApi<{ id: string }>(cfg, "POST", EVENTS_URL, body);
+    await writeConfig(cfg); // keep a refreshed access token
+    if (!out?.id) return { error: "Google returned no event id" };
+    return { externalId: `google:${out.id}` };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Google write failed" };
+  }
+}
+
+export async function deleteEventFromGoogle(externalId: string | null): Promise<{ ok: true } | { skipped: string } | { error: string }> {
+  if (!externalId?.startsWith("google:")) return { skipped: "not a Google event" };
+  if (!googleConfigured()) return { skipped: "not configured" };
+  const cfg = await readConfig();
+  if (!cfg.refreshToken || !cfg.canWrite) return { skipped: "read-only connection" };
+  try {
+    await writeApi(cfg, "DELETE", `${EVENTS_URL}/${encodeURIComponent(externalId.slice("google:".length))}`);
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Google delete failed" };
+  }
 }
 
 // ── Gmail ────────────────────────────────────────────────────────────────────

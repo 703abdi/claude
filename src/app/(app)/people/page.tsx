@@ -1,9 +1,7 @@
-import { getPeopleWithCounts } from "@/lib/people-data";
-import PeopleGrid from "@/components/people/PeopleGrid";
-
-export const dynamic = "force-dynamic";
-
-export default async function PeoplePage() {
-  const people = await getPeopleWithCounts();
-  return <PeopleGrid initialPeople={people} />;
+export default function PeoplePage() {
+  return (
+    <div className="flex h-full min-h-[60vh] items-center justify-center px-6">
+      <p className="text-[15px] text-muted-2">Pick someone on the left.</p>
+    </div>
+  );
 }

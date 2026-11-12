@@ -11,7 +11,7 @@ import { logSignal } from "@/lib/signals";
 
 const API = process.env.CALENDLY_API_BASE ?? "https://api.calendly.com"; // override only for local tests
 const SOURCE = { type: "MANUAL" as const, name: "calendly" };
-const THROTTLE_MS = 15 * 60_000;
+const THROTTLE_MS = 3 * 60_000;
 const PAST_DAYS = 7;
 const FUTURE_DAYS = 45;
 const MAX_PAGES = 5;

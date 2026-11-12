@@ -58,7 +58,7 @@ export const SOURCES: SourceDef[] = [
     group: "Calls and calendar",
     phase: 1,
     env: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
-    gives: "Your Google Calendar fills the Hub calendar, read-only, with the people on each invite added to People. Unread mail in the primary inbox from the last two days posts to the feed.",
+    gives: "Your Google Calendar shows on the Calendar page and events you add or edit there are written back to Google. The people on each invite are added to People. Unread mail in the primary inbox from the last two days posts to the feed.",
     setup: "console.cloud.google.com: enable the Google Calendar API and Gmail API, create an OAuth client (Web application) with redirect URI https://claude-tau-six.vercel.app/api/google/callback, add yourself as a test user. Put the client id and secret in Vercel, redeploy, then Connect Google here.",
     sync: { type: "MANUAL", name: "google" },
     syncUrl: "/api/google/sync",

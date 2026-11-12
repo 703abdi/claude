@@ -10,7 +10,7 @@ import { syncGoogle } from "@/lib/google";
 export function scheduleBackgroundSyncs(tz?: string) {
   const run = async () => {
     await Promise.all([
-      syncFathom().catch(() => null),
+      syncFathom({ tz }).catch(() => null),
       syncCalendly({ tz }).catch(() => null),
       syncGoogle({ tz }).catch(() => null),
     ]);

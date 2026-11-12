@@ -65,9 +65,7 @@ export const api = {
     delete: (id: string) => request<{ ok: boolean }>(`/api/categories/${id}`, { method: "DELETE" }),
   },
   people: {
-    list: () => request<(Person & { activeCount: number; waitingCount: number; completedCount: number; upcomingCount: number })[]>(
-      "/api/people"
-    ),
+    list: () => request<(Person & { waitingCount: number; nextMeeting: string | null; lastMeeting: string | null })[]>("/api/people"),
     create: (data: { name: string; notes?: string | null }) =>
       request<Person>("/api/people", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => request<Record<string, unknown>>(`/api/people/${id}`),

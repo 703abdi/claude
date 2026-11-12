@@ -1,17 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import type { CalendarEvent, Category, TaskWithDate } from "@/lib/types";
+import type { CalendarEvent, Category } from "@/lib/types";
 import { api } from "@/lib/api-client";
 import { getMonthGrid, isSameDay, toDateKey, MONTH_NAMES, WEEKDAY_NAMES } from "@/lib/calendar-utils";
+import { formatClock, parseQuickAdd } from "@/lib/quick-add-parse";
 import EventModal from "./EventModal";
-import { formatClock } from "@/lib/quick-add-parse";
 
 type View = "agenda" | "month";
 const VIEW_KEY = "calendar-view";
 const MOBILE = "(max-width: 767px)";
+const REFRESH_MS = 60_000;
+
+export type Connection = { id: "google" | "calendly" | "fathom"; label: string; state: "on" | "off" | "limited" | "error"; detail: string; action?: { label: string; href: string } };
 
 function subscribeView(cb: () => void) {
   const mq = window.matchMedia(MOBILE);
@@ -34,25 +36,38 @@ function readView(): View {
 
 type PersonLite = { id: string; name: string };
 
+const SOURCE_COLOR: Record<string, string> = { google: "var(--info)", calendly: "var(--ok)", fathom: "var(--warn)", feed: "var(--muted)" };
+
+function colorOf(e: CalendarEvent) {
+  return e.category?.color ?? SOURCE_COLOR[e.source ?? ""] ?? "var(--accent)";
+}
+
 export default function CalendarView({
   initialEvents,
-  initialTasksWithDates,
   categories,
   people,
-  embedded = false,
+  connections,
+  initialDay,
 }: {
   initialEvents: CalendarEvent[];
-  initialTasksWithDates: TaskWithDate[];
   categories: Category[];
   people: PersonLite[];
-  /** Inside the Hub: tighter padding, smaller title, no page gutters. */
-  embedded?: boolean;
+  connections: Connection[];
+  /** YYYY-MM-DD from ?day=, so a link from Home lands on the right month. */
+  initialDay?: string | null;
 }) {
-  const today = new Date();
-  const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
+  const today = useMemo(() => new Date(), []);
+  const focus = useMemo(() => {
+    if (initialDay && /^\d{4}-\d{2}-\d{2}$/.test(initialDay)) {
+      const [y, m, d] = initialDay.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return null;
+  }, [initialDay]);
+  const [cursor, setCursor] = useState({ year: (focus ?? today).getFullYear(), month: (focus ?? today).getMonth() });
   const [events, setEvents] = useState(initialEvents);
-  const [tasksWithDates] = useState(initialTasksWithDates);
   const [modal, setModal] = useState<{ mode: "create" | "edit"; date?: Date; event?: CalendarEvent } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   const storedView = useSyncExternalStore(subscribeView, readView, () => "month" as View);
   const [chosenView, setChosenView] = useState<View | null>(null);
@@ -66,8 +81,33 @@ export default function CalendarView({
     }
   }
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  // Stay current: re-read every minute and whenever the tab comes back.
+  const refresh = useCallback(async () => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const res = await fetch(`/api/calendar-events?feeds=1&tz=${encodeURIComponent(tz)}`, { cache: "no-store" });
+      if (res.ok) setEvents(await res.json());
+    } catch {
+      // keep what we have
+    }
+  }, []);
+  useEffect(() => {
+    const id = setInterval(() => !document.hidden && refresh(), REFRESH_MS);
+    const onShow = () => !document.hidden && refresh();
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onShow);
+    };
+  }, [refresh]);
 
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 5000);
+    return () => clearTimeout(t);
+  }, [note]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const days = useMemo(() => getMonthGrid(cursor.year, cursor.month), [cursor]);
 
   const eventsByDay = useMemo(() => {
@@ -77,19 +117,9 @@ export default function CalendarView({
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(e);
     }
+    for (const list of map.values()) list.sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
     return map;
   }, [events]);
-
-  const tasksByDay = useMemo(() => {
-    const map = new Map<string, TaskWithDate[]>();
-    for (const t of tasksWithDates) {
-      if (t.status === "COMPLETED") continue;
-      const key = toDateKey(new Date(t.dueDate));
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(t);
-    }
-    return map;
-  }, [tasksWithDates]);
 
   function goToday() {
     setCursor({ year: today.getFullYear(), month: today.getMonth() });
@@ -101,6 +131,13 @@ export default function CalendarView({
     setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }));
   }
 
+  function googleNote(saved: CalendarEvent, verb: string) {
+    if (saved.google === "saved") return `${verb} and sent to Google Calendar.`;
+    if (saved.google === "read-only connection") return `${verb} here. Reconnect Google to send new events there.`;
+    if (saved.google && !["not configured", "not connected", "owned by another source"].includes(saved.google)) return `${verb} here, but Google said: ${saved.google}`;
+    return `${verb}.`;
+  }
+
   async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over) return;
@@ -108,104 +145,104 @@ export default function CalendarView({
     const dateKey = String(over.id);
     const event = events.find((ev) => ev.id === eventId);
     if (!event || event.readOnly || toDateKey(new Date(event.date)) === dateKey) return;
-
-    const [y, m, d] = dateKey.split("-").map(Number);
-    const newDate = new Date(y, m - 1, d, 9, 0, 0).toISOString();
-
+    const newDate = new Date(`${dateKey}T${event.startTime ?? "12:00"}:00`).toISOString();
     setEvents((prev) => prev.map((ev) => (ev.id === eventId ? { ...ev, date: newDate } : ev)));
-    await api.calendarEvents.update(eventId, { date: newDate });
+    try {
+      const saved = await api.calendarEvents.update(eventId, { date: newDate });
+      setNote(googleNote(saved, "Moved"));
+    } catch {
+      setEvents((prev) => prev.map((ev) => (ev.id === eventId ? event : ev)));
+      setNote("Couldn't move it.");
+    }
   }
 
   function handleSaved(event: CalendarEvent) {
-    setEvents((prev) => {
-      const exists = prev.some((e) => e.id === event.id);
-      return exists ? prev.map((e) => (e.id === event.id ? event : e)) : [...prev, event];
-    });
+    setEvents((prev) => (prev.some((e) => e.id === event.id) ? prev.map((e) => (e.id === event.id ? { ...e, ...event } : e)) : [...prev, event]));
+    if (!event.readOnly) setNote(googleNote(event, "Saved"));
     setModal(null);
   }
 
   function handleDeleted(id: string) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
+    setNote("Deleted.");
     setModal(null);
   }
 
-  function openEvent(ev: CalendarEvent) {
-    if (ev.readOnly) return; // feed events (Google, Calendly) are edited at their source
-    setModal({ mode: "edit", event: ev });
-  }
-
   return (
-    <div className={embedded ? "px-4 py-4 md:px-5 md:py-5" : "max-w-5xl mx-auto px-4 md:px-6 py-6"}>
-      <div className={`flex flex-wrap items-center justify-between gap-3 ${embedded ? "mb-4" : "mb-6"}`}>
-        <h1 className={`whitespace-nowrap ${embedded ? "text-[18px] font-extrabold tracking-[-0.03em]" : "text-[24px] sm:text-[28px]"}`}>
-          {view === "agenda" ? "Next 14 days" : `${MONTH_NAMES[cursor.month]} ${cursor.year}`}
-        </h1>
+    <div className="mx-auto max-w-[1180px] px-4 py-5 md:px-8 md:py-8">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="eyebrow">Calendar</p>
+          <h1 className="mt-1 whitespace-nowrap text-[26px] font-semibold tracking-[-0.03em] sm:text-[32px]">
+            {view === "agenda" ? "Next 14 days" : `${MONTH_NAMES[cursor.month]} ${cursor.year}`}
+          </h1>
+        </div>
         <div className="flex items-center gap-2">
+          {view === "month" && (
+            <div className="flex items-center gap-1">
+              <button onClick={prevMonth} aria-label="Previous month" className="cal-btn w-9">
+                ‹
+              </button>
+              <button onClick={goToday} className="cal-btn px-3 text-xs">
+                Today
+              </button>
+              <button onClick={nextMonth} aria-label="Next month" className="cal-btn w-9">
+                ›
+              </button>
+            </div>
+          )}
           <div role="group" aria-label="Calendar view" className="flex rounded-full border border-border-2 p-0.5">
-            {(["agenda", "month"] as View[]).map((v) => (
+            {(["month", "agenda"] as View[]).map((v) => (
               <button
                 key={v}
                 aria-pressed={view === v}
                 onClick={() => chooseView(v)}
-                className={`px-3 py-1 text-xs font-semibold rounded-full capitalize ${
-                  view === v ? "bg-accent text-accent-ink" : "text-muted hover:text-foreground"
-                }`}
+                className={`h-8 rounded-full px-3 text-xs font-semibold capitalize ${view === v ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}
               >
-                {v}
+                {v === "agenda" ? "List" : "Month"}
               </button>
             ))}
           </div>
-          {view === "agenda" ? (
-            <button
-              onClick={() => setModal({ mode: "create", date: new Date() })}
-              aria-label="New event"
-              className="whitespace-nowrap px-3 py-1.5 text-xs font-bold text-accent-ink bg-accent rounded-full hover:bg-accent-hover"
-            >
-              +<span className="hidden sm:inline"> Event</span>
-            </button>
-          ) : (
-          <div className="flex items-center gap-1">
-            <button onClick={prevMonth} className="px-2.5 py-1 text-sm text-muted hover:text-foreground border border-border-2 rounded-full">
-              ←
-            </button>
-            <button onClick={goToday} className="px-2.5 py-1 text-xs text-muted hover:text-foreground border border-border-2 rounded-full">
-              Today
-            </button>
-            <button onClick={nextMonth} className="px-2.5 py-1 text-sm text-muted hover:text-foreground border border-border-2 rounded-full">
-              →
-            </button>
-          </div>
-          )}
         </div>
       </div>
 
+      <QuickAdd
+        categories={categories}
+        people={people}
+        onAdded={(ev) => {
+          setEvents((prev) => [...prev, ev]);
+          const d = new Date(ev.date);
+          setCursor({ year: d.getFullYear(), month: d.getMonth() });
+          setNote(`${googleNote(ev, "Added")} ${d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}${ev.startTime ? ` at ${formatClock(ev.startTime)}` : ""}.`);
+        }}
+        onFull={() => setModal({ mode: "create", date: new Date() })}
+      />
+
+      <Connections connections={connections} />
+
       {view === "agenda" ? (
-        <Agenda events={events} tasks={tasksWithDates} onSelectEvent={openEvent} embedded={embedded} />
+        <Agenda events={events} onSelectEvent={(e) => setModal({ mode: "edit", event: e })} />
       ) : (
         <DndContext id="calendar-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-7 gap-px bg-border border border-border rounded-3xl overflow-hidden">
+          <div className="grid grid-cols-7 gap-px overflow-hidden rounded-3xl border border-border bg-border">
             {WEEKDAY_NAMES.map((w) => (
-              <div key={w} className="bg-surface-2 text-center eyebrow py-2">
+              <div key={w} className="bg-surface py-2 text-center eyebrow">
                 {w}
               </div>
             ))}
             {days.map((day) => {
               const key = toDateKey(day);
-              const inMonth = day.getMonth() === cursor.month;
-              const isToday = isSameDay(day, today);
-              const dayEvents = eventsByDay.get(key) ?? [];
-              const dayTasks = tasksByDay.get(key) ?? [];
               return (
                 <DayCell
                   key={key}
                   dateKey={key}
                   day={day}
-                  inMonth={inMonth}
-                  isToday={isToday}
-                  events={dayEvents}
-                  tasks={dayTasks}
+                  inMonth={day.getMonth() === cursor.month}
+                  isToday={isSameDay(day, today)}
+                  isFocus={!!focus && isSameDay(day, focus)}
+                  events={eventsByDay.get(key) ?? []}
                   onCreate={() => setModal({ mode: "create", date: day })}
-                  onSelectEvent={openEvent}
+                  onSelectEvent={(e) => setModal({ mode: "edit", event: e })}
                 />
               );
             })}
@@ -213,8 +250,15 @@ export default function CalendarView({
         </DndContext>
       )}
 
+      {note && (
+        <div role="status" className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] left-1/2 z-40 w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl border border-border-2 bg-surface-hover px-4 py-3 text-center text-[14px] shadow-xl animate-fade-in md:bottom-6">
+          {note}
+        </div>
+      )}
+
       {modal && (
         <EventModal
+          key={modal.event?.id ?? `new-${modal.date?.getTime()}`}
           mode={modal.mode}
           date={modal.date}
           event={modal.event}
@@ -229,13 +273,114 @@ export default function CalendarView({
   );
 }
 
+/** One line in, one event out: "Lunch with Ali fri 1pm". The hint shows what it understood before you press Enter. */
+function QuickAdd({
+  categories,
+  people,
+  onAdded,
+  onFull,
+}: {
+  categories: Category[];
+  people: PersonLite[];
+  onAdded: (ev: CalendarEvent) => void;
+  onFull: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const parsed = useMemo(() => {
+    if (!value.trim()) return null;
+    const p = parseQuickAdd(value, { categories, people });
+    // "Lunch with Omar": link the person without needing an @.
+    if (p.people.length === 0) {
+      const words = p.title.toLowerCase().split(/\s+/);
+      const hit = people.find((x) => words.includes(x.name.toLowerCase().split(/\s+/)[0]));
+      if (hit) p.people = [hit];
+    }
+    return p;
+  }, [value, categories, people]);
+
+  const whenLabel = parsed
+    ? `${parsed.dueLabel ?? "today"}${parsed.dueTime ? ` at ${formatClock(parsed.dueTime)}` : ", all day"}${parsed.people.length ? ` · with ${parsed.people.map((p) => p.name).join(", ")}` : ""}`
+    : null;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!parsed?.title || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const day = parsed.dueDate ? new Date(parsed.dueDate) : new Date();
+      const key = toDateKey(day);
+      const ev = await api.calendarEvents.create({
+        title: parsed.title,
+        date: new Date(`${key}T${parsed.dueTime ?? "12:00"}:00`).toISOString(),
+        startTime: parsed.dueTime,
+        allDay: !parsed.dueTime,
+        categoryId: parsed.category?.id ?? null,
+        personId: parsed.people[0]?.id ?? null,
+      });
+      onAdded(ev);
+      setValue("");
+    } catch {
+      setError("Couldn't add that. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mb-3">
+      <div className="command-bar flex h-14 items-center gap-2 rounded-full pl-5 pr-2">
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          disabled={busy}
+          aria-label="Add an event"
+          placeholder="Add an event: Lunch with Ali fri 1pm"
+          className="min-w-0 flex-1 bg-transparent text-[16px] text-foreground outline-none placeholder:text-muted-2"
+        />
+        <button type="button" onClick={onFull} className="hidden h-10 shrink-0 rounded-full px-3 text-[13px] text-muted hover:bg-surface-hover hover:text-foreground sm:block">
+          More fields
+        </button>
+        <button type="submit" disabled={busy || !parsed?.title} className="h-10 shrink-0 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity disabled:opacity-25">
+          Add
+        </button>
+      </div>
+      <p className={`mt-1.5 min-h-[18px] px-5 font-mono text-[11px] ${error ? "text-danger" : "text-muted-2"}`}>
+        {error ?? (parsed?.title ? `"${parsed.title}" · ${whenLabel}` : "Type it like you'd say it. Or click any day.")}
+      </p>
+    </form>
+  );
+}
+
+function Connections({ connections }: { connections: Connection[] }) {
+  const dot: Record<Connection["state"], string> = { on: "bg-ok", limited: "bg-warn", off: "bg-muted-2", error: "bg-danger" };
+  return (
+    <ul className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-5 text-[12px] text-muted">
+      {connections.map((c) => (
+        <li key={c.id} className="flex items-center gap-2" title={c.detail}>
+          <span className={`h-1.5 w-1.5 rounded-full ${dot[c.state]}`} />
+          <span className="font-medium text-foreground">{c.label}</span>
+          <span className="text-muted-2">{c.detail}</span>
+          {c.action && (
+            <a href={c.action.href} className="font-semibold text-accent hover:underline">
+              {c.action.label}
+            </a>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function DayCell({
   dateKey,
   day,
   inMonth,
   isToday,
+  isFocus,
   events,
-  tasks,
   onCreate,
   onSelectEvent,
 }: {
@@ -243,30 +388,33 @@ function DayCell({
   day: Date;
   inMonth: boolean;
   isToday: boolean;
+  isFocus: boolean;
   events: CalendarEvent[];
-  tasks: TaskWithDate[];
   onCreate: () => void;
   onSelectEvent: (e: CalendarEvent) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey });
-
+  const shown = events.slice(0, 4);
   return (
     <div
       ref={setNodeRef}
       onClick={onCreate}
-      className={`min-h-[92px] sm:min-h-[110px] p-1.5 bg-background cursor-pointer transition-colors ${
-        isOver ? "bg-surface-2" : ""
-      } ${!inMonth ? "opacity-40" : ""}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onCreate())}
+      aria-label={`Add an event on ${day.toLocaleDateString(undefined, { month: "long", day: "numeric" })}`}
+      className={`cal-day group min-h-[88px] cursor-pointer p-1.5 sm:min-h-[116px] sm:p-2 ${isOver ? "bg-surface-hover" : isFocus ? "bg-accent-soft" : "bg-background"} ${!inMonth ? "opacity-35" : ""}`}
     >
-      <span
-        className={`inline-flex items-center justify-center w-5 h-5 text-[11px] rounded-full ${
-          isToday ? "bg-accent text-accent-ink font-bold" : "text-muted"
-        }`}
-      >
-        {day.getDate()}
-      </span>
+      <div className="flex items-center justify-between">
+        <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] ${isToday ? "bg-accent font-bold text-accent-ink" : "text-muted"}`}>
+          {day.getDate()}
+        </span>
+        <span aria-hidden className="text-[16px] leading-none text-muted-2 opacity-0 transition-opacity group-hover:opacity-100">
+          +
+        </span>
+      </div>
       <div className="mt-1 space-y-1">
-        {events.map((e) => (
+        {shown.map((e) => (
           <EventPill
             key={e.id}
             event={e}
@@ -276,19 +424,7 @@ function DayCell({
             }}
           />
         ))}
-        {tasks.map((t) => (
-          <div
-            key={t.id}
-            title={t.title}
-            className="text-[10px] px-1.5 py-0.5 rounded truncate border border-dashed"
-            style={{
-              borderColor: t.category?.color ?? "var(--muted-2)",
-              color: t.category?.color ?? "var(--muted)",
-            }}
-          >
-            {t.title}
-          </div>
-        ))}
+        {events.length > shown.length && <p className="px-1 text-[10px] text-muted-2">+{events.length - shown.length} more</p>}
       </div>
     </div>
   );
@@ -296,39 +432,32 @@ function DayCell({
 
 function EventPill({ event, onClick }: { event: CalendarEvent; onClick: (e: React.MouseEvent) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: event.id, disabled: !!event.readOnly });
-  const color = event.category?.color ?? (event.readOnly ? "var(--info)" : "var(--muted-2)");
-
+  const color = colorOf(event);
   return (
     <button
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       onClick={onClick}
+      title={event.title}
       style={{
-        backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
-        color: `color-mix(in srgb, ${color} 85%, white)`,
+        backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`,
+        color: `color-mix(in srgb, ${color} 80%, white)`,
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="w-full text-left text-[10px] px-1.5 py-0.5 rounded-full truncate font-medium touch-none relative z-10"
+      className="relative z-10 flex w-full touch-none items-center gap-1 truncate rounded-md px-1.5 py-[3px] text-left text-[11px] font-medium"
     >
-      {event.startTime ? `${event.startTime} ` : ""}
-      {event.title}
+      {event.recordingUrl && <span aria-label="Recorded" className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />}
+      <span className="truncate">
+        {event.startTime && !event.allDay ? `${formatClock(event.startTime)} ` : ""}
+        {event.title}
+      </span>
     </button>
   );
 }
 
-function Agenda({
-  events,
-  tasks,
-  onSelectEvent,
-  embedded = false,
-}: {
-  events: CalendarEvent[];
-  tasks: TaskWithDate[];
-  onSelectEvent: (e: CalendarEvent) => void;
-  embedded?: boolean;
-}) {
+function Agenda({ events, onSelectEvent }: { events: CalendarEvent[]; onSelectEvent: (e: CalendarEvent) => void }) {
   const days = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -340,75 +469,49 @@ function Agenda({
   }, []);
 
   const byDay = useMemo(() => {
-    const map = new Map<string, { events: CalendarEvent[]; tasks: TaskWithDate[] }>();
-    for (const d of days) map.set(toDateKey(d), { events: [], tasks: [] });
-    for (const e of events) map.get(toDateKey(new Date(e.date)))?.events.push(e);
-    for (const t of tasks) if (t.status !== "COMPLETED") map.get(toDateKey(new Date(t.dueDate)))?.tasks.push(t);
-    for (const v of map.values()) v.events.sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
+    const map = new Map<string, CalendarEvent[]>();
+    for (const d of days) map.set(toDateKey(d), []);
+    for (const e of events) map.get(toDateKey(new Date(e.date)))?.push(e);
+    for (const v of map.values()) v.sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
     return map;
-  }, [days, events, tasks]);
+  }, [days, events]);
 
   const todayKey = toDateKey(days[0]);
-  const filled = days.filter((d) => {
-    const v = byDay.get(toDateKey(d));
-    return toDateKey(d) === todayKey || (v && (v.events.length || v.tasks.length));
-  });
+  const filled = days.filter((d) => toDateKey(d) === todayKey || (byDay.get(toDateKey(d))?.length ?? 0) > 0);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {filled.map((d) => {
         const key = toDateKey(d);
-        const v = byDay.get(key)!;
+        const list = byDay.get(key)!;
         const isToday = key === todayKey;
-        const empty = !v.events.length && !v.tasks.length;
         return (
-          <section key={key}>
-            <h2
-              className={`${embedded ? "" : "sticky top-[57px] md:top-[53px] z-10 -mx-4 px-4 bg-background/90 backdrop-blur"} py-2 eyebrow ${
-                isToday ? "eyebrow-accent" : ""
-              }`}
-            >
+          <section key={key} className="jarvis-panel">
+            <h2 className={`mb-1 px-1 eyebrow ${isToday ? "eyebrow-accent" : ""}`}>
               {isToday ? "Today · " : ""}
               {d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
             </h2>
-            <ul className={`mt-1.5 space-y-1.5 ${isToday ? "border-l-2 border-accent pl-3" : ""}`}>
-              {empty && <li className="text-sm text-muted-2 py-1">Nothing scheduled.</li>}
-              {v.events.map((e) => {
-                const color = e.category?.color ?? (e.readOnly ? "var(--info)" : "var(--accent)");
-                return (
+            {list.length === 0 ? (
+              <p className="border-t border-border px-1 py-3 text-[14px] text-muted-2">Nothing scheduled.</p>
+            ) : (
+              <ul>
+                {list.map((e) => (
                   <li key={e.id}>
-                    <button
-                      onClick={() => onSelectEvent(e)}
-                      className="w-full flex items-center gap-3 rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-left transition-colors hover:border-border-2"
-                    >
-                      <span className="w-16 shrink-0 font-mono text-xs tabular-nums" style={{ color: `color-mix(in srgb, ${color} 85%, white)` }}>
+                    <button onClick={() => onSelectEvent(e)} className="jarvis-row w-full text-left">
+                      <span className="w-[72px] shrink-0 font-mono text-[12px]" style={{ color: `color-mix(in srgb, ${colorOf(e)} 80%, white)` }}>
                         {e.allDay || !e.startTime ? "all day" : formatClock(e.startTime)}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">{e.title}</span>
-                        {(e.person || e.location || e.readOnly) && (
-                          <span className="block truncate text-xs text-muted-2">
-                            {[e.person?.name, e.location, e.readOnly ? "from your calendar" : null].filter(Boolean).join(" · ")}
-                          </span>
-                        )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-medium">{e.title}</span>
+                        {(e.person || e.location) && <span className="block truncate text-[12px] text-muted-2">{[e.person?.name, e.location].filter(Boolean).join(" · ")}</span>}
                       </span>
+                      {e.recordingUrl && <span className="shrink-0 text-[12px] text-accent">Recorded</span>}
+                      {e.source && <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-2">{e.source}</span>}
                     </button>
                   </li>
-                );
-              })}
-              {v.tasks.map((t) => (
-                <li key={t.id}>
-                  <Link
-                    href={`/tasks?highlight=${t.id}`}
-                    className="flex items-center gap-3 rounded-2xl border border-dashed px-3 py-2.5 hover:bg-surface-hover"
-                    style={{ borderColor: t.category?.color ?? "var(--border)" }}
-                  >
-                    <span className="w-16 shrink-0 font-mono text-xs text-muted-2">{t.dueTime ? formatClock(t.dueTime) : "task"}</span>
-                    <span className="min-w-0 truncate text-sm">{t.title}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </ul>
+            )}
           </section>
         );
       })}

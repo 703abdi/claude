@@ -2,7 +2,6 @@ import { createHash } from "crypto";
 import { Prisma, TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { taskInclude, serializeTask } from "@/lib/serialize";
-import { listAgents } from "@/lib/agents/list";
 import { getLatestBrief } from "@/lib/morning-brief/latest";
 import { fetchAbdiformMetrics } from "@/lib/abdiform";
 import { getFeedEvents } from "@/lib/calendar-feeds";
@@ -128,7 +127,6 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
     inboxRows,
     categories,
     people,
-    agents,
     brief,
     metrics,
     feed,
@@ -170,7 +168,6 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
     prisma.inboxItem.findMany({ where: { resolvedAt: null }, orderBy: { createdAt: "desc" }, take: 30 }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
     prisma.person.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    opts.lean ? Promise.resolve({ agents: [], runs: [] }) : listAgents(),
     opts.lean ? Promise.resolve(null) : getLatestBrief(),
     opts.lean ? Promise.resolve({ configured: false } as AbdiformResult) : cachedMetrics(),
     getFeedEvents(tz).catch(() => ({ events: [] as CalendarEvent[], errors: [] as string[], count: 0 })),
@@ -264,7 +261,6 @@ export async function getHubData(opts: { tz?: string | null; lean?: boolean } = 
       goal: goalView,
     },
     stats: { open: openCount, overdue: overdueCount, dueToday: dueTodayCount, waiting: waitingCount, doneToday: doneTodayCount },
-    agents,
     inbox,
     brief: json<HubPayload["brief"]>(brief),
     categories,

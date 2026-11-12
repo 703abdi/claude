@@ -127,7 +127,11 @@ export type CalendarEvent = {
   isSeed?: boolean;
   createdAt: string;
   updatedAt: string;
-  /** "feed" for read-only events pulled from a connected calendar (Google, Calendly). */
+  /** null = made here, "google" (two-way), "calendly" / "fathom" / "feed" (read-only). */
   source?: string | null;
   readOnly?: boolean;
+  /** Fathom share link when the call was recorded. */
+  recordingUrl?: string | null;
+  /** Set on a save: "saved", or why it was not written to Google. */
+  google?: string;
 };

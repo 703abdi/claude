@@ -43,3 +43,9 @@ export const MONTH_NAMES = [
   "December",
 ];
 export const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Events pulled from Calendly, Fathom or an ICS feed are owned there and can't be edited here.
+ * Google events can: edits are written back. */
+export function isLockedSource(source: string | null | undefined) {
+  return source === "calendly" || source === "fathom" || source === "feed";
+}

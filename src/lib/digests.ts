@@ -127,7 +127,7 @@ export async function weeklyScorecard() {
     draft.length ? "Next week's three, drafted (edit them in This week):" : "Next week has no outcomes yet. Set three.",
     ...draft.map((t, i) => `${i + 1}. ${t}`),
     "",
-    `${appUrl()}/hub#week`,
+    `${appUrl()}/hub`,
   ];
-  return deliver("Sunday scorecard", lines.join("\n"), `${appUrl()}/hub#week`);
+  return deliver("Sunday scorecard", lines.join("\n"), `${appUrl()}/hub`);
 }
