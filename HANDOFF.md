@@ -1,6 +1,14 @@
 # Handoff: abdi's os
 
-## Nov 13 2026: Jarvis v2 (branch `feat/jarvis-v2`, NOT committed, NOT pushed, NOT deployed)
+## Nov 13 2026: Jarvis v2 (SHIPPED: commit 8d3edfa live on claude-tau-six.vercel.app; production branch is `claude/personal-os-dashboard-pv38le`)
+
+Live checks done after deploy: Vercel build Ready, migration ran, `scripts/mac/jarvis-tick.sh` returned 200 against
+the live tick. Still NOT checked on live: signed-in pages, the AI tool loop (ask "add lunch with Ali fri 1pm" then
+Undo), pushes, Fathom summaries. Abdi has to sign in for those; Claude must not type his password.
+
+Waiting on Abdi's yes (ask, do not assume): (1) upload the vault with `node scripts/memory-sync.mjs` (dry run
+first), (2) install the Mac jobs with `zsh scripts/mac/install.sh`, (3) Google OAuth client id + secret in Vercel,
+(4) allow notifications on his phone. Known gap: nudges only fire while Home is open until (2) is done.
 
 PRD: `docs/2026-11-13-jarvis-v2-prd.md` (14 criteria, file ownership table). Abdi's answers: act first then confirm
 and be proactive; memory is everything of his (whole vault incl. chats); free voice; prayer times by phone

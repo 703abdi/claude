@@ -12,11 +12,11 @@ if [ ! -r "$TOKEN_FILE" ]; then
 fi
 
 # The header goes through stdin (-H @-) so the token never shows in the process list.
-status=$(tr -d '\r\n' < "$TOKEN_FILE" | sed 's/^/Authorization: Bearer /' | \
+code=$(tr -d '\r\n' < "$TOKEN_FILE" | sed 's/^/Authorization: Bearer /' | \
   curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' \
     -H @- "$SERVER_URL/api/cron/tick")
 
-if [ "$status" != "200" ]; then
-  echo "jarvis-tick: tick answered $status" >&2
+if [ "$code" != "200" ]; then
+  echo "jarvis-tick: tick answered $code" >&2
   exit 1
 fi
