@@ -1,54 +1,55 @@
-import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { SUBJECTS, UNSORTED, searchLibrary, subjectCounts } from "@/lib/library";
+import { BoxGrid, ItemList, type Box } from "@/components/library/parts";
 
 export const dynamic = "force-dynamic";
 
-function ago(d: Date) {
-  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  if (days <= 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} days ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-export default async function LibraryPage() {
-  const docs = await prisma.libraryDoc.findMany({
-    orderBy: [{ folder: "asc" }, { order: "asc" }, { title: "asc" }],
-    select: { slug: true, title: true, folder: true, mtime: true },
-  });
-  const folders = [...new Set(docs.map((d) => d.folder))];
+export default async function LibraryPage({ searchParams }: PageProps<"/library">) {
+  const raw = (await searchParams).q;
+  const q = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 md:px-6">
-      <div className="mb-8">
+    <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
+      <div className="mb-6">
         <h1 className="text-[34px]">Library</h1>
-        <p className="mt-1 text-sm text-muted">Your rules and notes from Obsidian. Read here, edit in Obsidian.</p>
+        <p className="mt-1 text-sm text-muted">Everything in the vault worth learning from. Read here, edit in Obsidian.</p>
       </div>
 
-      {docs.length === 0 ? (
-        <div className="card p-6">
-          <p className="text-sm text-muted">Nothing here yet. Run the sync from your Mac:</p>
-          <pre className="md-pre mt-3">scripts/sync-library.sh</pre>
+      <form action="/library" method="get" role="search" className="mb-8">
+        <label htmlFor="library-q" className="eyebrow mb-1.5 block px-1">
+          What are you looking for?
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="library-q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder="Hooks, cold DMs, Meta ads..."
+            className="type-box h-11 min-w-0 flex-1 bg-surface-2 px-3 text-[15px] outline-none placeholder:text-muted-2"
+          />
+          <button type="submit" className="h-11 shrink-0 rounded-lg bg-foreground px-4 text-[13px] font-semibold text-background">
+            Search
+          </button>
         </div>
-      ) : (
-        folders.map((folder) => (
-          <section key={folder} className="mb-8">
-            <p className="eyebrow eyebrow-accent mb-3 px-1">{folder}</p>
-            <ul className="card divide-y divide-border overflow-hidden">
-              {docs
-                .filter((d) => d.folder === folder)
-                .map((d) => (
-                  <li key={d.slug}>
-                    <Link href={`/library/${d.slug}`} className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-surface-hover">
-                      <span className="text-[15px] font-semibold">{d.title}</span>
-                      <span className="shrink-0 font-mono text-[11px] text-muted-2">{ago(d.mtime)}</span>
-                    </Link>
-                  </li>
-                ))}
-            </ul>
-          </section>
-        ))
-      )}
+      </form>
+
+      {q ? <Results q={q} /> : <Subjects />}
     </div>
   );
+}
+
+async function Results({ q }: { q: string }) {
+  const items = await searchLibrary(q);
+  if (items.length === 0) return <p className="px-1 text-sm text-muted">Nothing matches &quot;{q}&quot;.</p>;
+  return <ItemList items={items} title={`${items.length} ${items.length === 1 ? "match" : "matches"} for "${q}"`} showPath />;
+}
+
+async function Subjects() {
+  const counts = await subjectCounts();
+  const boxes: Box[] = SUBJECTS.map((s) => ({ href: `/library/browse/${s.slug}`, label: s.label, blurb: s.blurb, count: counts[s.slug] }));
+  if (counts[UNSORTED.slug] > 0) {
+    boxes.push({ href: `/library/browse/${UNSORTED.slug}`, label: UNSORTED.label, blurb: UNSORTED.blurb, count: counts[UNSORTED.slug] });
+  }
+  boxes.push({ href: "/library/new", label: "Add new", blurb: "Paste a note or a link and file it under a subject.", accent: true });
+  return <BoxGrid boxes={boxes} />;
 }

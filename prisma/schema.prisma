@@ -520,8 +520,20 @@ model LibraryDoc {
   sourcePath String
   mtime      DateTime
   updatedAt  DateTime @updatedAt
+  subject    String?
+  source     String?
+  topic      String?
+  kind       String?
+  summary    String?
+  origin     String?
+  purpose    String?
+  steps      Json?
+  variants   Json?
+  url        String?
+  addedBy    String   @default("sync")
 
   @@index([folder, order])
+  @@index([subject, source, topic])
 }
 
 model Goal {

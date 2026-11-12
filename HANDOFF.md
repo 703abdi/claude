@@ -314,3 +314,52 @@ Supabase itself are untested.
   set inline, since there's no `.env`.
 - Vercel's free plan keeps runtime logs for 1 hour only.
 - Read `node_modules/next/dist/docs` before Next.js changes (see AGENTS.md).
+
+---
+
+## Nov 13 2026: Library rework requested (not started)
+
+Abdi (voice note): the Library page is useless to him as a flat list of SOPs. He wants subject boxes (content,
+ads, Claude optimization, and so on) that open up, an "add new" option, and for each SOP a plain explanation of
+where it came from and what it does, with visuals where possible. Drill-down example he gave: Content -> School of
+Hard Knocks -> every topic learned from it -> Instagram videos -> everything he has on that (tips, where they came
+from, scrapes, info), organized and visual. Moved to its own session because the previous one passed 500k
+tokens. That session starts with lettered questions (habit 3) before building.
+
+## Nov 12-13 2026: Library rework built (local only, not committed)
+
+PRD: `docs/2026-11-13-library-rework-prd.md`. Abdi's answers: 7 subject boxes, SOPs + research + methods +
+Nightshift + Grok reports + relevant chats, sources as they really exist (he adds School of Hard Knocks through
+Add new), explanations written once by Claude agents, Add new = paste text or a link.
+
+What exists now:
+- `/library` (search box "What are you looking for?", 7 subject boxes, Add new), `/library/browse/[subject]`,
+  `/[source]`, `/[topic]`, `/library/[slug]` (What this is / Where it came from / What it does, numbered steps,
+  Human / AI / Client tabs), `/library/new`. Code: `src/lib/library.ts`, `src/components/library/`,
+  `src/app/(app)/library/**`, `src/app/api/library/route.ts` and `new/route.ts`.
+- `LibraryDoc` has new nullable columns (subject, source, topic, kind, summary, origin, purpose, steps, variants,
+  url, addedBy). Migration `20261113120000_library_rework` is additive and applied to the LOCAL db only.
+- The explanations live in the vault at `_scripts/library/meta/*.json` (11 files, 440 entries, 20 marked skip).
+  `scripts/sync-library.sh [app-url]` (calls `sync-library.py`) reads them plus the `SOPs/` folder and posts in
+  batches. `LIBRARY_DRY_RUN=1` prints without posting. Rows added in the app (`addedBy = manual`) are never
+  deleted or overwritten by the sync. The sync deletes every other row that is no longer in the vault set.
+- Local DB after sync: 420 docs, all with subject + summary + origin + purpose, 194 chats, 78 agency SOP codes
+  each once, the 18 old `SOPs/` slugs unchanged.
+
+Checked by Fable: typecheck, lint (0 errors), `npm test`, `next build`; click-through on localhost:3010 of the
+subject -> source -> topic -> item path, search, an agency SOP with tabs, an old SOP link, Add new end to end; no
+sideways scroll at 375px on 9 library pages.
+
+Not done, needs Abdi's yes: commit, push, deploy (the migration runs on deploy via `vercel-build`), then
+`scripts/sync-library.sh` against production to load the 420 docs.
+
+Gotchas:
+- A dev server started before a migration keeps the old Prisma client and returns 500 on `/api/library`. Restart it.
+- The local dev server reads `AGENTS_TOKEN` from `.env.local`, which differs from `~/.config/personal-os/agents-token`
+  (the production one). For a local sync, call `sync-library.py` with a temp token file holding the `.env.local` value.
+- Chat docs contain whatever was pasted into the chat (call transcripts with prospect names). The Library is behind
+  login, same as the rest of the app.
+- "Skool of Content" (1 chat) and "School of Hard Knocks" (1 chat) show as two sources; they look like the same
+  program. Merge by editing `source` in the meta JSON if Abdi confirms.
+- New material: add it in the app, or add an entry to a meta JSON and re-run the sync. There is no in-app AI
+  writing yet (Anthropic key invalid until about Nov 14).
