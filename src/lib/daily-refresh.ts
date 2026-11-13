@@ -1,0 +1,122 @@
+import { prisma } from "./prisma";
+import { TaskStatus } from "@prisma/client";
+import { computeAiPriority } from "./priority-engine";
+import { runSuggestionDetectors } from "./suggestion-detectors";
+import { runExtractionPipeline } from "./context/extract";
+import { runContextSynthesis } from "./context/synthesize";
+import { gatherMorningBriefContext } from "./morning-brief/gather";
+import { generateMorningBriefText } from "./morning-brief/generate";
+import { buildTranscriptSegments, totalDuration } from "./morning-brief/segments";
+import { generateSpeech } from "./morning-brief/tts";
+import { syncFathom } from "./fathom";
+import { syncCalendly } from "./calendly";
+import { syncGoogle } from "./google";
+import { morningDigest } from "./digests";
+
+/**
+ * Recomputes aiPriorityScore/aiPriorityReason for every active task.
+ * Purely a recommendation layer — never touches `position` or
+ * `pinnedToday`, so a user's manual order and Today curation survive
+ * every run untouched (spec §30/§48).
+ */
+export async function recomputePriorities() {
+  const tasks = await prisma.task.findMany({
+    where: { status: { not: TaskStatus.COMPLETED } },
+    include: {
+      category: true,
+      people: true,
+      blocks: { include: { blocked: { select: { status: true } } } },
+    },
+  });
+
+  let updated = 0;
+  for (const task of tasks) {
+    const { score, reason } = computeAiPriority(task);
+    if (task.aiPriorityScore !== score || task.aiPriorityReason !== reason) {
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { aiPriorityScore: score, aiPriorityReason: reason },
+      });
+      updated++;
+    }
+  }
+  return { updated, total: tasks.length };
+}
+
+/**
+ * The full daily refresh pipeline (spec §30-31). Safe to run repeatedly:
+ * every step only adds/updates recommendation data or appends a new
+ * MorningBrief row — it never deletes tasks or silently overwrites a
+ * user's manual priorities.
+ */
+/**
+ * Today is a curated list for one day. Items a sync pinned yesterday or earlier
+ * that you never touched (still not started) drop back to Tasks each morning.
+ * Pins you set yourself have no source and are never cleared here.
+ */
+export async function expireSyncPins() {
+  const cutoff = new Date(Date.now() - 20 * 3_600_000);
+  const res = await prisma.task.updateMany({
+    where: { pinnedToday: true, status: TaskStatus.NOT_STARTED, source: { startsWith: "fathom:" }, createdAt: { lt: cutoff } },
+    data: { pinnedToday: false },
+  });
+  return { unpinned: res.count };
+}
+
+export async function runDailyRefresh() {
+  const pins = await expireSyncPins().catch(() => null);
+  const fathom = await syncFathom({ force: true }).catch(() => null);
+  const calendly = await syncCalendly({ force: true }).catch(() => null);
+  const google = await syncGoogle({ force: true }).catch(() => null);
+  const extraction = await runExtractionPipeline(50);
+  // Cross-item pass: runs after extraction so freshly ingested items are
+  // already classified, and before the detectors so its output is deduped
+  // against the same pending set they see.
+  const synthesis = await runContextSynthesis();
+  const suggestions = await runSuggestionDetectors();
+  const priorities = await recomputePriorities();
+
+  const user = await prisma.user.findFirst();
+  const ctx = await gatherMorningBriefContext();
+  const { text } = await generateMorningBriefText(ctx);
+  const segments = buildTranscriptSegments(text);
+  const estimatedDuration = totalDuration(segments);
+
+  let audioData: Uint8Array<ArrayBuffer> | undefined;
+  let audioMimeType: string | null = null;
+  let ttsStatus = "not_generated";
+  let ttsError: string | null = null;
+
+  const provider = process.env.TTS_PROVIDER || null;
+  if (provider) {
+    try {
+      const speech = await generateSpeech(text, user?.voiceStyle ?? "neutral-professional");
+      if (speech) {
+        audioData = Uint8Array.from(speech.buffer);
+        audioMimeType = speech.mimeType;
+        ttsStatus = "ready";
+      }
+    } catch (e) {
+      ttsStatus = "failed";
+      ttsError = e instanceof Error ? e.message : "Unknown TTS error";
+    }
+  }
+
+  const brief = await prisma.morningBrief.create({
+    data: {
+      textContent: text,
+      transcriptSegments: segments,
+      audioData,
+      audioMimeType,
+      audioDuration: estimatedDuration,
+      voiceStyle: user?.voiceStyle ?? "neutral-professional",
+      ttsProvider: provider,
+      ttsStatus,
+      ttsError,
+    },
+    select: { id: true },
+  });
+
+  const digest = await morningDigest().catch(() => null);
+  return { pins, fathom, calendly, google, extraction, synthesis, suggestions, priorities, briefId: brief.id, digest };
+}

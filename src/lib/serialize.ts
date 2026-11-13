@@ -44,6 +44,7 @@ export function serializeTask(task: TaskWithRelations) {
     completedAt: task.completedAt,
     updatedAt: task.updatedAt,
     isSeed: task.isSeed,
+    source: task.source,
     steps: task.steps,
     people: task.people.map((tp) => tp.person),
     blockedBy: task.blockedBy.map((d) => d.blocker),

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logSignal } from "@/lib/signals";
 import { prisma } from "@/lib/prisma";
 import { taskInclude, serializeTask } from "@/lib/serialize";
 import { taskUpdateSchema } from "@/lib/validation";
@@ -104,6 +105,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         actor: "user",
       },
     });
+    if (nextStatus === TaskStatus.COMPLETED) {
+      void logSignal("task.done", { source: existing.source, ref: id, data: { title: existing.title, pinned: existing.pinnedToday, ageDays: Math.floor((Date.now() - existing.createdAt.getTime()) / 86_400_000) } });
+    }
   }
 
   return NextResponse.json(serializeTask(task));
@@ -114,5 +118,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const existing = await prisma.task.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await prisma.task.delete({ where: { id } });
+  void logSignal("task.drop", { source: existing.source, ref: id, data: { title: existing.title, status: existing.status, pinned: existing.pinnedToday, ageDays: Math.floor((Date.now() - existing.createdAt.getTime()) / 86_400_000) } });
   return NextResponse.json({ ok: true });
 }

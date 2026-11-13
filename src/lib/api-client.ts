@@ -1,4 +1,4 @@
-import type { Task, Category, Person, Effort } from "./types";
+import type { Task, Category, Person, Effort, CalendarEvent, Suggestion, MorningBrief } from "./types";
 
 export type TaskCreateInput = {
   title: string;
@@ -65,14 +65,38 @@ export const api = {
     delete: (id: string) => request<{ ok: boolean }>(`/api/categories/${id}`, { method: "DELETE" }),
   },
   people: {
-    list: () => request<(Person & { activeCount: number; waitingCount: number; completedCount: number; upcomingCount: number })[]>(
-      "/api/people"
-    ),
+    list: () => request<(Person & { waitingCount: number; nextMeeting: string | null; lastMeeting: string | null })[]>("/api/people"),
     create: (data: { name: string; notes?: string | null }) =>
       request<Person>("/api/people", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => request<Record<string, unknown>>(`/api/people/${id}`),
     update: (id: string, data: Partial<{ name: string; notes: string | null }>) =>
       request<Person>(`/api/people/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) => request<{ ok: boolean }>(`/api/people/${id}`, { method: "DELETE" }),
+  },
+  calendarEvents: {
+    list: (params?: { from?: string; to?: string }) =>
+      request<CalendarEvent[]>(`/api/calendar-events${params ? "?" + new URLSearchParams(params) : ""}`),
+    create: (data: Partial<CalendarEvent> & { title: string; date: string; categoryId?: string | null; taskId?: string | null; personId?: string | null }) =>
+      request<CalendarEvent>("/api/calendar-events", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Record<string, unknown>) =>
+      request<CalendarEvent>(`/api/calendar-events/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) => request<{ ok: boolean }>(`/api/calendar-events/${id}`, { method: "DELETE" }),
+  },
+  morningBrief: {
+    latest: () => request<MorningBrief | null>("/api/morning-brief/latest"),
+    generate: () => request<MorningBrief>("/api/morning-brief/generate", { method: "POST" }),
+    savePosition: (id: string, position: number) =>
+      request<{ ok: boolean }>(`/api/morning-brief/${id}/position`, {
+        method: "PATCH",
+        body: JSON.stringify({ position }),
+      }),
+  },
+  suggestions: {
+    list: () => request<Suggestion[]>("/api/suggestions"),
+    resolve: (id: string, action: "accept" | "reject" | "dismiss" | "snooze" | "edit", extra?: Record<string, unknown>) =>
+      request<{ ok: boolean; taskId?: string }>(`/api/suggestions/${id}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ action, ...extra }),
+      }),
   },
 };

@@ -57,6 +57,20 @@ model Person {
   followUpTasks Task[]          @relation("FollowUpPerson")
 }
 
+/** Someone seen on a call, booking or invite who is not a Person yet. One row per email (or
+ * name when there is no email); `refs` are the distinct events they were seen on. They become
+ * a Person once refs reaches the policy's personAfterSeen. */
+model ContactSighting {
+  key       String   @id
+  name      String?
+  email     String?
+  refs      String[] @default([])
+  sources   String[] @default([])
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  personId  String?
+}
+
 // ─────────────────────────────────────────────────────────────
 // TASKS
 // ─────────────────────────────────────────────────────────────
@@ -119,6 +133,9 @@ model Task {
   updatedAt   DateTime  @updatedAt
 
   isSeed Boolean @default(false)
+
+  // "agent:grok" etc. null = typed by Abdi
+  source String?
 
   steps       TaskStep[]
   people      TaskPerson[]
@@ -207,6 +224,13 @@ model CalendarEvent {
   personId String?
   person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
 
+  /** Where the event came from: null = made here, "calendly" = pulled (read-only in the UI). */
+  source     String?
+  /** Stable id at the source, so a pull can update instead of duplicate. */
+  externalId String? @unique
+  /** Fathom share link when the call was recorded. */
+  recordingUrl String?
+
   isSeed    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -219,6 +243,7 @@ model CalendarEvent {
 enum ContextSourceType {
   OBSIDIAN
   CHATGPT
+  CLAUDE
   MANUAL
   TASK
   CALENDAR
@@ -340,11 +365,16 @@ model MorningBrief {
   // JSON array of { start: number, end: number, text: string } segments (seconds)
   transcriptSegments Json?
 
-  audioUrl      String?
+  // MP3 bytes stored directly in Postgres so playback works on serverless
+  // hosts with no persistent/writable filesystem (e.g. Vercel) without
+  // requiring a separate blob storage provider.
+  audioData     Bytes?
+  audioMimeType String?
   audioDuration Float?
   voiceStyle    String?
   ttsProvider   String?
   ttsStatus     String @default("not_generated") // "not_generated" | "pending" | "ready" | "failed"
+  ttsError      String?
 
   lastPlaybackPosition Float @default(0)
 
@@ -373,4 +403,259 @@ model SyncSource {
   updatedAt DateTime @updatedAt
 
   @@unique([type, name])
+}
+
+// ─────────────────────────────────────────────────────────────
+// AGENTS (Grok bots + local agents that work through the task queue)
+// ─────────────────────────────────────────────────────────────
+
+enum AgentKind {
+  GROK
+  NVIDIA
+  CLAUDE
+  LOCAL
+}
+
+enum AgentStatus {
+  IDLE
+  WORKING
+  BLOCKED
+  OFFLINE
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+model Agent {
+  id           String      @id @default(cuid())
+  name         String      @unique
+  kind         AgentKind
+  status       AgentStatus @default(OFFLINE)
+  model        String? // Grok model id; GROK agents only
+  systemPrompt String?
+  lastSeenAt   DateTime?
+  createdAt    DateTime    @default(now())
+
+  runs AgentRun[]
+}
+
+model AgentRun {
+  id      String    @id @default(cuid())
+  agentId String
+  agent   Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  taskId  String?
+  prompt  String
+  status  RunStatus @default(QUEUED)
+  output  String?
+  error   String?
+
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  @@index([agentId, status])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// AGENCY: weekly outcomes, outbound scoreboard, cash goal
+// ─────────────────────────────────────────────────────────────
+
+model WeekPlan {
+  id        String   @id @default(cuid())
+  weekStart DateTime @unique // Sunday 00:00 local, stored as date at UTC midnight
+  outcomes  Json // [{ text: string, done: boolean }], max 3
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────
+// SELF-IMPROVEMENT: what the OS showed, what Abdi did, and the knobs the brain tunes
+// ─────────────────────────────────────────────────────────────
+
+/// Append-only. Every card shown, every tap, every sync, every brain run.
+model Signal {
+  id     String   @id @default(cuid())
+  at     DateTime @default(now())
+  kind   String // "donow.shown" | "donow.acted" | "task.done" | "task.drop" | "score.add" | "score.set" | "feed.post" | "feed.task" | "feed.dismiss" | "sync" | "brain.run"
+  source String? // which agent / integration, when it applies
+  ref    String? // task id, inbox id, action key
+  data   Json?
+
+  @@index([at])
+  @@index([kind, at])
+}
+
+/// Versioned knobs for the ranking. The highest version is live. Never edited in place.
+model Policy {
+  id        String   @id @default(cuid())
+  version   Int      @unique
+  data      Json
+  reason    String?
+  author    String // "abdi" | "brain" | "default"
+  createdAt DateTime @default(now())
+}
+
+model ScoreEntry {
+  id        String   @id @default(cuid())
+  date      DateTime @unique // local day, stored at UTC midnight
+  dials     Int      @default(0)
+  convos    Int      @default(0)
+  booked    Int      @default(0)
+  cashCents Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+/** A note pushed from the Obsidian vault (SOPs first). Read-only in the app; edited in Obsidian. */
+model LibraryDoc {
+  slug       String   @id
+  title      String
+  folder     String   @default("SOPs")
+  order      Int      @default(0)
+  content    String
+  sourcePath String
+  mtime      DateTime
+  updatedAt  DateTime @updatedAt
+  subject    String?
+  source     String?
+  topic      String?
+  kind       String?
+  summary    String?
+  origin     String?
+  purpose    String?
+  steps      Json?
+  variants   Json?
+  url        String?
+  addedBy    String   @default("sync")
+  tldr       String?
+  useWhen    String?
+  fromLine   String?
+  example    Json?
+  links      Json?
+  related    Json?
+  visual     Json?
+  groupLabel String?
+
+  @@index([folder, order])
+  @@index([subject, source, topic])
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  label       String
+  targetCents Int
+  startDate   DateTime
+  deadline    DateTime
+  createdAt   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// INBOX (what external agents like Grok, Codex, Jarvis write in)
+// ─────────────────────────────────────────────────────────────
+
+model InboxItem {
+  id         String    @id @default(cuid())
+  agent      String // "grok" | "codex" | "claude" | "jarvis" | free text, lowercased
+  kind       String // "task" | "note" | "update" | "question"
+  title      String
+  body       String?
+  link       String?
+  taskId     String?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([resolvedAt, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// PUSH (notifications to Abdi's phone and Mac)
+// ─────────────────────────────────────────────────────────────
+
+/** One browser or home-screen app that asked for notifications. */
+model PushSubscription {
+  id         String    @id @default(cuid())
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime?
+  failures   Int       @default(0)
+}
+
+/** The VAPID key pair, made once on first use so nothing needs configuring. */
+model PushConfig {
+  id         String   @id @default("vapid")
+  publicKey  String
+  privateKey String
+  createdAt  DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// JARVIS V2 (Nov 13 2026): notes, memory, action log, nudges
+// ─────────────────────────────────────────────────────────────
+
+model Note {
+  id        String   @id @default(cuid())
+  title     String   @default("")
+  body      String   @default("")
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+}
+
+/// One searchable chunk of something Abdi wrote, said or was told. `source` is
+/// "vault" (Obsidian file), "fathom" (call summary), "note" (Notes page) or "person"
+/// (People notes). Long documents are split; `chunk` is the piece number.
+/// `tsv` is filled by Postgres (generated column); search it with raw SQL.
+model MemoryDoc {
+  id         String                   @id @default(cuid())
+  source     String
+  externalId String
+  chunk      Int                      @default(0)
+  title      String
+  body       String
+  url        String?
+  date       DateTime?
+  hash       String
+  updatedAt  DateTime                 @updatedAt
+  tsv        Unsupported("tsvector")?
+
+  @@unique([source, externalId, chunk])
+  @@index([source, externalId])
+  @@index([tsv], type: Gin)
+}
+
+/// Everything Jarvis did on Abdi's behalf, with what is needed to undo it.
+model JarvisAction {
+  id        String    @id @default(cuid())
+  kind      String
+  summary   String
+  undo      Json?
+  undoneAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+/// Something Jarvis raised on its own. `key` makes each one fire once
+/// (for example "precall:<eventId>" or "waiting:<personId>:2026-11-13").
+model JarvisNudge {
+  id          String    @id @default(cuid())
+  kind        String
+  key         String    @unique
+  title       String
+  body        String
+  url         String?
+  createdAt   DateTime  @default(now())
+  pushedAt    DateTime?
+  dismissedAt DateTime?
+
+  @@index([dismissedAt, createdAt])
 }

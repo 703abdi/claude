@@ -27,7 +27,7 @@ function LoginForm() {
         setLoading(false);
         return;
       }
-      const dest = params.get("from") || "/tasks";
+      const dest = params.get("from") || "/hub";
       router.push(dest);
       router.refresh();
     } catch {
@@ -36,48 +36,60 @@ function LoginForm() {
     }
   }
 
+  const inputClass =
+    "type-box w-full bg-surface-hover px-3.5 py-3 text-[15px] text-foreground placeholder:text-muted-2 outline-none";
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-4">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm border border-border bg-surface rounded-lg p-8 animate-fade-in"
-      >
-        <h1 className="text-lg font-bold tracking-tight mb-1">abdi&apos;s os</h1>
-        <p className="text-sm text-muted mb-6">Private command center. Sign in to continue.</p>
+      <div className="glow-accent w-full max-w-sm">
+        <form onSubmit={onSubmit} className="card w-full p-8 animate-fade-in">
+          <div className="mb-8 flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-accent text-base font-extrabold text-accent-ink">a</span>
+            <span className="text-[22px] font-extrabold tracking-[-0.03em]">abdi&apos;s os</span>
+          </div>
+          <h1 className="text-[28px] mb-2">
+            Sign <span className="hl">in</span>
+          </h1>
+          <p className="text-[15px] text-muted mb-6">Private command center.</p>
 
-        <label className="block text-xs font-medium text-muted mb-1.5">Email</label>
-        <input
-          type="email"
-          required
-          autoFocus
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-4 rounded-md border border-border bg-surface-2 px-3 py-2 text-sm outline-none focus:border-muted-2 transition-colors"
-        />
+          <label htmlFor="email" className="eyebrow block mb-1.5">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            autoFocus
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={`${inputClass} mb-4`}
+          />
 
-        <label className="block text-xs font-medium text-muted mb-1.5">Password</label>
-        <input
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-5 rounded-md border border-border bg-surface-2 px-3 py-2 text-sm outline-none focus:border-muted-2 transition-colors"
-        />
+          <label htmlFor="password" className="eyebrow block mb-1.5">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={`${inputClass} mb-5`}
+          />
 
-        {error && (
-          <p className="text-sm text-status-red mb-4" role="alert">
-            {error}
-          </p>
-        )}
+          {error && (
+            <p className="text-sm text-danger mb-4" role="alert">
+              {error}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-foreground text-background font-semibold text-sm py-2.5 disabled:opacity-50 transition-opacity"
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+          <button type="submit" disabled={loading} className="btn-primary w-full min-h-[52px] text-[15px]">
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

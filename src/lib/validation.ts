@@ -74,3 +74,101 @@ export const personUpdateSchema = z.object({
 export const dependencySchema = z.object({
   blockerId: z.string(),
 });
+
+export const calendarEventCreateSchema = z.object({
+  title: z.string().min(1).max(300),
+  date: z.string().datetime(),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
+  allDay: z.boolean().optional(),
+  location: z.string().max(300).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  taskId: z.string().optional().nullable(),
+  personId: z.string().optional().nullable(),
+});
+
+export const calendarEventUpdateSchema = z.object({
+  title: z.string().min(1).max(300).optional(),
+  date: z.string().datetime().optional(),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
+  allDay: z.boolean().optional(),
+  location: z.string().max(300).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  taskId: z.string().optional().nullable(),
+  personId: z.string().optional().nullable(),
+});
+
+export const weekUpdateSchema = z.object({
+  weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  outcomes: z
+    .array(z.object({ text: z.string().max(300), done: z.boolean() }))
+    .max(3),
+});
+
+const scoreField = z.enum(["dials", "convos", "booked", "cashCents"]);
+
+export const scoreUpdateSchema = z.union([
+  z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    field: scoreField,
+    delta: z.number().int().min(-100_000_000).max(100_000_000),
+  }),
+  z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    values: z.object({
+      dials: z.number().int().min(0).optional(),
+      convos: z.number().int().min(0).optional(),
+      booked: z.number().int().min(0).optional(),
+      cashCents: z.number().int().min(0).optional(),
+    }),
+  }),
+]);
+
+export const goalUpdateSchema = z.object({
+  label: z.string().trim().min(1).max(120).optional(),
+  targetCents: z.number().int().min(0).max(1_000_000_000).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+
+export const inboxCreateSchema = z.object({
+  agent: z.string().trim().min(1).max(40).transform((s) => s.toLowerCase()),
+  kind: z.enum(["task", "note", "update", "question"]),
+  title: z.string().trim().min(1).max(300),
+  body: z.string().max(10_000).optional().nullable(),
+  link: z
+    .string()
+    .url()
+    .max(2000)
+    .refine((s) => /^https?:\/\//i.test(s), { message: "link must be http(s)" })
+    .optional()
+    .nullable(),
+  due: z
+    .string()
+    .refine((s) => !Number.isNaN(Date.parse(s)), { message: "due must be an ISO date" })
+    .optional()
+    .nullable(),
+  person: z.string().trim().max(200).optional().nullable(),
+  pinToday: z.boolean().optional(),
+  /** Optional scoreboard for the day: totals, not deltas. `conversations` is an alias of `convos`. */
+  counters: z
+    .object({
+      dials: z.number().int().min(0).optional(),
+      convos: z.number().int().min(0).optional(),
+      conversations: z.number().int().min(0).optional(),
+      booked: z.number().int().min(0).optional(),
+    })
+    .optional()
+    .nullable(),
+  /** Cash collected that day, in dollars. */
+  cash: z.number().min(0).max(100_000_000).optional().nullable(),
+  /** The local day the counters belong to, YYYY-MM-DD. Defaults to today. */
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+});
+
+export const inboxResolveSchema = z.object({
+  action: z.enum(["task", "dismiss"]),
+});
