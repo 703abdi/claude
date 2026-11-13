@@ -364,3 +364,22 @@ Gotchas:
   program. Merge by editing `source` in the meta JSON if Abdi confirms.
 - New material: add it in the app, or add an entry to a meta JSON and re-run the sync. There is no in-app AI
   writing yet (Anthropic key invalid until about Nov 14).
+
+## Nov 12 2026: Library v2 content pass (built, local only until Abdi says ship)
+
+Abdi after using the live Library: "too many words, not clear enough instruction, no visuals or example links",
+"I don't like the full note system", split big topics, hint on the steps line, merge Skool of Content.
+Spec: the "V2 content pass" and "Full note reader" sections at the end of `docs/2026-11-13-library-rework-prd.md`.
+
+- Every meta entry now also has `tldr`, `useWhen`, `from`, command-style `steps`, `example` (copied word for word
+  from the note), `links` (only URLs in the note), `related`, and `visual` (flow, formula, twocol, funnel, numbers).
+  Checker: `scripts/check-library-meta.py <meta files>`.
+  421 entries, 0 problems, 419 with an example, 292 with links or related.
+- `groups.json` in the meta folder maps sourcePath -> group label for the 11 topics with more than 6 items
+  (138 items, max 6 per group). If items are added to a big topic, re-run a grouping pass.
+- App: migration `20261113180000_library_v2` (additive), `ItemSummary`, `Visual`, `StepsLine`, `Reader` components,
+  `src/lib/note-sections.ts` (splits a note by headings, a chat by "You:" turns). `VariantTabs` is gone.
+- "Skool of Content" merged into "School of Hard Knocks" (3 items there now, including the Sep 2 course chat).
+- Checked by Fable locally: typecheck, lint, 109 tests, build; grouped topic page, pop-up for several visual types,
+  CON-02 and a chat in the reader, no sideways scroll at 375px on 6 pages, no console errors.
+- To ship: commit, push (migration runs on deploy), then `scripts/sync-library.sh` against production.

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Markdown, slugify } from "@/lib/markdown";
-import { browseHref, buildTabs, kindLabel, parseSteps, parseVariants, subjectInfo } from "@/lib/library";
-import { Breadcrumb, ExplainRow, KindTag, StepsLine, type Crumb } from "@/components/library/parts";
-import VariantTabs from "@/components/library/VariantTabs";
+import { browseHref, buildTabs, parseVariants, subjectInfo, toCard } from "@/lib/library";
+import { splitSections } from "@/lib/note-sections";
+import { Breadcrumb, KindTag, type Crumb } from "@/components/library/parts";
+import ItemSummary from "@/components/library/ItemSummary";
+import Reader, { type ReaderVersion } from "@/components/library/Reader";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +34,17 @@ export default async function LibraryDocPage({ params }: PageProps<"/library/[sl
     crumbs.push({ label: doc.topic || "Other", href: browseHref(subject.slug, doc.source, doc.topic) });
   }
 
-  const steps = parseSteps(doc.steps);
-  const hasSummary = !!(doc.summary?.trim() || doc.origin?.trim() || doc.purpose?.trim()) || steps.length > 0;
+  const item = toCard(doc);
+  const hasSummary = !!(item.tldr || item.summary || item.visual || item.steps.length || item.example || item.links.length || item.related.length);
+
+  // The full note: one version, or Human / AI / Client, each split into sections.
   const variantTabs = buildTabs(doc.content, parseVariants(doc.variants));
-  const tabs = variantTabs.length > 0 ? variantTabs : doc.content.trim() ? [{ label: "Full text", content: doc.content }] : [];
+  const texts = variantTabs.length > 0 ? variantTabs : doc.content.trim() ? [{ label: "Full text", content: doc.content }] : [];
+  const versions: ReaderVersion[] = texts.map((t) => ({
+    label: t.label,
+    sections: splitSections(t.content).map((sec) => ({ id: sec.id, label: sec.label, body: <Markdown source={sec.body} resolve={resolve} /> })),
+  }));
+  const plain = versions.length === 1 && versions[0].sections.length < 2;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
@@ -47,9 +56,9 @@ export default async function LibraryDocPage({ params }: PageProps<"/library/[sl
         </Link>
       )}
 
-      <div className="mt-4 mb-6">
+      <div className="mt-4 mb-5">
         <div className="flex flex-wrap items-center gap-2">
-          {doc.kind && <KindTag label={kindLabel(doc.kind)} />}
+          <KindTag label={item.kindLabel} />
           <span className="font-mono text-[11px] text-muted-2">
             {doc.source || doc.folder} · {doc.addedBy === "manual" ? "added" : "edited"}{" "}
             {doc.mtime.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -58,38 +67,24 @@ export default async function LibraryDocPage({ params }: PageProps<"/library/[sl
         <h1 className="mt-2 min-w-0 break-words text-[28px] leading-tight md:text-[32px]">{doc.title}</h1>
       </div>
 
-      <div className="flex flex-col gap-6" id="summary">
-        <ExplainRow summary={doc.summary} origin={doc.origin} purpose={doc.purpose} />
-        <StepsLine steps={steps} />
-        {doc.url && (
-          <a
-            href={doc.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-11 items-center self-start rounded-lg bg-accent px-5 text-[14px] font-semibold text-accent-ink hover:bg-accent-hover"
-          >
-            Open link
-          </a>
-        )}
-      </div>
+      {hasSummary && (
+        <div id="lib-top" className="mb-10">
+          <ItemSummary item={item} />
+        </div>
+      )}
 
-      <div className="mt-8">
-        {tabs.length > 0 ? (
-          <VariantTabs
-            defaultOpen={!hasSummary}
-            tabs={tabs.map((t) => ({
-              label: t.label,
-              body: (
-                <div className="card max-w-3xl p-5 md:p-7">
-                  <Markdown source={t.content} resolve={resolve} />
-                </div>
-              ),
-            }))}
-          />
-        ) : (
-          <p className="px-1 text-sm text-muted">No text saved, only the link.</p>
-        )}
-      </div>
+      {texts.length === 0 ? (
+        <p className="px-1 text-sm text-muted">No text saved, only the link.</p>
+      ) : plain ? (
+        <section aria-label="Full note">
+          <h2 className="eyebrow mb-3">Full note</h2>
+          <div className="card max-w-3xl p-5 md:p-7">
+            <Markdown source={texts[0].content} resolve={resolve} />
+          </div>
+        </section>
+      ) : (
+        <Reader versions={versions} />
+      )}
     </div>
   );
 }

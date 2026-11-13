@@ -122,7 +122,14 @@ test("toCard flattens a row for the client", () => {
   const c = toCard({
     slug: "s", title: "T", kind: "sop", summary: "sum", subject: "content", source: null, topic: "Hooks",
     origin: null, purpose: "p", steps: ["a", 2, "b"], url: null,
+    tldr: " Short ", useWhen: null, fromLine: null, example: { text: "quote" }, links: [{ label: "L", url: "https://x.dev" }],
+    related: null, visual: { type: "flow" }, groupLabel: "",
   });
+  assert.equal(c.tldr, "Short");
+  assert.deepEqual(c.example, { text: "quote", label: null });
+  assert.deepEqual(c.visual, { type: "flow" });
+  assert.equal(c.groupLabel, null);
+  assert.deepEqual(c.related, []);
   assert.deepEqual(c.steps, ["a", "b"]);
   assert.equal(c.path, "Content / Other / Hooks");
 });

@@ -531,6 +531,14 @@ model LibraryDoc {
   variants   Json?
   url        String?
   addedBy    String   @default("sync")
+  tldr       String?
+  useWhen    String?
+  fromLine   String?
+  example    Json?
+  links      Json?
+  related    Json?
+  visual     Json?
+  groupLabel String?
 
   @@index([folder, order])
   @@index([subject, source, topic])

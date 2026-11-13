@@ -36,6 +36,15 @@ const docSchema = z.object({
   steps: z.array(z.string().min(1).max(300)).max(20).nullish(),
   variants: z.array(variantSchema).max(5).nullish(),
   url: z.string().url().max(2000).nullish(),
+  tldr: optText(300),
+  useWhen: optText(300),
+  fromLine: optText(300),
+  example: z.object({ text: z.string().min(1).max(1000), label: z.string().max(100).nullish() }).nullish(),
+  links: z.array(z.object({ label: z.string().min(1).max(100), url: z.string().url().max(2000) })).max(5).nullish(),
+  related: z.array(z.object({ slug: z.string().min(1).max(200), title: z.string().min(1).max(300) })).max(3).nullish(),
+  // Loose on purpose: the app draws the types it knows and ignores the rest.
+  visual: z.looseObject({ type: z.string().min(1).max(30) }).nullish(),
+  groupLabel: optText(100),
 });
 
 const bodySchema = z.object({
@@ -65,6 +74,8 @@ export async function GET(req: NextRequest) {
       purpose: true,
       steps: true,
       url: true,
+      tldr: true,
+      groupLabel: true,
     },
   });
   return NextResponse.json(docs);
@@ -106,6 +117,14 @@ export async function POST(req: NextRequest) {
       steps: json(d.steps),
       variants: json(d.variants),
       url: d.url ?? null,
+      tldr: d.tldr ?? null,
+      useWhen: d.useWhen ?? null,
+      fromLine: d.fromLine ?? null,
+      example: json(d.example),
+      links: json(d.links),
+      related: json(d.related),
+      visual: json(d.visual),
+      groupLabel: d.groupLabel ?? null,
     };
     await prisma.libraryDoc.upsert({
       where: { slug: d.slug },

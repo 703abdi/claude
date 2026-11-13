@@ -31,7 +31,7 @@ export default async function LibraryTopicPage({ params }: PageProps<"/library/b
           {items.length} {items.length === 1 ? "item" : "items"} from {source.name}
         </p>
       </div>
-      <ItemBrowser items={items.map(toCard)} filters={kindFilters(items)} />
+      <ItemBrowser items={items.map(toCard)} filters={kindFilters(items)} grouped />
     </div>
   );
 }

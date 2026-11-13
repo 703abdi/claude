@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { parseExample, parseLinks, parseRelated, parseVisual, type Example, type ItemLink, type Related, type Visual } from "@/lib/library-view";
 
 /** Library drill-down: subject -> source -> topic -> items. Subjects are fixed; sources and topics are
  * free text, so their URL segments are slugs that get mapped back to the stored values by query. */
@@ -207,6 +208,14 @@ const itemSelect = {
   purpose: true,
   steps: true,
   url: true,
+  tldr: true,
+  useWhen: true,
+  fromLine: true,
+  example: true,
+  links: true,
+  related: true,
+  visual: true,
+  groupLabel: true,
 } satisfies Prisma.LibraryDocSelect;
 
 export type LibraryItem = Prisma.LibraryDocGetPayload<{ select: typeof itemSelect }>;
@@ -223,6 +232,14 @@ export type CardItem = {
   steps: string[];
   url: string | null;
   path: string;
+  tldr: string | null;
+  useWhen: string | null;
+  fromLine: string | null;
+  example: Example | null;
+  links: ItemLink[];
+  related: Related[];
+  visual: Visual | null;
+  groupLabel: string | null;
 };
 
 export function toCard(d: LibraryItem): CardItem {
@@ -238,6 +255,14 @@ export function toCard(d: LibraryItem): CardItem {
     steps: parseSteps(d.steps),
     url: d.url,
     path: [subject, d.source || OTHER, d.topic || OTHER].join(" / "),
+    tldr: d.tldr?.trim() || null,
+    useWhen: d.useWhen?.trim() || null,
+    fromLine: d.fromLine?.trim() || null,
+    example: parseExample(d.example),
+    links: parseLinks(d.links),
+    related: parseRelated(d.related),
+    visual: parseVisual(d.visual),
+    groupLabel: d.groupLabel?.trim() || null,
   };
 }
 
@@ -298,7 +323,7 @@ export function titleHits(title: string, terms: string[]): number {
   return terms.filter((w) => t.includes(w)).length;
 }
 
-/** Every word must match title, summary, topic, source or purpose (case-insensitive). Title matches first. */
+/** Every word must match title, summary, tldr, topic, source or purpose (case-insensitive). Title matches first. */
 export async function searchLibrary(q: string, take = 100): Promise<LibraryItem[]> {
   const terms = searchTerms(q);
   if (terms.length === 0) return [];
@@ -306,7 +331,9 @@ export async function searchLibrary(q: string, take = 100): Promise<LibraryItem[
     where: {
       AND: terms.map((w) => {
         const contains = { contains: w, mode: "insensitive" as const };
-        return { OR: [{ title: contains }, { summary: contains }, { topic: contains }, { source: contains }, { purpose: contains }] };
+        return {
+          OR: [{ title: contains }, { summary: contains }, { tldr: contains }, { topic: contains }, { source: contains }, { purpose: contains }],
+        };
       }),
     },
     orderBy: [{ title: "asc" }],

@@ -10,7 +10,10 @@ Sources:
 
 Posts in batches to /api/library, then removes rows the app has with addedBy "sync" that are
 no longer in the set. Rows added in the app (addedBy "manual") are never touched.
-Set LIBRARY_DRY_RUN=1 to print what would be sent without posting.
+Also reads groups.json in the meta folder: one object {"<sourcePath>": "<group label>"} that splits
+big topics into headed groups. Any other JSON file whose top level is not a list is ignored.
+Set LIBRARY_DRY_RUN=1 to print what would be sent without posting, and LIBRARY_NO_DELETE=1 to skip
+removing rows that are no longer in the set (for a partial sync).
 """
 import glob
 import hashlib
@@ -74,11 +77,12 @@ def read(path):
 
 
 def load_meta(meta_dir, vault):
-    """sourcePath -> entry, in file order. Skips bad entries with a warning."""
+    """(sourcePath -> entry in file order, sourcePath -> group label). Skips bad entries with a warning."""
     entries = {}
+    groups = {}
     if not os.path.isdir(meta_dir):
         warn("no meta folder at " + meta_dir + " (only SOPs/ will sync)")
-        return entries
+        return entries, groups
     for path in sorted(glob.glob(os.path.join(meta_dir, "*.json"))):
         try:
             data = json.loads(read(path))
@@ -86,7 +90,13 @@ def load_meta(meta_dir, vault):
             warn("could not read %s: %s" % (path, e))
             continue
         if not isinstance(data, list):
-            warn(path + " is not a JSON array, skipped")
+            if os.path.basename(path) == "groups.json" and isinstance(data, dict):
+                for sp, label in data.items():
+                    label = clip(label, 100)
+                    if isinstance(sp, str) and label:
+                        groups[sp] = label
+            elif os.path.basename(path) != "groups.json":
+                warn(path + " is not a JSON array, skipped")
             continue
         for e in data:
             if not isinstance(e, dict) or e.get("skip") is True:
@@ -102,7 +112,7 @@ def load_meta(meta_dir, vault):
                 warn("duplicate entry for " + sp + ", keeping the first")
                 continue
             entries[sp] = e
-    return entries
+    return entries, groups
 
 
 def meta_fields(e, vault):
@@ -142,10 +152,34 @@ def meta_fields(e, vault):
             continue
         variants.append({"label": label.strip()[:40], "content": truncate(read(full)), "sourcePath": vp})
     out["variants"] = variants[:5] or None
+
+    # v2 short fields
+    out["tldr"] = clip(e.get("tldr"), 300)
+    out["useWhen"] = clip(e.get("useWhen"), 300)
+    out["fromLine"] = clip(e.get("from"), 300)
+    ex = e.get("example")
+    if isinstance(ex, dict) and clip(ex.get("text"), 1000):
+        out["example"] = {"text": clip(ex.get("text"), 1000), "label": clip(ex.get("label"), 100)}
+    else:
+        out["example"] = None
+    links = []
+    for l in e.get("links") or []:
+        if not isinstance(l, dict):
+            continue
+        label, link = clip(l.get("label"), 100), clip(l.get("url"), 2000)
+        if label and link and re.match(r"^https?://\S+$", link):
+            links.append({"label": label, "url": link})
+        elif link:
+            warn("bad link %r for %s, dropped" % (link, e["sourcePath"]))
+    out["links"] = links[:5] or None
+    visual = e.get("visual")
+    out["visual"] = visual if isinstance(visual, dict) and isinstance(visual.get("type"), str) and visual["type"].strip() else None
+    rel = e.get("related")
+    out["_related"] = [r for r in rel if isinstance(r, str)] if isinstance(rel, list) else []
     return out
 
 
-def build_docs(vault, meta):
+def build_docs(vault, meta, groups):
     docs = []
     taken = set(RESERVED)
     used_meta = set()
@@ -205,6 +239,19 @@ def build_docs(vault, meta):
         doc.update(meta_fields(e, vault))
         doc["folder"] = (doc.get("source") or "Library")[:100]
         docs.append(doc)
+
+    # Groups and related items need the whole set: related paths become {slug, title} of docs in it.
+    by_path = {d["sourcePath"]: d for d in docs}
+    for d in docs:
+        d["groupLabel"] = groups.get(d["sourcePath"])
+        related = []
+        for rp in d.pop("_related", []) or []:
+            other = by_path.get(rp)
+            if other is None:
+                warn("related %s for %s is not in the Library, dropped" % (rp, d["sourcePath"]))
+            elif other is not d and all(r["slug"] != other["slug"] for r in related):
+                related.append({"slug": other["slug"], "title": other["title"]})
+        d["related"] = related[:3] or None
     return docs
 
 
@@ -242,10 +289,11 @@ def main():
     meta_dir = os.environ.get("LIBRARY_META_DIR") or os.path.join(vault, "_scripts", "library", "meta")
     dry = os.environ.get("LIBRARY_DRY_RUN") == "1"
 
-    meta = load_meta(meta_dir, vault)
-    docs = build_docs(vault, meta)
+    meta, groups = load_meta(meta_dir, vault)
+    docs = build_docs(vault, meta, groups)
     with_subject = sum(1 for d in docs if d.get("subject"))
-    print("built %d docs (%d from meta, %d with a subject)" % (len(docs), len(meta), with_subject))
+    print("built %d docs (%d from meta, %d with a subject, %d grouped, %d with a visual)"
+          % (len(docs), len(meta), with_subject, sum(1 for d in docs if d.get("groupLabel")), sum(1 for d in docs if d.get("visual"))))
 
     if dry:
         for d in docs:
@@ -263,6 +311,9 @@ def main():
         skipped += res.get("skipped", 0)
         print("batch %d: %s" % (i, res))
 
+    if os.environ.get("LIBRARY_NO_DELETE") == "1":
+        print("upserted %d, skipped %d (added in the app), delete step skipped" % (upserted, skipped))
+        return
     have = {d["slug"] for d in api(app, token, "GET") if d.get("addedBy", "sync") == "sync"}
     gone = sorted(have - {d["slug"] for d in docs})
     deleted = 0

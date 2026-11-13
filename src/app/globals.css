@@ -910,6 +910,7 @@ select:focus-visible {
 /* Small kind tag: muted rectangle, not a pill. */
 .lib-tag {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   height: 20px;
   padding: 0 6px;
@@ -1006,4 +1007,167 @@ select:focus-visible {
 }
 .lib-noscroll {
   overflow: hidden;
+}
+
+/* ---------- Library v2 (lib-*) ---------- */
+/* Fades over a sideways row take the colour of whatever sits behind them. */
+.lib-dialog {
+  --lib-fade: var(--surface-2);
+}
+@media (min-width: 700px) {
+  .lib-dialog {
+    max-height: 92vh;
+  }
+}
+.lib-hscroll {
+  position: relative;
+}
+.lib-fade {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  width: 56px;
+  pointer-events: none;
+}
+.lib-fade-right {
+  right: 0;
+  background: linear-gradient(to left, var(--lib-fade, var(--background)) 30%, transparent);
+}
+.lib-fade-left {
+  left: 0;
+  background: linear-gradient(to right, var(--lib-fade, var(--background)) 30%, transparent);
+}
+.lib-scroll-btn {
+  position: absolute;
+  z-index: 2; /* above the step nodes */
+  top: -7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--foreground);
+}
+.lib-scroll-btn > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+}
+.lib-scroll-btn:hover > span {
+  background: var(--surface-hover);
+}
+
+/* Drawn visuals */
+.lib-ftile {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.lib-ftile-result {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.lib-op {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted-2);
+}
+.lib-funnel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin: 0 auto;
+  padding: 4px 10px;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  background: var(--surface-hover);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.lib-funnel-bar:last-child {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Chips: links and related items. Rectangles, not pills. */
+.lib-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.lib-chip:hover {
+  background: var(--surface-hover);
+}
+@media (max-width: 699px) {
+  .lib-chip {
+    min-height: 44px;
+  }
+}
+.lib-chip[aria-current="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Quiet segmented control: the pressed segment gets accent text, not an accent fill. */
+.lib-seg-quiet button[aria-pressed="true"] {
+  background: var(--surface-hover);
+  color: var(--accent);
+}
+
+/* Reader section list */
+.lib-toc-item {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 12px;
+  border-left: 2px solid transparent;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.lib-toc-item:hover {
+  color: var(--foreground);
+}
+.lib-toc-item[aria-current="true"] {
+  border-left-color: var(--accent);
+  color: var(--accent);
+}
+.lib-more > summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lib-more > summary::-webkit-details-marker {
+  display: none;
+}
+.lib-more[open] > summary .lib-more-caret {
+  transform: rotate(90deg);
 }

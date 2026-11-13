@@ -70,3 +70,71 @@ Rules for the text: plain words a 12-year-old follows, no em dashes, no "serves 
 - No file upload, no editing of vault docs in the app, no images from Nightshift.
 - No sync to production, commit, push or deploy without Abdi's yes.
 - Chats are picked for relevance, not imported wholesale.
+
+---
+
+# V2 content pass (Nov 12 2026)
+
+Abdi after seeing it live: "too many words, not clear enough instruction, no visuals or example links or anything."
+Also: split big topics, hint when the steps line overflows, merge "Skool of Content" into "School of Hard Knocks".
+
+## What an item shows now (pop-up and top of the item page)
+
+1. `tldr`: one line, the whole point.
+2. `visual`: one drawn graphic that fits the item.
+3. `steps`: what to do, as commands.
+4. `example`: one real line lifted from the note.
+5. `links`: links that are in the note, plus `related` Library items.
+6. `from`: one short line on where it came from.
+7. Button: Read the full note. The old long summary / origin / purpose sit behind a "More detail" expander.
+
+## New fields in each meta entry (old fields stay)
+
+```json
+{
+  "tldr": "max 16 words. What this is, said so a 12-year-old gets it. No filler.",
+  "useWhen": "max 14 words. Starts with a verb or 'When'. The moment to open it.",
+  "from": "max 14 words. Who or what it came from and the date. 'source needed' if unknown.",
+  "steps": ["max 5 steps, each max 7 words, each starts with a verb (a command)"],
+  "example": { "text": "max 30 words, copied word for word from the note", "label": "max 6 words: what the example is, e.g. 'A hook from this note'" },
+  "links": [{ "label": "max 5 words", "url": "a URL that appears in the note, copied exactly" }],
+  "related": ["vault-relative paths of up to 3 other notes this one was built from or pairs with"],
+  "visual": { "type": "..." }
+}
+```
+
+`visual` is exactly one of:
+- `{ "type": "flow" }` draws `steps` as a numbered line. Use when the note is a process.
+- `{ "type": "formula", "parts": ["2 to 4 labels, max 3 words each"], "result": "max 4 words" }` draws A + B + C = result. Use when the note boils down to a recipe.
+- `{ "type": "twocol", "leftLabel": "Do", "left": ["max 3 items, max 7 words each"], "rightLabel": "Don't", "right": ["max 3 items"] }` any two-sided contrast (do / don't, before / after, us / them, works / fails).
+- `{ "type": "funnel", "stages": ["3 to 5 labels, max 3 words each, top to bottom"] }` use when the note is about stages people move through.
+- `{ "type": "numbers", "items": [{ "value": "10+", "label": "max 6 words" }] }` 1 to 3 key numbers that the note itself states.
+
+Rules: `steps` is required for every entry (if the note is not a process, the steps are how to use it). `example` is required unless the note has no quotable line (then omit it). `links` may be empty; never invent a URL. Numbers, names and quotes come only from the note. No em or en dashes, straight quotes, plain words.
+
+## Groups inside big topics
+
+`_scripts/library/meta/groups.json` is one object `{ "<sourcePath>": "<group label>" }`. Any (subject, source, topic) set with more than 6 items gets split into groups of 2 to 6 items with a 2 to 4 word label. The topic page shows the groups as headed sections.
+
+## Acceptance criteria (pass / fail)
+
+1. Every non-skipped meta entry passes `check_meta_v2.py` (field limits, example found in the note, link URLs found in the note, visual schema, no dashes).
+2. No single visual type is used for more than 60% of items.
+3. The pop-up for a typical item shows: tldr, visual, steps, example, links or related, from line, one accent button. Visible words in the pop-up are under half of the v1 pop-up for the same item (measure 5 items, report both numbers).
+4. Topic pages with more than 6 items show group headings; no group has more than 6 cards.
+5. When the steps line overflows, a fade and a small arrow show there is more.
+6. "Skool of Content" no longer appears as a source.
+7. Typecheck, lint, tests, build pass. No sideways page scroll at 375px.
+
+## Non-Goals
+
+No images from the vault, no generated pictures, no in-app AI, no new subjects.
+
+## Full note reader (added after Abdi: "I don't like the full note system, rethink it")
+
+The "Pick a tab to read the full text" tab bar goes away. Under the summary the item page shows a reader:
+- The note is split into sections by its markdown headings (h1 to h3). A chat is split into exchanges: each "**You:**" turn starts a section and its label is the first words of what he asked (max 8 words).
+- Desktop: a section list on the left (sticky, scrolls on its own), the picked section on the right. The first section is open on load. Only one section shows at a time, with previous / next section buttons at the bottom.
+- Phone: the section list is a horizontal swipe row of chips above the section.
+- A note with fewer than 2 sections just shows its text. Notes with Human / AI / Client versions get a small segmented control above the section list.
+- Acceptance: on load, the page height at 1280x800 for CON-02 and for the longest chat is under 2 screens; clicking a section swaps the right pane without a page reload; a link with #section-id opens that section.

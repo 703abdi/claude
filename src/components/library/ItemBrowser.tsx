@@ -1,24 +1,39 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CardItem, KindFilter } from "@/lib/library";
-import { ExplainRow, KindTag, StepsLine, TILE } from "./parts";
+import { groupItems } from "@/lib/library-view";
+import ItemSummary from "./ItemSummary";
+import { KindTag, TILE } from "./parts";
 
 /** Card grid with a kind filter and a pop-up for each item. Cards link to /library/[slug], so
- * middle-click and no-JS still work; a plain click opens the pop-up instead. */
-export default function ItemBrowser({ items, filters, showPath }: { items: CardItem[]; filters: KindFilter[]; showPath?: boolean }) {
+ * middle-click and no-JS still work; a plain click opens the pop-up instead. With `grouped`, items
+ * that have a group label show under small headings, and previous / next follow that order. */
+export default function ItemBrowser({
+  items,
+  filters,
+  showPath,
+  grouped,
+}: {
+  items: CardItem[];
+  filters: KindFilter[];
+  showPath?: boolean;
+  grouped?: boolean;
+}) {
   const [filter, setFilter] = useState("all");
   const [open, setOpen] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
 
-  const shown = filter === "all" ? items : items.filter((it) => (it.kind ?? "doc") === filter);
+  const filtered = filter === "all" ? items : items.filter((it) => (it.kind ?? "doc") === filter);
+  const groups = grouped ? groupItems(filtered) : [{ label: null, items: filtered }];
+  const shown = groups.flatMap((g) => g.items);
   const current = open !== null ? shown[open] : null;
 
-  const close = useCallback(() => dialogRef.current?.close(), []);
-  const move = useCallback((d: number) => setOpen((i) => (i === null ? i : Math.min(Math.max(i + d, 0), shown.length - 1))), [shown.length]);
+  const close = () => dialogRef.current?.close();
+  const move = (d: number) => setOpen((i) => (i === null ? i : Math.min(Math.max(i + d, 0), shown.length - 1)));
 
   useEffect(() => {
     const dlg = dialogRef.current;
@@ -44,6 +59,8 @@ export default function ItemBrowser({ items, filters, showPath }: { items: CardI
   }
 
   function onDialogKey(e: React.KeyboardEvent) {
+    // Arrow keys inside the sideways steps line scroll it instead.
+    if ((e.target as HTMLElement).closest?.('[data-testid="lib-steps"]')) return;
     if (e.key === "ArrowRight") {
       e.preventDefault();
       move(1);
@@ -65,20 +82,35 @@ export default function ItemBrowser({ items, filters, showPath }: { items: CardI
         </div>
       )}
 
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="lib-cards">
-        {shown.map((it, i) => (
-          <li key={it.slug} className="min-w-0">
-            <Link href={`/library/${it.slug}`} onClick={(e) => onCardClick(e, i)} className={`${TILE} flex h-full min-h-[44px] flex-col gap-2 p-4`}>
-              <span className="flex items-center justify-between gap-2">
-                <KindTag label={it.kindLabel} />
-                {it.steps.length > 0 && <span className="font-mono text-[11px] text-muted-2">{it.steps.length} steps</span>}
-              </span>
-              <span className="line-clamp-2 break-words text-[15px] font-semibold leading-snug">{it.title}</span>
-              {it.summary && <span className="line-clamp-2 text-[13px] leading-snug text-muted">{it.summary}</span>}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <div className="flex flex-col gap-8">
+        {groups.map((g, gi) => {
+          const offset = groups.slice(0, gi).reduce((n, x) => n + x.items.length, 0);
+          return (
+            <section key={g.label ?? "all"} aria-label={g.label ?? undefined}>
+              {g.label && (
+                <h2 className="eyebrow mb-3 px-1">
+                  {g.label} <span className="text-muted-2">{g.items.length}</span>
+                </h2>
+              )}
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="lib-cards">
+                {g.items.map((it, j) => (
+                  <li key={it.slug} className="min-w-0">
+                    <Link
+                      href={`/library/${it.slug}`}
+                      onClick={(e) => onCardClick(e, offset + j)}
+                      className={`${TILE} flex h-full min-h-[44px] flex-col gap-2 p-4`}
+                    >
+                      <KindTag label={it.kindLabel} />
+                      <span className="line-clamp-2 break-words text-[15px] font-semibold leading-snug">{it.title}</span>
+                      {(it.tldr ?? it.summary) && <span className="line-clamp-2 text-[13px] leading-snug text-muted">{it.tldr ?? it.summary}</span>}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
 
       <dialog
         ref={dialogRef}
@@ -92,13 +124,13 @@ export default function ItemBrowser({ items, filters, showPath }: { items: CardI
       >
         {current && (
           <>
-            <div className="flex items-start gap-3 border-b border-border px-5 pb-4 pt-5 md:px-7">
+            <div className="flex items-start gap-3 border-b border-border px-5 pb-3 pt-4 md:px-7">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <KindTag label={current.kindLabel} />
                   {showPath && <span className="truncate font-mono text-[11px] text-muted-2">{current.path}</span>}
                 </div>
-                <h2 id="lib-dialog-title" className="mt-2 break-words text-[22px] font-semibold leading-tight md:text-[26px]">
+                <h2 id="lib-dialog-title" className="mt-1.5 break-words text-[20px] font-semibold leading-tight md:text-[24px]">
                   {current.title}
                 </h2>
               </div>
@@ -109,23 +141,17 @@ export default function ItemBrowser({ items, filters, showPath }: { items: CardI
               </button>
             </div>
 
-            <div ref={bodyRef} className="lib-dialog-body flex flex-col gap-6 px-5 py-5 md:px-7">
-              <ExplainRow summary={current.summary} origin={current.origin} purpose={current.purpose} />
-              <StepsLine steps={current.steps} />
-              {!current.summary && !current.origin && !current.purpose && current.steps.length === 0 && (
+            <div ref={bodyRef} className="lib-dialog-body px-5 py-5 md:px-7">
+              <ItemSummary key={current.slug} item={current} />
+              {!current.tldr && !current.summary && current.steps.length === 0 && !current.visual && (
                 <p className="text-[14px] text-muted">No summary yet. Open the full note to read it.</p>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 border-t border-border px-5 py-4 md:px-7">
+            <div className="flex flex-wrap items-center gap-3 border-t border-border px-5 py-3 md:px-7">
               <Link href={`/library/${current.slug}`} className="inline-flex h-11 items-center rounded-lg bg-accent px-5 text-[14px] font-semibold text-accent-ink hover:bg-accent-hover">
                 Read the full note
               </Link>
-              {current.url && (
-                <a href={current.url} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center rounded-lg border border-border-2 px-4 text-[14px] font-semibold hover:bg-surface-hover">
-                  Open link
-                </a>
-              )}
               <div className="ml-auto flex items-center gap-1">
                 <button type="button" onClick={() => move(-1)} aria-disabled={open === 0} aria-label="Previous item" className="flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-surface-hover hover:text-foreground aria-disabled:opacity-30">
                   <svg aria-hidden viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
